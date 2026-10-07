@@ -53,10 +53,11 @@ export default function RoleSwitcher({ currentRole, onSelectRole, currentUser, o
 
     // If user is logged in and their role matches or admin access
     if (currentUser) {
-      if (currentUser.role === targetRoleId || currentUser.role === 'admin') {
+      const userRole = currentUser.role || 'guest';
+      if (userRole === targetRoleId || userRole === 'admin') {
         onSelectRole(targetRoleId);
       } else {
-        alert(`Your current account is registered as '${currentUser.role.toUpperCase()}'. Log out or sign up with a '${targetRoleId.toUpperCase()}' account to access this portal.`);
+        alert(`Your current account is registered as '${userRole.toUpperCase()}'. Log out or sign up with a '${targetRoleId.toUpperCase()}' account to access this portal.`);
       }
     } else {
       // Prompt log in / sign up

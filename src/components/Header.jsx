@@ -121,7 +121,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
               >
                 <Menu className="w-4 h-4 text-slate-600" />
                 <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-tafiya-blue to-tafiya-orange flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                  {currentUser ? currentUser.name.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+                  {currentUser && currentUser.name ? currentUser.name.charAt(0).toUpperCase() : (currentUser && currentUser.email ? currentUser.email.charAt(0).toUpperCase() : <User className="w-4 h-4" />)}
                 </div>
               </button>
 
@@ -136,10 +136,10 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                     <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
                       {currentUser ? (
                         <div>
-                          <p className="text-xs font-bold text-slate-900">{currentUser.name}</p>
-                          <p className="text-[11px] text-slate-500 truncate">{currentUser.email}</p>
+                          <p className="text-xs font-bold text-slate-900">{currentUser.name || 'Account User'}</p>
+                          <p className="text-[11px] text-slate-500 truncate">{currentUser.email || ''}</p>
                           <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-tafiya-blue-50 text-tafiya-blue uppercase">
-                            Role: {currentUser.role}
+                            Role: {currentUser.role || 'guest'}
                           </span>
                         </div>
                       ) : (

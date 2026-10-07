@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Lock, 
@@ -24,6 +24,15 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Sync mode state when modal opens or initialMode changes
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setErrorMessage('');
+      setSuccessMessage('');
+    }
+  }, [isOpen, initialMode]);
+
   // Login State
   const [loginInput, setLoginInput] = useState('musa@example.com');
   const [loginPassword, setLoginPassword] = useState('password123');
@@ -40,6 +49,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   const [forgotEmailOrPhone, setForgotEmailOrPhone] = useState('');
   const [otpCode, setOtpCode] = useState(['8', '9', '2', '0', '1', '4']);
   const [newPassword, setNewPassword] = useState('');
+
+  // Email Verification State
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [verifyCode, setVerifyCode] = useState(['4', '9', '2', '0', '1', '8']);
 
   if (!isOpen) return null;
 
@@ -64,8 +77,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
 
       const data = await response.json();
 
-      if (response.ok && data.status === 'success') {
-        onAuthSuccess(data.data.user, data.data.token);
+      if (response.ok && data.status === 'success' && data.data?.user) {
+        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
         onClose();
       } else {
         setErrorMessage(data.message || 'Google authentication failed');
@@ -80,16 +93,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
         role: signUpRole || 'guest',
         google_id: 'goog_demo_123'
       };
-      onAuthSuccess(mockUser, 'google_sanctum_token_' + Date.now());
+      if (onAuthSuccess) onAuthSuccess(mockUser, 'google_sanctum_token_' + Date.now());
       onClose();
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Email Verification State
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
-  const [verifyCode, setVerifyCode] = useState(['4', '9', '2', '0', '1', '8']);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -106,8 +115,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
 
       const data = await response.json();
 
-      if (response.ok && data.status === 'success') {
-        onAuthSuccess(data.data.user, data.data.token);
+      if (response.ok && data.status === 'success' && data.data?.user) {
+        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
         onClose();
       } else if (data.requires_verification || data.status === 'unverified') {
         setUnverifiedEmail(data.data?.email || loginInput);
@@ -176,8 +185,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
 
       const data = await response.json();
 
-      if (response.ok && data.status === 'success') {
-        onAuthSuccess(data.data.user, data.data.token);
+      if (response.ok && data.status === 'success' && data.data?.user) {
+        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
         onClose();
       } else {
         setErrorMessage(data.message || 'Invalid verification code');

@@ -205,7 +205,7 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>My Saved Trips ({currentUser ? currentUser.name : 'Guest Account'})</span>
+              <span>My Saved Trips ({(currentUser && currentUser.name) ? currentUser.name : 'Guest Account'})</span>
             </button>
           </div>
         </div>
@@ -323,7 +323,7 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
                     <div className="p-4 border border-blue-100 bg-blue-50/40 rounded-xl flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-tafiya-blue text-white flex items-center justify-center font-bold text-sm">
-                          {trackedBooking.property.host_name.charAt(0)}
+                          {trackedBooking.property?.host_name ? trackedBooking.property.host_name.charAt(0) : 'H'}
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-900">{trackedBooking.property.host_name}</p>
@@ -344,7 +344,7 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
                             checkIn: trackedBooking.check_in_date,
                             checkOut: trackedBooking.check_out_date,
                             totalAmount: trackedBooking.total_amount_formatted,
-                            guestName: currentUser ? currentUser.name : 'Verified Guest'
+                            guestName: (currentUser && currentUser.name) ? currentUser.name : 'Verified Guest'
                           });
                         }}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"

@@ -36,7 +36,13 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('tafiya_user');
-      return savedUser ? JSON.parse(savedUser) : null;
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed && typeof parsed === 'object' && (parsed.name || parsed.email || parsed.id)) {
+          return parsed;
+        }
+      }
+      return null;
     } catch {
       return null;
     }
@@ -102,14 +108,15 @@ export default function App() {
   };
 
   const handleAuthSuccess = (user, token) => {
+    if (!user) return;
     setCurrentUser(user);
-    setAuthToken(token);
+    if (token) setAuthToken(token);
     if (user.role) {
       setCurrentRole(user.role);
     }
     try {
       localStorage.setItem('tafiya_user', JSON.stringify(user));
-      localStorage.setItem('tafiya_token', token);
+      if (token) localStorage.setItem('tafiya_token', token);
     } catch (e) {
       console.error('Failed to save auth state to localStorage', e);
     }
