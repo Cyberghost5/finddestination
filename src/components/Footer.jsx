@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, 
-  Globe, 
-  Building2, 
-  Lock, 
-  HelpCircle, 
-  Heart, 
+import {
+  ShieldCheck,
+  Globe,
+  Building2,
+  Lock,
+  HelpCircle,
+  Heart,
   Sparkles,
   MapPin,
   CheckCircle2,
@@ -62,12 +62,12 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
   return (
     <footer className="bg-slate-900 text-slate-300 border-t border-slate-800 pt-12 pb-16 md:pb-8 mt-16 text-xs font-medium">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        
+
         {/* Top Brand Banner */}
         <div className="p-6 sm:p-8 bg-gradient-to-r from-slate-950 via-slate-900 to-tafiya-dark rounded-3xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
           <div className="flex items-center gap-4">
             <div className="relative overflow-hidden rounded-2xl border border-slate-700 p-1.5 bg-white shadow-md shrink-0">
-              <img src="/logo.jpeg" alt="FindDestination.ng" className="w-12 h-12 object-contain rounded-xl" />
+              <img src="/logo.jpeg" alt="FindDestination.comng" className="w-12 h-12 object-contain rounded-xl" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -102,32 +102,29 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
         {/* Section 1: Inspiration for Future Trips (Airbnb Style Tabs) */}
         <div className="border-b border-slate-800 pb-10">
           <h3 className="text-sm font-extrabold text-white mb-4">Inspiration for stays across Northern Nigeria</h3>
-          
+
           {/* Navigation Category Tabs */}
           <div className="flex items-center gap-6 border-b border-slate-800 pb-3 mb-6 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('destinations')}
-              className={`pb-3 text-xs font-bold transition-all relative whitespace-nowrap cursor-pointer ${
-                activeTab === 'destinations' ? 'text-tafiya-orange' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`pb-3 text-xs font-bold transition-all relative whitespace-nowrap cursor-pointer ${activeTab === 'destinations' ? 'text-tafiya-orange' : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               Popular Destinations
               {activeTab === 'destinations' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-tafiya-orange rounded-full"></span>}
             </button>
             <button
               onClick={() => setActiveTab('cultural')}
-              className={`pb-3 text-xs font-bold transition-all relative whitespace-nowrap cursor-pointer ${
-                activeTab === 'cultural' ? 'text-tafiya-orange' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`pb-3 text-xs font-bold transition-all relative whitespace-nowrap cursor-pointer ${activeTab === 'cultural' ? 'text-tafiya-orange' : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               Cultural & Heritage Stays
               {activeTab === 'cultural' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-tafiya-orange rounded-full"></span>}
             </button>
             <button
               onClick={() => setActiveTab('business')}
-              className={`pb-3 text-xs font-bold transition-all relative whitespace-nowrap cursor-pointer ${
-                activeTab === 'business' ? 'text-tafiya-orange' : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`pb-3 text-xs font-bold transition-all relative whitespace-nowrap cursor-pointer ${activeTab === 'business' ? 'text-tafiya-orange' : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               Corporate & NGO Hubs
               {activeTab === 'business' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-tafiya-orange rounded-full"></span>}
@@ -154,7 +151,7 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
 
         {/* Section 2: 4-Column Directory Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 border-b border-slate-800 pb-12">
-          
+
           {/* Column 1: Support & Safety */}
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Support & Verification</h4>
@@ -185,7 +182,7 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">FindDestination Marketplace</h4>
             <ul className="space-y-2 text-slate-400 text-xs">
-              <li><button onClick={(e) => handleInfoClick(e, 'about')} className="hover:text-white transition-colors cursor-pointer text-left">About FindDestination.ng</button></li>
+              <li><button onClick={(e) => handleInfoClick(e, 'about')} className="hover:text-white transition-colors cursor-pointer text-left">About FindDestination.com.ng</button></li>
               <li><button onClick={(e) => handleInfoClick(e, 'about')} className="hover:text-white transition-colors cursor-pointer text-left">Northern Cultural Heritage Stays</button></li>
               <li><button onClick={(e) => handleInfoClick(e, 'about')} className="hover:text-white transition-colors cursor-pointer text-left">Newsroom & Press Releases</button></li>
               <li><button onClick={(e) => handleInfoClick(e, 'help')} className="hover:text-white transition-colors cursor-pointer text-left">Careers at FindDestination</button></li>
@@ -222,10 +219,10 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
 
         {/* Section 3: Bottom Legal & Currency Bar (Airbnb Style) */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-2 text-slate-400 text-xs">
-          
+
           {/* Left Legal Info */}
           <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
-            <span>© 2026 FindDestination.ng, Inc.</span>
+            <span>© 2026 FindDestination.com.ng, Inc.</span>
             <span>•</span>
             <button onClick={(e) => handleInfoClick(e, 'privacy')} className="hover:text-white transition-colors cursor-pointer">Privacy Policy</button>
             <span>•</span>
@@ -242,7 +239,7 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
               <Globe className="w-4 h-4 text-slate-300" />
               <span>English (NG)</span>
             </button>
-            
+
             <button className="flex items-center gap-1 hover:text-white transition-colors font-bold cursor-pointer">
               <span className="text-tafiya-orange">₦</span>
               <span>NGN</span>
@@ -250,7 +247,7 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
 
             <div className="h-4 w-[1px] bg-slate-800"></div>
 
-            <button 
+            <button
               onClick={(e) => handleInfoClick(e, 'escrow')}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-400 text-[10px] font-bold cursor-pointer hover:bg-emerald-900 transition-colors"
             >
