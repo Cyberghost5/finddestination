@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Globe, 
-  Menu, 
-  User, 
-  ShieldCheck, 
-  Building2, 
+import {
+  Search,
+  Globe,
+  Menu,
+  User,
+  ShieldCheck,
+  Building2,
   SlidersHorizontal,
   ChevronDown,
   Sparkles,
@@ -37,24 +37,23 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
   const guestsLabel = searchParams?.guests ? `${searchParams.guests} ${searchParams.guests === 1 ? 'Guest' : 'Guests'}` : 'Add guests';
 
   return (
-    <header className={`sticky top-0 z-40 w-full transition-all duration-300 ${
-      isScrolled ? 'glass-header border-b border-slate-200/80 shadow-sm py-3' : 'bg-white border-b border-slate-100 py-4'
-    }`}>
+    <header className={`sticky top-0 z-40 w-full transition-all duration-300 ${isScrolled ? 'glass-header border-b border-slate-200/80 shadow-sm py-3' : 'bg-white border-b border-slate-100 py-4'
+      }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
-          
+
           {/* Logo & Brand */}
           <div className="flex items-center gap-3 cursor-pointer group">
             <div className="relative overflow-hidden rounded-xl border border-slate-200/60 p-1 bg-white shadow-sm transition-transform duration-300 group-hover:scale-105">
-              <img 
-                src="/logo.jpeg" 
-                alt="FindDestination Logo" 
+              <img
+                src="/logo.jpeg"
+                alt="FindDestination Logo"
                 className="w-10 h-10 object-contain rounded-lg"
               />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-extrabold tracking-tight text-slate-900 group-hover:text-tafiya-blue transition-colors">
-                FindDestination<span className="text-tafiya-orange">.ng</span>
+                FindDestination<span className="text-tafiya-orange">.com.ng</span>
               </span>
               <span className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase -mt-1 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-tafiya-blue fill-tafiya-blue/10" /> Verified Northern Stays
@@ -90,7 +89,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
 
           {/* Right Action Menu & User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button 
+            <button
               onClick={() => onOpenTracker && onOpenTracker()}
               className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 px-3.5 py-2 rounded-full transition-all duration-200 border border-slate-200 cursor-pointer"
             >
@@ -98,7 +97,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
               <span>Track Booking</span>
             </button>
 
-            <button 
+            <button
               onClick={() => {
                 if (!currentUser) {
                   onOpenAuthModal && onOpenAuthModal('signup');
@@ -129,9 +128,9 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
               {/* Dropdown Menu Modal */}
               {isMenuOpen && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-10" 
-                    onClick={() => setIsMenuOpen(false)} 
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setIsMenuOpen(false)}
                   />
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-airbnb border border-slate-100 py-2 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
@@ -245,7 +244,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
 
                     <div className="py-1">
                       {!currentUser || currentUser.role === 'guest' ? (
-                        <button 
+                        <button
                           onClick={() => {
                             setIsMenuOpen(false);
                             onOpenAuthModal && onOpenAuthModal('signup');

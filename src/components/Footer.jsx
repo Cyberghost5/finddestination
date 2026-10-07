@@ -67,11 +67,11 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
         <div className="p-6 sm:p-8 bg-gradient-to-r from-slate-950 via-slate-900 to-tafiya-dark rounded-3xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
           <div className="flex items-center gap-4">
             <div className="relative overflow-hidden rounded-2xl border border-slate-700 p-1.5 bg-white shadow-md shrink-0">
-              <img src="/logo.jpeg" alt="FindDestination.comng" className="w-12 h-12 object-contain rounded-xl" />
+              <img src="/logo.jpeg" alt="FindDestination.com.ng" className="w-12 h-12 object-contain rounded-xl" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-extrabold text-white">FindDestination<span className="text-tafiya-orange">.ng</span></span>
+                <span className="text-xl font-extrabold text-white">FindDestination<span className="text-tafiya-orange">.com.ng</span></span>
                 <span className="px-2.5 py-0.5 rounded-full bg-tafiya-blue/20 text-tafiya-blue text-[10px] font-bold border border-tafiya-blue/30">
                   Northern Nigeria Marketplace
                 </span>
