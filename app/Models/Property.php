@@ -23,6 +23,11 @@ class Property extends Model
         'contact_phone',
         'check_in_time',
         'check_out_time',
+        'neighborhood',
+        'category',
+        'verification_tier',
+        'images',
+        'amenities',
         'verification_status',
         'is_published',
     ];
@@ -31,6 +36,8 @@ class Property extends Model
         'is_published' => 'boolean',
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
+        'images' => 'array',
+        'amenities' => 'array',
     ];
 
     public function host()

@@ -31,6 +31,24 @@ import {
 
 export default function App() {
   const [properties, setProperties] = useState(MOCK_PROPERTIES);
+
+  // Fetch real product/property data from database on mount
+  useEffect(() => {
+    const fetchDbProperties = async () => {
+      try {
+        const response = await fetch('/api/v1/properties');
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.status === 'success' && Array.isArray(resData.data) && resData.data.length > 0) {
+            setProperties(resData.data);
+          }
+        }
+      } catch (err) {
+        console.error('Database property fetch failed, using fallback dataset', err);
+      }
+    };
+    fetchDbProperties();
+  }, []);
   
   // Authenticated User State & Token
   const [currentUser, setCurrentUser] = useState(() => {
@@ -239,17 +257,50 @@ export default function App() {
     setIsVoucherModalOpen(true);
   };
 
-  const handlePropertyCreated = (newProp) => {
+  const handlePropertyCreated = async (newProp) => {
+    try {
+      const response = await fetch('/api/v1/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(newProp)
+      });
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.status === 'success' && resData.data) {
+          setProperties(prev => [resData.data, ...prev]);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to create property in DB', e);
+    }
     setProperties(prev => [newProp, ...prev]);
   };
 
-  const handleTogglePublish = (propId) => {
+  const handleTogglePublish = async (propId) => {
+    try {
+      await fetch(`/api/v1/properties/${propId}/publish`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+      });
+    } catch (e) {
+      console.error('Failed to toggle publish status in DB', e);
+    }
     setProperties(prev => prev.map(p => 
       p.id === propId ? { ...p, is_published: !p.is_published } : p
     ));
   };
 
-  const handleUpdateVerificationStatus = (propId, newTier) => {
+  const handleUpdateVerificationStatus = async (propId, newTier) => {
+    try {
+      await fetch(`/api/v1/properties/${propId}/verification`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ tier: newTier })
+      });
+    } catch (e) {
+      console.error('Failed to update verification status in DB', e);
+    }
     setProperties(prev => prev.map(p => {
       if (p.id === propId) {
         const statusMap = {
