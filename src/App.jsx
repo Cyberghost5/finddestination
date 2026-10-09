@@ -23,6 +23,7 @@ import TripsPage from './components/TripsPage';
 import InboxPage from './components/InboxPage';
 import ProfilePage from './components/ProfilePage';
 import AuthGuard from './components/AuthGuard';
+import OnboardingModal from './components/OnboardingModal';
 import { MOCK_PROPERTIES } from './data/mockProperties';
 import { 
   Building2, 
@@ -141,6 +142,21 @@ export default function App() {
       setActiveMobileTab('dashboard');
     }
   };
+
+  const handleUpdateUser = (updatedUser) => {
+    setCurrentUser(updatedUser);
+    try {
+      localStorage.setItem('tafiya_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.error('Failed to update user in localStorage', e);
+    }
+  };
+
+  // Compulsory Onboarding Modal Trigger
+  const isOnboardingModalOpen = useMemo(() => {
+    if (!currentUser) return false;
+    return !currentUser.onboarding_completed;
+  }, [currentUser]);
 
   const handleOpenAuthModal = (mode = 'login') => {
     setAuthModalMode(mode);
@@ -452,6 +468,7 @@ export default function App() {
             onSelectRole={handleRoleSelect}
             onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
             onOpenInfoModal={(key) => handleOpenInfoTopic(key)}
+            onUpdateUser={handleUpdateUser}
           />
         ) : activeMobileTab === 'explore' || currentRole === 'guest' ? (
           /* GUEST / TRAVELER STAYS FEED */
@@ -624,6 +641,13 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
         onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Compulsory Post-Registration Onboarding Modal */}
+      <OnboardingModal
+        isOpen={isOnboardingModalOpen}
+        currentUser={currentUser}
+        onCompleteOnboarding={handleUpdateUser}
       />
 
       {/* Share Property Modal */}

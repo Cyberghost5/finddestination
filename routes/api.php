@@ -37,6 +37,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+    Route::post('/auth/onboarding', [AuthController::class, 'completeOnboarding']);
 
     // Admin Level 1 Host Approval Queue
     Route::get('/admin/hosts', [AuthController::class, 'getAdminHosts']);

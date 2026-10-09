@@ -361,6 +361,43 @@ class AuthController extends Controller
     }
 
     /**
+     * POST /api/v1/auth/onboarding
+     */
+    public function completeOnboarding(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'dob' => 'required|date',
+            'marketing_opt_out' => 'nullable|boolean',
+        ]);
+
+        $email = strtolower($validated['email']);
+        $user = User::where('email', $email)->first();
+
+        if ($user) {
+            $user->update([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'name' => $validated['first_name'] . ' ' . $validated['last_name'],
+                'dob' => $validated['dob'],
+                'marketing_opt_out' => $validated['marketing_opt_out'] ?? false,
+                'onboarding_completed' => true,
+                'terms_accepted_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account onboarding completed successfully!',
+            'data' => [
+                'user' => $user
+            ]
+        ]);
+    }
+
+    /**
      * POST /api/v1/auth/logout
      */
     public function logout(Request $request)
