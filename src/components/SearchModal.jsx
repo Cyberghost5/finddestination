@@ -11,7 +11,7 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
   };
 
   const todayStr = formatDateForInput(new Date());
-  
+
   // Default checkout is 2 days from today
   const defaultCheckout = new Date();
   defaultCheckout.setDate(defaultCheckout.getDate() + 2);
@@ -88,14 +88,11 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-4 sm:pt-12 px-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
-        
+
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-900">Search Accommodations in Northern Nigeria</span>
-            <span className="text-[10px] bg-tafiya-blue-50 text-tafiya-blue px-2.5 py-0.5 rounded-full font-bold border border-tafiya-blue-100">
-              Verified Stays
-            </span>
           </div>
           <button
             onClick={onClose}
@@ -107,7 +104,7 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
 
         {/* Modal Body Form */}
         <form onSubmit={handleSearchSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
-          
+
           {/* 1. Where to? Section */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -130,11 +127,10 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
                     type="button"
                     key={state.name}
                     onClick={() => setSelectedState(isSelected ? '' : state.name)}
-                    className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${
-                      isSelected
+                    className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${isSelected
                         ? 'border-tafiya-blue bg-tafiya-blue-50/60 ring-2 ring-tafiya-blue/30 shadow-sm'
                         : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-extrabold text-slate-900 text-sm">{state.name}</span>
@@ -239,7 +235,7 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Clear all</span>
           </button>
-          
+
           <button
             type="button"
             onClick={handleSearchSubmit}

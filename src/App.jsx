@@ -132,6 +132,16 @@ export default function App() {
     });
   };
 
+  const handleRoleSelect = (role) => {
+    setCurrentRole(role);
+    if (role === 'guest') {
+      setGuestSubView('feed');
+      setActiveMobileTab('explore');
+    } else {
+      setActiveMobileTab('dashboard');
+    }
+  };
+
   const handleOpenAuthModal = (mode = 'login') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
@@ -390,10 +400,7 @@ export default function App() {
           currentRole={currentRole}
           currentUser={currentUser}
           onOpenAuthModal={handleOpenAuthModal}
-          onSelectRole={(role) => {
-            setCurrentRole(role);
-            if (role === 'guest') setGuestSubView('feed');
-          }}
+          onSelectRole={handleRoleSelect}
         />
 
         {/* 2. Main Header */}
@@ -408,107 +415,100 @@ export default function App() {
           onOpenTracker={handleOpenTrackerModal}
         />
 
-        {/* 3. Render Role-Specific Portal */}
-        {currentRole === 'guest' ? (
-          /* GUEST / TRAVELER ROLE */
+        {/* 3. Render Role-Specific Portal or Mobile Sub-Page */}
+        {activeMobileTab === 'wishlist' ? (
+          <WishlistPage
+            properties={properties}
+            wishlistIds={wishlistIds}
+            onToggleWishlist={handleToggleWishlist}
+            onSelectProperty={handleSelectProperty}
+            onNavigateExplore={() => setActiveMobileTab('explore')}
+            currentUser={currentUser}
+            onOpenAuthModal={handleOpenAuthModal}
+          />
+        ) : activeMobileTab === 'trips' ? (
+          <TripsPage
+            currentUser={currentUser}
+            onOpenAuthModal={handleOpenAuthModal}
+            onOpenVoucher={(booking) => {
+              setActiveBookingData(booking);
+              setIsVoucherModalOpen(true);
+            }}
+            onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
+            onNavigateExplore={() => setActiveMobileTab('explore')}
+          />
+        ) : activeMobileTab === 'inbox' ? (
+          <InboxPage
+            currentUser={currentUser}
+            onOpenAuthModal={handleOpenAuthModal}
+            onNavigateExplore={() => setActiveMobileTab('explore')}
+          />
+        ) : activeMobileTab === 'profile' ? (
+          <ProfilePage
+            currentUser={currentUser}
+            currentRole={currentRole}
+            onOpenAuthModal={handleOpenAuthModal}
+            onLogout={handleLogout}
+            onSelectRole={handleRoleSelect}
+            onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
+            onOpenInfoModal={(key) => handleOpenInfoTopic(key)}
+          />
+        ) : activeMobileTab === 'explore' || currentRole === 'guest' ? (
+          /* GUEST / TRAVELER STAYS FEED */
           <>
-            {activeMobileTab === 'wishlist' ? (
-              <WishlistPage
-                properties={properties}
-                wishlistIds={wishlistIds}
-                onToggleWishlist={handleToggleWishlist}
-                onSelectProperty={handleSelectProperty}
-                onNavigateExplore={() => setActiveMobileTab('explore')}
-                currentUser={currentUser}
-                onOpenAuthModal={handleOpenAuthModal}
+            <div className={guestSubView === 'feed' ? 'animate-in fade-in duration-300' : 'hidden'}>
+              <CategoryRail
+                activeCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                onOpenFilterModal={() => setIsFilterModalOpen(true)}
+                activeFilterCount={activeFilterCount}
               />
-            ) : activeMobileTab === 'trips' ? (
-              <TripsPage
-                currentUser={currentUser}
-                onOpenAuthModal={handleOpenAuthModal}
-                onOpenVoucher={(booking) => {
-                  setActiveBookingData(booking);
-                  setIsVoucherModalOpen(true);
-                }}
-                onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
-                onNavigateExplore={() => setActiveMobileTab('explore')}
-              />
-            ) : activeMobileTab === 'inbox' ? (
-              <InboxPage
-                currentUser={currentUser}
-                onOpenAuthModal={handleOpenAuthModal}
-                onNavigateExplore={() => setActiveMobileTab('explore')}
-              />
-            ) : activeMobileTab === 'profile' ? (
-              <ProfilePage
-                currentUser={currentUser}
-                currentRole={currentRole}
-                onOpenAuthModal={handleOpenAuthModal}
-                onLogout={handleLogout}
-                onSelectRole={(role) => {
-                  setCurrentRole(role);
-                  if (role === 'guest') setGuestSubView('feed');
-                }}
-                onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
-                onOpenInfoModal={(key) => handleOpenInfoTopic(key)}
-              />
-            ) : (
-              <>
-                <div className={guestSubView === 'feed' ? 'animate-in fade-in duration-300' : 'hidden'}>
-                  <CategoryRail
-                    activeCategory={selectedCategory}
-                    onSelectCategory={setSelectedCategory}
-                    onOpenFilterModal={() => setIsFilterModalOpen(true)}
-                    activeFilterCount={activeFilterCount}
-                  />
 
-                  <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-                    
-                    <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-tafiya-dark to-slate-900 text-white rounded-3xl shadow-md border border-slate-800 flex items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tafiya-orange/20 text-tafiya-orange text-[11px] font-bold">
-                          <User className="w-3 h-3" />
-                          <span>Role 1: Guest / Traveler Portal</span>
-                        </div>
-                        <h2 className="text-base sm:text-lg font-extrabold text-white">
-                          Explore Verified Accommodations in Northern Nigeria
-                        </h2>
-                        <p className="text-xs text-slate-400 hidden sm:block">
-                          Bauchi • Kaduna • Kano • Plateau • Adamawa • Gombe
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="hidden md:inline-block text-xs font-bold text-slate-300">
-                          {filteredProperties.length} Stays Available
-                        </span>
-                      </div>
+              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                
+                <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-tafiya-dark to-slate-900 text-white rounded-3xl shadow-md border border-slate-800 flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tafiya-orange/20 text-tafiya-orange text-[11px] font-bold">
+                      <User className="w-3 h-3" />
+                      <span>Role 1: Guest / Traveler Portal</span>
                     </div>
+                    <h2 className="text-base sm:text-lg font-extrabold text-white">
+                      Explore Verified Accommodations in Northern Nigeria
+                    </h2>
+                    <p className="text-xs text-slate-400 hidden sm:block">
+                      Bauchi • Kaduna • Kano • Plateau • Adamawa • Gombe
+                    </p>
+                  </div>
 
-                    <ListingGrid 
-                      properties={filteredProperties}
-                      onSelectProperty={handleSelectProperty}
-                      onOpenFilterModal={() => setIsFilterModalOpen(true)}
-                      wishlistIds={wishlistIds}
-                      onToggleWishlist={handleToggleWishlist}
-                    />
-
-                  </main>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="hidden md:inline-block text-xs font-bold text-slate-300">
+                      {filteredProperties.length} Stays Available
+                    </span>
+                  </div>
                 </div>
 
-                {guestSubView === 'detail' && (
-                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
-                    <PropertyDetail
-                      property={selectedProperty}
-                      onBack={handleBackToFeed}
-                      onInitiateBooking={handleInitiateBooking}
-                      isSaved={wishlistIds.includes(selectedProperty?.id)}
-                      onToggleWishlist={handleToggleWishlist}
-                      onOpenShareModal={(p) => setShareProperty(p)}
-                    />
-                  </div>
-                )}
-              </>
+                <ListingGrid 
+                  properties={filteredProperties}
+                  onSelectProperty={handleSelectProperty}
+                  onOpenFilterModal={() => setIsFilterModalOpen(true)}
+                  wishlistIds={wishlistIds}
+                  onToggleWishlist={handleToggleWishlist}
+                />
+
+              </main>
+            </div>
+
+            {guestSubView === 'detail' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+                <PropertyDetail
+                  property={selectedProperty}
+                  onBack={handleBackToFeed}
+                  onInitiateBooking={handleInitiateBooking}
+                  isSaved={wishlistIds.includes(selectedProperty?.id)}
+                  onToggleWishlist={handleToggleWishlist}
+                  onOpenShareModal={(p) => setShareProperty(p)}
+                />
+              </div>
             )}
           </>
         ) : currentRole === 'host' ? (
@@ -518,10 +518,7 @@ export default function App() {
             requiredRole="host"
             portalName="Host Dashboard"
             onOpenAuthModal={handleOpenAuthModal}
-            onSelectRole={(role) => {
-              setCurrentRole(role);
-              if (role === 'guest') setGuestSubView('feed');
-            }}
+            onSelectRole={handleRoleSelect}
             onLogout={handleLogout}
           >
             <HostDashboard
@@ -538,10 +535,7 @@ export default function App() {
             requiredRole="agent"
             portalName="Field Agent Desk"
             onOpenAuthModal={handleOpenAuthModal}
-            onSelectRole={(role) => {
-              setCurrentRole(role);
-              if (role === 'guest') setGuestSubView('feed');
-            }}
+            onSelectRole={handleRoleSelect}
             onLogout={handleLogout}
           >
             <FieldAgentPortal
@@ -556,10 +550,7 @@ export default function App() {
             requiredRole="admin"
             portalName="Super Admin Portal"
             onOpenAuthModal={handleOpenAuthModal}
-            onSelectRole={(role) => {
-              setCurrentRole(role);
-              if (role === 'guest') setGuestSubView('feed');
-            }}
+            onSelectRole={handleRoleSelect}
             onLogout={handleLogout}
           >
             <AdminPortal
@@ -661,8 +652,10 @@ export default function App() {
 
       {/* Mobile Bottom Navigation */}
       <MobileFooterNav 
+        currentRole={currentRole}
         activeTab={activeMobileTab}
         setActiveTab={setActiveMobileTab}
+        onOpenWizard={() => setIsWizardOpen(true)}
       />
 
     </div>
