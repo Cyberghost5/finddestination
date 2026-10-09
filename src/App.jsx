@@ -106,7 +106,18 @@ export default function App() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-  const [activeMobileTab, setActiveMobileTab] = useState('explore');
+  const [activeMobileTab, setActiveMobileTab] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('tafiya_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        if (u && (u.role === 'host' || u.role === 'agent' || u.role === 'admin')) {
+          return 'dashboard';
+        }
+      }
+    } catch {}
+    return 'explore';
+  });
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Wishlist State (persisted in localStorage)
@@ -145,6 +156,9 @@ export default function App() {
 
   const handleUpdateUser = (updatedUser) => {
     setCurrentUser(updatedUser);
+    if (updatedUser && updatedUser.role && updatedUser.role !== 'guest') {
+      setActiveMobileTab('dashboard');
+    }
     try {
       localStorage.setItem('tafiya_user', JSON.stringify(updatedUser));
     } catch (e) {
@@ -187,6 +201,11 @@ export default function App() {
     if (token) setAuthToken(token);
     if (user.role) {
       setCurrentRole(user.role);
+      if (user.role === 'host' || user.role === 'agent' || user.role === 'admin') {
+        setActiveMobileTab('dashboard');
+      } else {
+        setActiveMobileTab('explore');
+      }
     }
     try {
       localStorage.setItem('tafiya_user', JSON.stringify(user));
