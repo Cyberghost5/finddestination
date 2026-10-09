@@ -130,7 +130,7 @@ export default function InboxPage({ currentUser, onOpenAuthModal, onNavigateExpl
         {
           id: 'm20',
           sender: 'support',
-          text: 'Welcome to Tafiya! Your bookings are protected by 24h post-checkin escrow payout locking.',
+          text: 'Welcome to FindDestination! Your bookings are protected by 24h post-checkin escrow payout locking.',
           time: 'Oct 5'
         }
       ]

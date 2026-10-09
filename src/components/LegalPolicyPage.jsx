@@ -50,7 +50,7 @@ Effective Date: January 1, 2026
 Website: https://finddestination.com.ng
 
 1. OVERVIEW & ESCROW GUARANTEE
-Under the FindDestination Escrow Protection Guarantee, all guest payments (processed via Monnify or Paystack) are held in secure digital escrow by FindDestination (Tafiya Nigeria Ltd). Funds are never disbursed to the property host prior to successful check-in. Host payouts occur strictly 24 hours after guest arrival, ensuring complete protection for travelers across Bauchi, Kaduna, Kano, Plateau, Adamawa, Gombe, Zaria, and Sokoto.
+Under the FindDestination Escrow Protection Guarantee, all guest payments (processed via Monnify or Paystack) are held in secure digital escrow by FindDestination (FindDestination Nigeria Ltd). Funds are never disbursed to the property host prior to successful check-in. Host payouts occur strictly 24 hours after guest arrival, ensuring complete protection for travelers across Bauchi, Kaduna, Kano, Plateau, Adamawa, Gombe, Zaria, and Sokoto.
 
 2. FULL REFUND ELIGIBILITY (100% ESCROW REFUND)
 A guest is entitled to a full 100% escrow refund under the following verified conditions:
@@ -85,7 +85,7 @@ Effective Date: January 1, 2026
 Website: https://finddestination.com.ng
 
 1. ACCEPTANCE OF TERMS
-By accessing, registering, or booking shortlet accommodations on FindDestination.com.ng (operated by Tafiya Nigeria Ltd, CAC RC: 7890123), you agree to be bound by these Terms of Service, Privacy Policy, and Escrow Guarantee Rules.
+By accessing, registering, or booking shortlet accommodations on FindDestination.com.ng (operated by FindDestination Nigeria Ltd, CAC RC: 7890123), you agree to be bound by these Terms of Service, Privacy Policy, and Escrow Guarantee Rules.
 
 2. ELIGIBILITY & USER ACCOUNT OBLIGATIONS
 - Users must be at least 18 years of age to create an account, book a stay, or list a property.
@@ -194,11 +194,9 @@ Website: https://finddestination.com.ng
           hash: '#privacy-policy',
           plainText: `FINDDESTINATION PRIVACY POLICY & DATA PROTECTION NOTICE
 Effective Date: January 1, 2026
-Website: https://finddestination.com.ng
-App Package Name: com.tafiya.finddestination
 
 1. INTRODUCTION & REGULATORY SCOPE
-FindDestination ("we", "us", or "our", operated by Tafiya Nigeria Ltd) is committed to protecting the privacy and security of user data. This Privacy Policy outlines how we collect, use, process, and disclose personal data when you use our mobile application and web portal (https://finddestination.com.ng) in compliance with the Nigeria Data Protection Regulation (NDPR) and Google Play Developer Policies.
+FindDestination ("we", "us", or "our", operated by FindDestination Nigeria Ltd) is committed to protecting the privacy and security of user data. This Privacy Policy outlines how we collect, use, process, and disclose personal data when you use our mobile application and web portal (https://finddestination.com.ng) in compliance with the Nigeria Data Protection Regulation (NDPR) and Google Play Developer Policies.
 
 2. DATA WE COLLECT
 We collect personal information necessary to facilitate verified shortlet bookings and property listings:

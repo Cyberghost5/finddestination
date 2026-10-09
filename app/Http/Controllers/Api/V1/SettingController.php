@@ -14,8 +14,8 @@ class SettingController extends Controller
     public function getPaymentGatewaySetting()
     {
         $activeGateway = Setting::getByKey('active_payment_gateway', env('ACTIVE_PAYMENT_GATEWAY', 'paystack'));
-        $paystackPublicKey = Setting::getByKey('paystack_public_key', env('PAYSTACK_PUBLIC_KEY', 'pk_test_tafiya_paystack_public_key_2026'));
-        $monnifyApiKey = Setting::getByKey('monnify_api_key', env('MONNIFY_API_KEY', 'MK_TEST_TAFIYA_MONNIFY_API_KEY'));
+        $paystackPublicKey = Setting::getByKey('paystack_public_key', env('PAYSTACK_PUBLIC_KEY', 'pk_test_finddestination_paystack_public_key_2026'));
+        $monnifyApiKey = Setting::getByKey('monnify_api_key', env('MONNIFY_API_KEY', 'MK_TEST_FINDDESTINATION_MONNIFY_API_KEY'));
         $monnifyContractCode = Setting::getByKey('monnify_contract_code', env('MONNIFY_CONTRACT_CODE', '8920184920'));
         $googleClientId = Setting::getByKey('google_client_id', env('GOOGLE_CLIENT_ID', ''));
 
@@ -67,8 +67,8 @@ class SettingController extends Controller
             'message' => 'Settings updated successfully',
             'data' => [
                 'active_gateway' => $validated['active_gateway'],
-                'paystack_public_key' => Setting::getByKey('paystack_public_key', env('PAYSTACK_PUBLIC_KEY', 'pk_test_tafiya_paystack_public_key_2026')),
-                'monnify_api_key' => Setting::getByKey('monnify_api_key', env('MONNIFY_API_KEY', 'MK_TEST_TAFIYA_MONNIFY_API_KEY')),
+                'paystack_public_key' => Setting::getByKey('paystack_public_key', env('PAYSTACK_PUBLIC_KEY', 'pk_test_finddestination_paystack_public_key_2026')),
+                'monnify_api_key' => Setting::getByKey('monnify_api_key', env('MONNIFY_API_KEY', 'MK_TEST_FINDDESTINATION_MONNIFY_API_KEY')),
                 'monnify_contract_code' => Setting::getByKey('monnify_contract_code', env('MONNIFY_CONTRACT_CODE', '8920184920')),
                 'google_client_id' => Setting::getByKey('google_client_id', env('GOOGLE_CLIENT_ID', '')),
             ]

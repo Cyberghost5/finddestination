@@ -38,8 +38,8 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
   // Payment Gateway & Auth Settings State
   const [activeGateway, setActiveGateway] = useState('paystack');
-  const [paystackPublicKey, setPaystackPublicKey] = useState('pk_test_tafiya_paystack_public_key_2026');
-  const [monnifyApiKey, setMonnifyApiKey] = useState('MK_TEST_TAFIYA_MONNIFY_API_KEY');
+  const [paystackPublicKey, setPaystackPublicKey] = useState('pk_test_finddestination_paystack_public_key_2026');
+  const [monnifyApiKey, setMonnifyApiKey] = useState('MK_TEST_FINDDESTINATION_MONNIFY_API_KEY');
   const [monnifyContractCode, setMonnifyContractCode] = useState('8920184920');
   const [googleClientId, setGoogleClientId] = useState('');
   const [isSavingGateway, setIsSavingGateway] = useState(false);
@@ -93,7 +93,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     setHostActionError('');
 
     try {
-      const token = localStorage.getItem('tafiya_token');
+      const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
       const response = await fetch(`/api/v1/admin/hosts/${hostId}/approval`, {
         method: 'PATCH',
         headers: {
@@ -131,7 +131,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     setGatewaySaveError('');
 
     try {
-      const token = localStorage.getItem('tafiya_token');
+      const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
       const response = await fetch('/api/v1/settings/payment-gateway', {
         method: 'POST',
         headers: {

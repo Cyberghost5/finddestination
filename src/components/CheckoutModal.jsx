@@ -17,8 +17,8 @@ import {
 
 export default function CheckoutModal({ isOpen, onClose, property, selectedRoom, totalNights, bookingDates, onPaymentComplete, currentUser, onOpenAuthModal }) {
   const [activeGateway, setActiveGateway] = useState('paystack'); // 'paystack' or 'monnify'
-  const [paystackPublicKey, setPaystackPublicKey] = useState('pk_test_tafiya_paystack_public_key_2026');
-  const [monnifyApiKey, setMonnifyApiKey] = useState('MK_TEST_TAFIYA_MONNIFY_API_KEY');
+  const [paystackPublicKey, setPaystackPublicKey] = useState('pk_test_finddestination_paystack_public_key_2026');
+  const [monnifyApiKey, setMonnifyApiKey] = useState('MK_TEST_FINDDESTINATION_MONNIFY_API_KEY');
   const [monnifyContractCode, setMonnifyContractCode] = useState('8920184920');
 
   const [monnifyMethod, setMonnifyMethod] = useState('sdk'); // 'sdk' or 'transfer'
@@ -118,7 +118,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
       checkOutDateObj.setDate(checkOutDateObj.getDate() + nights);
       const checkOut = bookingDates?.checkOut || checkOutDateObj.toISOString().split('T')[0];
 
-      const token = localStorage.getItem('tafiya_token');
+      const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
 
       const response = await fetch('/api/v1/bookings', {
         method: 'POST',
@@ -188,13 +188,13 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
     setIsProcessing(true);
     setApiError('');
 
-    const generatedRef = `TAF-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const generatedRef = `FD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     if (activeGateway === 'paystack') {
       if (window.PaystackPop) {
         try {
           const handler = window.PaystackPop.setup({
-            key: paystackPublicKey || 'pk_test_tafiya_paystack_public_key_2026',
+            key: paystackPublicKey || 'pk_test_finddestination_paystack_public_key_2026',
             email: guestEmail,
             amount: Math.round(totalAmount * 100), // convert NGN to kobo
             currency: 'NGN',
@@ -234,7 +234,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
             paymentDescription: `FindDestination - ${property.name}`,
             currencyCode: 'NGN',
             contractCode: monnifyContractCode || '8920184920',
-            apiKey: monnifyApiKey || 'MK_TEST_TAFIYA_MONNIFY_API_KEY',
+            apiKey: monnifyApiKey || 'MK_TEST_FINDDESTINATION_MONNIFY_API_KEY',
             isTestMode: true,
             onComplete: function (response) {
               finalizeBooking(response.paymentReference || generatedRef);

@@ -67,7 +67,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
     let loadedBookings = [];
 
     // 1. Try fetching real bookings from Laravel API if token exists
-    const token = localStorage.getItem('tafiya_token');
+    const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
     if (token) {
       try {
         const response = await fetch('/api/v1/bookings', {
@@ -80,7 +80,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
           const resData = await response.json();
           if (resData.status === 'success' && Array.isArray(resData.data)) {
             loadedBookings = resData.data.map(b => ({
-              reference: b.booking_reference || `TAF-TRIP-${b.id}`,
+              reference: b.booking_reference || `FD-TRIP-${b.id}`,
               property: b.room_type?.property || {
                 name: b.property_name || 'FindDestination Shortlet Stay',
                 city: b.property_city || 'Bauchi',
@@ -107,7 +107,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
 
     // 2. Load from localStorage if present
     try {
-      const localBookingsStr = localStorage.getItem('tafiya_recent_bookings');
+      const localBookingsStr = localStorage.getItem('finddestination_recent_bookings') || localStorage.getItem('tafiya_recent_bookings');
       if (localBookingsStr) {
         const parsed = JSON.parse(localBookingsStr);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -134,7 +134,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
           room: { name: 'Premier Wildlife Suite' },
           guestName: currentUser?.name || 'Verified Traveler',
           guestPhone: currentUser?.phone || '+234 802 111 2233',
-          guestEmail: currentUser?.email || 'user@tafiya.ng',
+          guestEmail: currentUser?.email || 'user@finddestination.com.ng',
           checkInDate: '2026-11-15',
           checkOutDate: '2026-11-17',
           nights: 2,
@@ -143,7 +143,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
           escrowStatus: 'held'
         },
         {
-          reference: 'TAF-KD-2026-3109',
+          reference: 'FD-KD-2026-3109',
           property: {
             name: 'Gamji Heritage Villa & Gardens',
             city: 'Kaduna',
@@ -155,7 +155,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
           room: { name: 'Deluxe Executive Suite' },
           guestName: currentUser?.name || 'Verified Traveler',
           guestPhone: currentUser?.phone || '+234 802 111 2233',
-          guestEmail: currentUser?.email || 'user@tafiya.ng',
+          guestEmail: currentUser?.email || 'user@finddestination.com.ng',
           checkInDate: '2026-08-10',
           checkOutDate: '2026-08-12',
           nights: 2,

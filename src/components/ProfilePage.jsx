@@ -73,6 +73,7 @@ export default function ProfilePage({
         onUpdateUser(updatedUser);
       } else {
         try {
+          localStorage.setItem('finddestination_user', JSON.stringify(updatedUser));
           localStorage.setItem('tafiya_user', JSON.stringify(updatedUser));
         } catch {}
       }

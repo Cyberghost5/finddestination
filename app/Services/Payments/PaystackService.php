@@ -22,14 +22,14 @@ class PaystackService implements PaymentGatewayInterface
         return [
             'gateway' => 'paystack',
             'payment_mode' => 'card',
-            'authorization_url' => 'https://checkout.paystack.com/access_code_tafiya_' . strtolower($booking->booking_reference),
+            'authorization_url' => 'https://checkout.paystack.com/access_code_finddestination_' . strtolower($booking->booking_reference),
             'reference' => 'PST-' . $booking->booking_reference,
         ];
     }
 
     public function verifyWebhookSignature(string $payload, string $signature): bool
     {
-        $secretKey = config('services.paystack.secret_key', env('PAYSTACK_SECRET_KEY', 'sk_test_tafiya_paystack_secret_key_2026'));
+        $secretKey = config('services.paystack.secret_key', env('PAYSTACK_SECRET_KEY', 'sk_test_finddestination_paystack_secret_key_2026'));
         $computedHash = hash_hmac('sha512', $payload, $secretKey);
         return hash_equals($computedHash, $signature);
     }

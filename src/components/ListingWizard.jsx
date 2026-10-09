@@ -117,7 +117,7 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-tafiya-blue" />
-            <span className="text-sm font-extrabold text-slate-900">List Your Property on Tafiya</span>
+            <span className="text-sm font-extrabold text-slate-900">List Your Property on FindDestination</span>
           </div>
           <button
             onClick={onClose}

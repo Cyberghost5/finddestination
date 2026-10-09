@@ -1,12 +1,12 @@
 {
-    "name": "tafiya/backend",
+    "name": "finddestination/backend",
     "type": "project",
     "description": "FindDestination Digital Accommodation Marketplace API for Northern Nigeria",
     "keywords": [
         "laravel",
         "framework",
         "marketplace",
-        "tafiya",
+        "finddestination",
         "accommodation"
     ],
     "license": "MIT",

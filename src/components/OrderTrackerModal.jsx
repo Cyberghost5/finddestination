@@ -410,7 +410,7 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
                   <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                   <p className="text-sm font-bold text-slate-800">No bookings found yet</p>
                   <p className="text-xs text-slate-500 mt-1">
-                    When you book any stay on Tafiya, your reservations will automatically appear here.
+                    When you book any stay on FindDestination, your reservations will automatically appear here.
                   </p>
                 </div>
               )}

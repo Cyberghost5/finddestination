@@ -61,7 +61,7 @@ export default function App() {
   // Authenticated User State & Token
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const savedUser = localStorage.getItem('tafiya_user');
+      const savedUser = localStorage.getItem('finddestination_user') || localStorage.getItem('tafiya_user');
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         if (parsed && typeof parsed === 'object' && (parsed.name || parsed.email || parsed.id)) {
@@ -73,12 +73,12 @@ export default function App() {
       return null;
     }
   });
-  const [authToken, setAuthToken] = useState(() => localStorage.getItem('tafiya_token') || null);
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token') || null);
 
   // Active User Role: 'guest', 'host', 'agent', or 'admin'
   const [currentRole, setCurrentRole] = useState(() => {
     try {
-      const savedUser = localStorage.getItem('tafiya_user');
+      const savedUser = localStorage.getItem('finddestination_user') || localStorage.getItem('tafiya_user');
       if (savedUser) {
         const u = JSON.parse(savedUser);
         if (u && u.role) return u.role;
@@ -142,7 +142,7 @@ export default function App() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState(() => {
     try {
-      const savedUser = localStorage.getItem('tafiya_user');
+      const savedUser = localStorage.getItem('finddestination_user') || localStorage.getItem('tafiya_user');
       if (savedUser) {
         const u = JSON.parse(savedUser);
         if (u && (u.role === 'host' || u.role === 'agent' || u.role === 'admin')) {
@@ -157,7 +157,7 @@ export default function App() {
   // Wishlist State (persisted in localStorage)
   const [wishlistIds, setWishlistIds] = useState(() => {
     try {
-      const saved = localStorage.getItem('tafiya_wishlist');
+      const saved = localStorage.getItem('finddestination_wishlist') || localStorage.getItem('tafiya_wishlist');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -172,6 +172,7 @@ export default function App() {
       const exists = prev.includes(propertyId);
       const updated = exists ? prev.filter(id => id !== propertyId) : [...prev, propertyId];
       try {
+        localStorage.setItem('finddestination_wishlist', JSON.stringify(updated));
         localStorage.setItem('tafiya_wishlist', JSON.stringify(updated));
       } catch {}
       return updated;
@@ -195,6 +196,7 @@ export default function App() {
       setActiveMobileTab('dashboard');
     }
     try {
+      localStorage.setItem('finddestination_user', JSON.stringify(updatedUser));
       localStorage.setItem('tafiya_user', JSON.stringify(updatedUser));
     } catch (e) {
       console.error('Failed to update user in localStorage', e);
@@ -270,8 +272,12 @@ export default function App() {
     }
 
     try {
+      localStorage.setItem('finddestination_user', JSON.stringify(user));
       localStorage.setItem('tafiya_user', JSON.stringify(user));
-      if (token) localStorage.setItem('tafiya_token', token);
+      if (token) {
+        localStorage.setItem('finddestination_token', token);
+        localStorage.setItem('tafiya_token', token);
+      }
     } catch (e) {
       console.error('Failed to save auth state to localStorage', e);
     }
@@ -294,6 +300,8 @@ export default function App() {
     setCurrentUser(null);
     setAuthToken(null);
     setCurrentRole('guest');
+    localStorage.removeItem('finddestination_user');
+    localStorage.removeItem('finddestination_token');
     localStorage.removeItem('tafiya_user');
     localStorage.removeItem('tafiya_token');
   };
@@ -403,9 +411,10 @@ export default function App() {
     setActiveBookingData(bookingData);
     setIsVoucherModalOpen(true);
     try {
-      const savedStr = localStorage.getItem('tafiya_recent_bookings');
+      const savedStr = localStorage.getItem('finddestination_recent_bookings') || localStorage.getItem('tafiya_recent_bookings');
       const saved = savedStr ? JSON.parse(savedStr) : [];
       const updated = [bookingData, ...saved.filter(b => b.reference !== bookingData.reference)];
+      localStorage.setItem('finddestination_recent_bookings', JSON.stringify(updated));
       localStorage.setItem('tafiya_recent_bookings', JSON.stringify(updated));
     } catch (e) {
       console.error('Failed to save booking to local storage', e);

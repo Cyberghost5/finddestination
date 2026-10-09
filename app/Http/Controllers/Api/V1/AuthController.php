@@ -122,7 +122,7 @@ class AuthController extends Controller
             'email_verified_at' => now(),
         ]);
 
-        $token = $user->createToken('tafiya_auth_token')->plainTextToken;
+        $token = $user->createToken('finddestination_auth_token')->plainTextToken;
 
         return response()->json([
             'status' => 'success',
@@ -206,7 +206,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken('tafiya_auth_token')->plainTextToken;
+        $token = $user->createToken('finddestination_auth_token')->plainTextToken;
 
         return response()->json([
             'status' => 'success',
@@ -337,7 +337,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('tafiya_auth_token')->plainTextToken;
+        $token = $user->createToken('finddestination_auth_token')->plainTextToken;
 
         return response()->json([
             'status' => 'success',

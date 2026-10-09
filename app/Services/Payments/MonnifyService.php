@@ -37,7 +37,7 @@ class MonnifyService implements PaymentGatewayInterface
 
     public function verifyWebhookSignature(string $payload, string $signature): bool
     {
-        $secretKey = config('services.monnify.secret_key', env('MONNIFY_SECRET_KEY', 'SK_TEST_TAFIYA_MONNIFY_SECRET'));
+        $secretKey = config('services.monnify.secret_key', env('MONNIFY_SECRET_KEY', 'SK_TEST_FINDDESTINATION_MONNIFY_SECRET'));
         $computedHash = hash_hmac('sha512', $payload, $secretKey);
         return hash_equals($computedHash, $signature);
     }

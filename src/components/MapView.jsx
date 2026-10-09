@@ -41,7 +41,7 @@ export default function MapView({ properties, onSelectProperty, singleProperty =
 
       // Add OpenStreetMap tiles with dark/modern styling option
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Tafiya.ng GPS Engine',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | FindDestination.com.ng GPS Engine',
         maxZoom: 19,
       }).addTo(map);
 

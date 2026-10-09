@@ -144,13 +144,13 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       )
     },
     about: {
-      title: "About Tafiya.ng Marketplace",
+      title: "About FindDestination.com.ng Marketplace",
       icon: Building2,
       badge: "Northern Nigeria Accommodation Portal",
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            Tafiya.ng is Northern Nigeria's premier digital accommodation marketplace connecting travelers, NGO teams, and corporate personnel with verified hotels, serviced apartments, resorts, and guest houses.
+            FindDestination.com.ng is Northern Nigeria's premier digital accommodation marketplace connecting travelers, NGO teams, and corporate personnel with verified hotels, serviced apartments, resorts, and guest houses.
           </p>
           <p className="leading-relaxed text-[11px] text-slate-500">
             Registered with the Corporate Affairs Commission (CAC RC: 7890123), FindDestination operates across Bauchi, Kaduna, Kano, Plateau (Jos), Adamawa (Yola), Gombe, Zaria, and Sokoto.
@@ -165,7 +165,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       content: (
         <div className="space-y-3 text-xs text-slate-600 max-h-60 overflow-y-auto pr-2">
           <h4 className="font-bold text-slate-900 text-xs">1. Marketplace Agreement</h4>
-          <p className="text-[11px] text-slate-500">By accessing Tafiya.ng, guests and hosts agree to abide by our regional verification rules, escrow hold terms, and house policies.</p>
+          <p className="text-[11px] text-slate-500">By accessing FindDestination.com.ng, guests and hosts agree to abide by our regional verification rules, escrow hold terms, and house policies.</p>
           <h4 className="font-bold text-slate-900 text-xs">2. Cancellation Policy</h4>
           <p className="text-[11px] text-slate-500">Free cancellation up to 48 hours prior to check-in for full escrow refund.</p>
         </div>
@@ -217,7 +217,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
     content: (
       <div className="space-y-3 text-xs text-slate-600">
         <p className="leading-relaxed">
-          Welcome to Tafiya.ng — Northern Nigeria's trusted digital accommodation marketplace.
+          Welcome to FindDestination.com.ng — Northern Nigeria's trusted digital accommodation marketplace.
         </p>
       </div>
     )
