@@ -32,6 +32,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/register-host', [AuthController::class, 'registerHost']);
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/google', [AuthController::class, 'googleAuth']);
+    Route::get('/auth/google/callback', [AuthController::class, 'googleCallback']);
     Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
     Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);

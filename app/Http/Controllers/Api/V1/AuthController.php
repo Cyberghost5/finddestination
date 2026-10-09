@@ -349,6 +349,18 @@ class AuthController extends Controller
     }
 
     /**
+     * GET /api/v1/auth/google/callback
+     */
+    public function googleCallback(Request $request)
+    {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Google OAuth Callback route active. Google Identity Services client-side popup handles authentication directly.',
+            'redirect_url' => config('app.url')
+        ]);
+    }
+
+    /**
      * POST /api/v1/auth/logout
      */
     public function logout(Request $request)
