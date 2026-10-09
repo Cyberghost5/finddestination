@@ -14,7 +14,7 @@ class AuthController extends Controller
      * POST /api/v1/auth/register
      */
     /**
-     * POST /api/v1/auth/register
+     * POST /api/v1/auth/register (Standard Guest Signup)
      */
     public function register(Request $request)
     {
@@ -23,7 +23,6 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:150|unique:users',
             'phone' => 'required|string|max:30|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'nullable|in:guest,host,agent,admin',
         ]);
 
         $user = User::create([
@@ -31,18 +30,60 @@ class AuthController extends Controller
             'email' => strtolower($validated['email']),
             'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'] ?? 'guest',
+            'role' => 'guest',
+            'host_status' => 'approved',
             'is_active' => true,
             'email_verified_at' => null, // Requires email verification before login
         ]);
 
-        // Demo verification code (In production, sent via VerifyEmailMail)
         $verificationCode = '492018';
 
         return response()->json([
             'status' => 'unverified',
             'requires_verification' => true,
             'message' => 'Account created! Please enter the 6-digit verification code sent to ' . $user->email,
+            'data' => [
+                'email' => $user->email,
+                'demo_verification_code' => $verificationCode,
+            ]
+        ], 201);
+    }
+
+    /**
+     * POST /api/v1/auth/register-host (Dedicated Host CAC Signup)
+     */
+    public function registerHost(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'email' => 'required|string|email|max:150|unique:users',
+            'phone' => 'required|string|max:30|unique:users',
+            'password' => 'required|string|min:6',
+            'business_name' => 'required|string|max:200',
+            'cac_number' => 'required|string|max:100',
+            'tin_number' => 'nullable|string|max:100',
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => strtolower($validated['email']),
+            'phone' => $validated['phone'],
+            'password' => Hash::make($validated['password']),
+            'role' => 'host',
+            'business_name' => $validated['business_name'],
+            'cac_number' => $validated['cac_number'],
+            'tin_number' => $validated['tin_number'] ?? null,
+            'host_status' => 'pending_approval', // Level 1 Check: Awaits Admin CAC approval
+            'is_active' => true,
+            'email_verified_at' => null,
+        ]);
+
+        $verificationCode = '492018';
+
+        return response()->json([
+            'status' => 'unverified',
+            'requires_verification' => true,
+            'message' => 'Host account created! Please enter the 6-digit verification code sent to ' . $user->email,
             'data' => [
                 'email' => $user->email,
                 'demo_verification_code' => $verificationCode,
@@ -319,6 +360,61 @@ class AuthController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Logged out successfully'
+        ]);
+    }
+
+    /**
+     * GET /api/v1/admin/hosts
+     */
+    public function getAdminHosts()
+    {
+        $hosts = User::where('role', 'host')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $hosts
+        ]);
+    }
+
+    /**
+     * PATCH /api/v1/admin/hosts/{id}/approval
+     */
+    public function updateHostApproval(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'action' => 'required|in:approve,reject',
+            'rejection_reason' => 'nullable|string',
+        ]);
+
+        $host = User::where('id', $id)->where('role', 'host')->first();
+
+        if (!$host) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Host account not found.'
+            ], 404);
+        }
+
+        if ($validated['action'] === 'approve') {
+            $host->update([
+                'host_status' => 'approved',
+                'rejection_reason' => null
+            ]);
+            $msg = 'Host account (' . ($host->business_name ?? $host->name) . ') approved successfully. Level 1 CAC check cleared!';
+        } else {
+            $host->update([
+                'host_status' => 'rejected',
+                'rejection_reason' => $validated['rejection_reason'] ?? 'CAC business credentials could not be verified.'
+            ]);
+            $msg = 'Host account application rejected.';
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => $msg,
+            'data' => $host
         ]);
     }
 }

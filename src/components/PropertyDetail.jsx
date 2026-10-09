@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import MapView from './MapView';
-import { 
-  ArrowLeft, 
-  Star, 
-  Share2, 
-  Heart, 
-  ShieldCheck, 
-  MapPin, 
-  CheckCircle2, 
-  Building2, 
-  Zap, 
-  Droplets, 
-  Wind, 
-  Wifi, 
-  Shield, 
-  Coffee, 
-  Waves, 
-  Calendar, 
-  Users, 
-  Grid, 
+import {
+  ArrowLeft,
+  Star,
+  Share2,
+  Heart,
+  ShieldCheck,
+  MapPin,
+  CheckCircle2,
+  Building2,
+  Zap,
+  Droplets,
+  Wind,
+  Wifi,
+  Shield,
+  Coffee,
+  Waves,
+  Calendar,
+  Users,
+  Grid,
   X,
   ChevronRight,
   Lock,
@@ -94,7 +94,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-in fade-in duration-300">
-      
+
       {/* Back Button & Action Bar */}
       <div className="flex items-center justify-between">
         <button
@@ -110,7 +110,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
             <Share2 className="w-4 h-4 text-slate-500" />
             <span className="hidden sm:inline">Share</span>
           </button>
-          <button 
+          <button
             onClick={() => setIsSaved(!isSaved)}
             className="flex items-center gap-1.5 text-xs font-bold text-slate-700 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors"
           >
@@ -148,12 +148,12 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
       {/* Airbnb 5-Photo Hero Grid */}
       <div className="relative rounded-3xl overflow-hidden border border-slate-200/80 shadow-sm bg-slate-100">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 aspect-[16/9] md:aspect-[21/9]">
-          
+
           {/* Main Large Hero Image */}
           <div className="md:col-span-2 h-full overflow-hidden">
-            <img 
-              src={images[0]} 
-              alt={property.name} 
+            <img
+              src={images[0]}
+              alt={property.name}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
               onClick={() => setIsGalleryOpen(true)}
             />
@@ -163,9 +163,9 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
           <div className="hidden md:grid md:col-span-2 grid-cols-2 gap-2 h-full">
             {images.slice(1, 5).map((imgUrl, idx) => (
               <div key={idx} className="h-full overflow-hidden">
-                <img 
-                  src={imgUrl} 
-                  alt={`${property.name} ${idx + 2}`} 
+                <img
+                  src={imgUrl}
+                  alt={`${property.name} ${idx + 2}`}
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
                   onClick={() => setIsGalleryOpen(true)}
                 />
@@ -187,10 +187,10 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
 
       {/* Main Content Layout: Left Details + Sticky Right Booking Widget */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-4">
-        
+
         {/* Left Column: Details & Verification */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* Host Info Box */}
           <div className="flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm">
             <div className="space-y-1">
@@ -213,9 +213,6 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
                 <ShieldCheck className="w-5 h-5 text-tafiya-orange" />
                 <h3 className="text-sm font-extrabold text-white">Anti-Fraud Verification Clearance</h3>
               </div>
-              <span className="text-[10px] font-bold text-tafiya-gold bg-tafiya-gold/10 px-2.5 py-0.5 rounded-full border border-tafiya-gold/20">
-                Tafiya Regional Clearance
-              </span>
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
@@ -249,7 +246,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
           {/* Room Tiers Selection */}
           <div className="space-y-4">
             <h3 className="text-base font-extrabold text-slate-900">Select Available Room Tier</h3>
-            
+
             <div className="space-y-3">
               {property.rooms.map((room) => {
                 const isSelected = selectedRoom?.id === room.id;
@@ -257,11 +254,10 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
                   <div
                     key={room.id}
                     onClick={() => setSelectedRoom(room)}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'border-tafiya-blue bg-tafiya-blue-50/50 ring-2 ring-tafiya-blue/20 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
+                    className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${isSelected
+                      ? 'border-tafiya-blue bg-tafiya-blue-50/50 ring-2 ring-tafiya-blue/20 shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
                   >
                     <div className="space-y-1">
                       <h4 className="text-xs font-extrabold text-slate-900">{room.name}</h4>
@@ -283,7 +279,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
           {/* Property Amenities */}
           <div className="space-y-4 pt-4 border-t border-slate-200">
             <h3 className="text-base font-extrabold text-slate-900">Verified Amenities</h3>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs font-semibold text-slate-700">
               {property.amenities.map((amenity) => (
                 <div key={amenity} className="flex items-center gap-2.5 p-3 rounded-2xl bg-white border border-slate-200/80">
@@ -299,7 +295,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
         {/* Right Column: Sticky Airbnb Booking Box */}
         <div className="lg:col-span-1">
           <div className="sticky top-28 bg-white rounded-3xl p-6 border border-slate-200 shadow-airbnb space-y-6">
-            
+
             {/* Price Header */}
             <div className="flex items-baseline justify-between">
               <div>
@@ -351,14 +347,14 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
                   <span className="text-xs font-bold text-slate-800">{guestCount} Guest(s)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
                     className="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-slate-100"
                   >
                     -
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setGuestCount(guestCount + 1)}
                     className="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-slate-100"
@@ -379,7 +375,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
                 <span>Platform Escrow Protection Fee (12.5%)</span>
                 <span className="font-bold text-slate-900">₦{platformFee.toLocaleString()}</span>
               </div>
-              
+
               <div className="h-[1px] bg-slate-200 my-2"></div>
 
               <div className="flex justify-between text-sm font-extrabold text-slate-900">
@@ -394,7 +390,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
               className="w-full py-4 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white font-extrabold text-xs rounded-2xl shadow-lg hover:shadow-tafiya-blue/30 transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
             >
               <Lock className="w-4 h-4 text-tafiya-gold" />
-              <span>Reserve & Pay via Monnify / Paystack</span>
+              <span>Proceed</span>
             </button>
 
             <p className="text-[11px] text-center text-slate-400">
@@ -421,10 +417,10 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 my-6 max-w-6xl mx-auto">
             {images.map((img, idx) => (
-              <img 
-                key={idx} 
-                src={img} 
-                alt={`Gallery ${idx + 1}`} 
+              <img
+                key={idx}
+                src={img}
+                alt={`Gallery ${idx + 1}`}
                 className="w-full h-64 object-cover rounded-2xl border border-white/10 shadow-lg"
               />
             ))}

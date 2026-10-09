@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Lock, 
-  Mail, 
-  Phone, 
-  User, 
-  ShieldCheck, 
-  Building2, 
-  Eye, 
-  EyeOff, 
-  CheckCircle2, 
+import {
+  X,
+  Lock,
+  Mail,
+  Phone,
+  User,
+  ShieldCheck,
+  Building2,
+  Eye,
+  EyeOff,
+  CheckCircle2,
   ArrowRight,
   Sparkles,
   KeyRound,
@@ -44,6 +44,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   const [signUpPassword, setSignUpPassword] = useState('');
   const [signUpRole, setSignUpRole] = useState('guest');
 
+  // Dedicated Host CAC State
+  const [hostBusinessName, setHostBusinessName] = useState('');
+  const [hostCacNumber, setHostCacNumber] = useState('');
+  const [hostTinNumber, setHostTinNumber] = useState('');
+
   // Forgot Password Wizard State (1: Request, 2: OTP, 3: New Password, 4: Success)
   const [forgotStep, setForgotStep] = useState(1);
   const [forgotEmailOrPhone, setForgotEmailOrPhone] = useState('');
@@ -54,6 +59,18 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [verifyCode, setVerifyCode] = useState(['4', '9', '2', '0', '1', '8']);
 
+  // Dynamically inject Google Identity Services SDK
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleGoogleAuth = async () => {
@@ -61,41 +78,82 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
     setErrorMessage('');
 
     try {
-      const googlePayload = {
-        name: signUpName.trim() || 'Musa Danjuma (Google User)',
-        email: signUpEmail.trim() || 'musa.google@example.com',
-        google_id: 'goog_' + Date.now(),
-        role: signUpRole || 'guest',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
-      };
-
-      const response = await fetch('/api/v1/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(googlePayload)
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.status === 'success' && data.data?.user) {
-        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
-        onClose();
-      } else {
-        setErrorMessage(data.message || 'Google authentication failed');
+      // Fetch Google Client ID from backend setting
+      const settingsRes = await fetch('/api/v1/settings/payment-gateway');
+      let googleClientId = '';
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        googleClientId = settingsData.data?.google_client_id || '';
       }
+
+      const isValidClientId = googleClientId &&
+        !googleClientId.includes('your_google_client_id_here') &&
+        googleClientId.endsWith('.apps.googleusercontent.com');
+
+      if (isValidClientId && window.google?.accounts?.oauth2) {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse) => {
+            if (tokenResponse.error) {
+              setErrorMessage('Google Sign-In canceled or failed: ' + tokenResponse.error);
+              setIsLoading(false);
+              return;
+            }
+
+            try {
+              // Fetch real user profile from Google UserInfo API
+              const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+              });
+              const googleProfile = await profileRes.json();
+
+              if (!googleProfile.email) {
+                throw new Error('Unable to retrieve user email from Google account');
+              }
+
+              // Store real Google account in Laravel database
+              const response = await fetch('/api/v1/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                  name: googleProfile.name || googleProfile.email.split('@')[0],
+                  email: googleProfile.email,
+                  google_id: googleProfile.sub,
+                  avatar: googleProfile.picture || null,
+                  role: signUpRole || 'guest'
+                })
+              });
+
+              const data = await response.json();
+              if (response.ok && data.status === 'success' && data.data?.user) {
+                if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
+                onClose();
+              } else {
+                setErrorMessage(data.message || 'Failed to authenticate Google user');
+              }
+            } catch (err) {
+              setErrorMessage(err.message || 'Error processing Google profile data');
+            } finally {
+              setIsLoading(false);
+            }
+          }
+        });
+
+        tokenClient.requestAccessToken();
+        return;
+      }
+
+      // If Google Client ID is not configured yet or still placeholder
+      if (!isValidClientId) {
+        setErrorMessage('Google Client ID is currently set to placeholder in .env. Please add your actual GOOGLE_CLIENT_ID (ending in .apps.googleusercontent.com) in your .env or Admin Panel Settings.');
+        setIsLoading(false);
+        return;
+      }
+
     } catch (err) {
       console.error('Google Auth Error:', err);
-      // Fallback demo simulation
-      const mockUser = {
-        id: Date.now(),
-        name: signUpName.trim() || 'Musa Danjuma (Google User)',
-        email: signUpEmail.trim() || 'musa.google@example.com',
-        role: signUpRole || 'guest',
-        google_id: 'goog_demo_123'
-      };
-      if (onAuthSuccess) onAuthSuccess(mockUser, 'google_sanctum_token_' + Date.now());
-      onClose();
-    } finally {
+      setErrorMessage('Google Authentication Error. Please check your network connection.');
       setIsLoading(false);
     }
   };
@@ -147,7 +205,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
           email: signUpEmail,
           phone: signUpPhone,
           password: signUpPassword,
-          role: signUpRole
         })
       });
 
@@ -159,6 +216,43 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
         setMode('verify');
       } else {
         setErrorMessage(data.message || 'Registration failed');
+      }
+    } catch (err) {
+      setErrorMessage('Network error connecting to backend server');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleHostSignUpSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      const response = await fetch('/api/v1/auth/register-host', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          name: signUpName,
+          email: signUpEmail,
+          phone: signUpPhone,
+          password: signUpPassword,
+          business_name: hostBusinessName,
+          cac_number: hostCacNumber,
+          tin_number: hostTinNumber
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && (data.status === 'success' || data.requires_verification || data.status === 'unverified')) {
+        setUnverifiedEmail(signUpEmail || data.data?.email);
+        setSuccessMessage(data.message || 'Host application submitted! Enter the 6-digit code sent to your email.');
+        setMode('verify');
+      } else {
+        setErrorMessage(data.message || 'Host registration failed');
       }
     } catch (err) {
       setErrorMessage('Network error connecting to backend server');
@@ -285,7 +379,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-2">
@@ -294,7 +388,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
             </div>
             <span className="text-sm font-extrabold text-slate-900">
               {mode === 'login' && 'Log In to FindDestination'}
-              {mode === 'signup' && 'Create Your Account'}
+              {mode === 'signup' && 'Create Guest Account'}
+              {mode === 'host_signup' && 'Create Host Account'}
               {mode === 'forgot' && 'Password Recovery'}
               {mode === 'verify' && 'Verify Email Address'}
             </span>
@@ -312,26 +407,24 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
           <div className="flex border-b border-slate-100 bg-slate-50/60 p-1">
             <button
               onClick={() => { setMode('login'); setErrorMessage(''); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-2xl transition-all ${
-                mode === 'login' ? 'bg-white text-tafiya-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
+              className={`flex-1 py-2 text-xs font-bold rounded-2xl transition-all ${mode === 'login' ? 'bg-white text-tafiya-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
               Log In
             </button>
             <button
               onClick={() => { setMode('signup'); setErrorMessage(''); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-2xl transition-all ${
-                mode === 'signup' ? 'bg-white text-tafiya-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
+              className={`flex-1 py-2 text-xs font-bold rounded-2xl transition-all ${mode === 'signup' || mode === 'host_signup' ? 'bg-white text-tafiya-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
-              Sign Up
+              {mode === 'host_signup' ? 'Host Sign Up' : 'Guest Sign Up'}
             </button>
           </div>
         )}
 
         {/* Modal Body */}
         <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          
+
           {/* Error / Success Notifications */}
           {errorMessage && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-2xl flex items-center gap-2">
@@ -428,7 +521,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
             </div>
           )}
 
-          {/* 2. SIGN UP VIEW */}
+          {/* 2. GUEST SIGN UP VIEW */}
           {mode === 'signup' && (
             <div className="space-y-4">
               <button
@@ -450,84 +543,206 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
                 <div className="border-t border-slate-200 w-full"></div>
                 <span className="bg-white px-3 text-[10px] uppercase tracking-wider font-extrabold text-slate-400 absolute">or</span>
               </div>
-            <form onSubmit={handleSignUpSubmit} className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Musa Danjuma"
-                  value={signUpName}
-                  onChange={(e) => setSignUpName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+              <form onSubmit={handleSignUpSubmit} className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Email</label>
-                  <input
-                    type="email"
-                    placeholder="musa@example.com"
-                    value={signUpEmail}
-                    onChange={(e) => setSignUpEmail(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Phone (+234)</label>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Full Name</label>
                   <input
                     type="text"
-                    placeholder="+2348021112233"
-                    value={signUpPhone}
-                    onChange={(e) => setSignUpPhone(e.target.value)}
+                    placeholder="e.g. Musa Danjuma"
+                    value={signUpName}
+                    onChange={(e) => setSignUpName(e.target.value)}
                     className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
                     required
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Select Account Type / Role</label>
-                <select
-                  value={signUpRole}
-                  onChange={(e) => setSignUpRole(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl bg-white font-semibold"
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Email</label>
+                    <input
+                      type="email"
+                      placeholder="musa@example.com"
+                      value={signUpEmail}
+                      onChange={(e) => setSignUpEmail(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Phone (+234)</label>
+                    <input
+                      type="text"
+                      placeholder="+2348021112233"
+                      value={signUpPhone}
+                      onChange={(e) => setSignUpPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={signUpPassword}
+                    onChange={(e) => setSignUpPassword(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-50 mt-2"
                 >
-                  <option value="guest">Guest / Traveler (Book Verified Stays)</option>
-                  <option value="host">Host / Property Manager (List Properties)</option>
-                  <option value="agent">Field Verification Agent (Location Audits)</option>
-                </select>
+                  {isLoading ? 'Creating Account...' : 'Create Guest Account'}
+                </button>
+
+                <div className="p-3 bg-tafiya-blue-50/70 border border-tafiya-blue-100 rounded-2xl flex items-center justify-between gap-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-tafiya-blue shrink-0" />
+                    <span className="text-xs text-slate-700 font-medium">Want to list your property?</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('host_signup'); setErrorMessage(''); }}
+                    className="text-xs font-bold text-tafiya-blue hover:underline shrink-0 cursor-pointer"
+                  >
+                    Become a Host &rarr;
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* 2.5 DEDICATED HOST SIGN UP VIEW */}
+          {mode === 'host_signup' && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-900 text-white rounded-2xl space-y-1">
+                <div className="flex items-center gap-2 text-xs font-bold text-tafiya-orange">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>How this works!</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  After signing up, you will be redirected to the verification dashboard, after successful CAC verification, you can now list your properties.
+                </p>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={signUpPassword}
-                  onChange={(e) => setSignUpPassword(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
-                  required
-                />
-              </div>
+              <form onSubmit={handleHostSignUpSubmit} className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1" Succes>Host Full Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Amina Bello"
+                    value={signUpName}
+                    onChange={(e) => setSignUpName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                    required
+                  />
+                </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-50 mt-2"
-              >
-                {isLoading ? 'Creating Account...' : 'Create Account & Auto Log In'}
-              </button>
-            </form>
-          </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Email</label>
+                    <input
+                      type="email"
+                      placeholder="amina@example.com"
+                      value={signUpEmail}
+                      onChange={(e) => setSignUpEmail(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Phone (+234)</label>
+                    <input
+                      type="text"
+                      placeholder="+2348030000000"
+                      value={signUpPhone}
+                      onChange={(e) => setSignUpPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Registered Business / Enterprise Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Arewa Luxury Apartments & Suites Ltd"
+                    value={hostBusinessName}
+                    onChange={(e) => setHostBusinessName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">CAC Registration No.</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. RC-1928374 or BN-482910"
+                      value={hostCacNumber}
+                      onChange={(e) => setHostCacNumber(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">TIN Number (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 29384756-0001"
+                      value={hostTinNumber}
+                      onChange={(e) => setHostTinNumber(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Account Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={signUpPassword}
+                    onChange={(e) => setSignUpPassword(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-tafiya-blue font-semibold"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-3 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-50 mt-2"
+                >
+                  {isLoading ? 'Submitting Application...' : 'Register as Host & Submit CAC Details'}
+                </button>
+
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-2 mt-2">
+                  <span className="text-xs text-slate-600 font-medium">Looking to book stays instead?</span>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('signup'); setErrorMessage(''); }}
+                    className="text-xs font-bold text-tafiya-blue hover:underline shrink-0 cursor-pointer"
+                  >
+                    Register as Guest &rarr;
+                  </button>
+                </div>
+              </form>
+            </div>
           )}
 
           {/* 3. FORGOT PASSWORD WIZARD */}
           {mode === 'forgot' && (
             <div className="space-y-4">
-              
+
               {/* Step 1: Request OTP */}
               {forgotStep === 1 && (
                 <form onSubmit={handleForgotRequest} className="space-y-4">

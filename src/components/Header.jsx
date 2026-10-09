@@ -97,18 +97,6 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
               <span>Track Booking</span>
             </button>
 
-            <button
-              onClick={() => {
-                if (!currentUser) {
-                  onOpenAuthModal && onOpenAuthModal('signup');
-                }
-              }}
-              className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/80 px-3.5 py-2 rounded-full transition-all duration-200 border border-slate-200/50 cursor-pointer"
-            >
-              <Building2 className="w-4 h-4 text-tafiya-orange" />
-              <span>Switch to Host</span>
-            </button>
-
             <button className="hidden sm:flex items-center justify-center w-9 h-9 rounded-full text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
               <Globe className="w-4 h-4" />
             </button>
@@ -160,7 +148,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                         className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-tafiya-blue hover:bg-slate-50 transition-colors cursor-pointer"
                       >
                         <Package className="w-4 h-4 text-tafiya-blue" />
-                        <span>Track Order / Find Booking</span>
+                        <span>Track Order</span>
                       </button>
 
                       {currentUser ? (
@@ -225,7 +213,6 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                             className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
                           >
                             <span>Sign up</span>
-                            <span className="text-[10px] bg-tafiya-blue-50 text-tafiya-blue font-bold px-2 py-0.5 rounded-full">New</span>
                           </button>
                           <button
                             onClick={() => {
@@ -247,7 +234,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                         <button
                           onClick={() => {
                             setIsMenuOpen(false);
-                            onOpenAuthModal && onOpenAuthModal('signup');
+                            onOpenAuthModal && onOpenAuthModal('host_signup');
                           }}
                           className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                         >

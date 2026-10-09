@@ -56,7 +56,7 @@ export default function ListingCard({ property, onSelectProperty }) {
   return (
     <div 
       onClick={() => onSelectProperty(property)}
-      className="group cursor-pointer flex flex-col space-y-3"
+      className="group cursor-pointer flex flex-col space-y-3 active:scale-[0.98] transition-all duration-200"
     >
       
       {/* Photo Carousel Container */}

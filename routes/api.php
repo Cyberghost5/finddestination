@@ -29,12 +29,17 @@ Route::prefix('v1')->group(function () {
 
     // Authentication Flow
     Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/register-host', [AuthController::class, 'registerHost']);
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/google', [AuthController::class, 'googleAuth']);
     Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
     Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+
+    // Admin Level 1 Host Approval Queue
+    Route::get('/admin/hosts', [AuthController::class, 'getAdminHosts']);
+    Route::patch('/admin/hosts/{id}/approval', [AuthController::class, 'updateHostApproval']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);

@@ -72,9 +72,6 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-extrabold text-white">FindDestination<span className="text-tafiya-orange">.com.ng</span></span>
-                <span className="px-2.5 py-0.5 rounded-full bg-tafiya-blue/20 text-tafiya-blue text-[10px] font-bold border border-tafiya-blue/30">
-                  Northern Nigeria Marketplace
-                </span>
               </div>
               <p className="text-slate-400 text-xs mt-1 max-w-xl">
                 The trusted digital accommodation portal for Northern Nigeria. Verified property documents, on-site GPS agent audits, and 100% escrow backed payment security.
@@ -84,7 +81,7 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
 
           <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => onOpenAuthModal && onOpenAuthModal('signup')}
+              onClick={() => onOpenAuthModal && onOpenAuthModal('host_signup')}
               className="px-5 py-2.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
             >
               <Building2 className="w-4 h-4" />
@@ -169,7 +166,7 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold text-white uppercase tracking-wider">Hosting on FindDestination</h4>
             <ul className="space-y-2 text-slate-400 text-xs">
-              <li><button onClick={() => onOpenAuthModal && onOpenAuthModal('signup')} className="hover:text-white transition-colors text-left cursor-pointer">List Your Property</button></li>
+              <li><button onClick={() => onOpenAuthModal && onOpenAuthModal('host_signup')} className="hover:text-white transition-colors text-left cursor-pointer">List Your Property</button></li>
               <li><button onClick={(e) => handleInfoClick(e, 'host-cover')} className="hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer text-left"><Award className="w-3.5 h-3.5 text-tafiya-gold" /> FindDestination Cover for Hosts</button></li>
               <li><button onClick={(e) => handleInfoClick(e, 'help')} className="hover:text-white transition-colors cursor-pointer text-left">Host Resource Center</button></li>
               <li><button onClick={(e) => handleInfoClick(e, 'verification')} className="hover:text-white transition-colors cursor-pointer text-left">CAC Document Verification</button></li>

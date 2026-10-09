@@ -15,35 +15,54 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Create Core Personas
-        $admin = User::firstOrCreate(['email' => 'admin@tafiya.ng'], [
-            'name' => 'FindDestination Admin',
+        $admin = User::updateOrCreate(['email' => 'admin@tafiya.ng'], [
+            'name' => 'Super Admin Console',
             'phone' => '+2348000000001',
             'password' => Hash::make('password123'),
             'role' => 'admin',
+            'host_status' => 'approved',
             'email_verified_at' => now(),
         ]);
 
-        $agent = User::firstOrCreate(['email' => 'agent@tafiya.ng'], [
+        $agent = User::updateOrCreate(['email' => 'agent@tafiya.ng'], [
             'name' => 'Usman Field Agent',
             'phone' => '+2348000000002',
             'password' => Hash::make('password123'),
             'role' => 'agent',
+            'host_status' => 'approved',
             'email_verified_at' => now(),
         ]);
 
-        $host = User::firstOrCreate(['email' => 'ibrahim@tafiya.ng'], [
+        $approvedHost = User::updateOrCreate(['email' => 'ibrahim@tafiya.ng'], [
             'name' => 'Alhaji Ibrahim Bello',
             'phone' => '+2348021112233',
             'password' => Hash::make('password123'),
             'role' => 'host',
+            'business_name' => 'Arewa Luxury Suites & Apartments Ltd',
+            'cac_number' => 'RC-1928374',
+            'tin_number' => '29384756-0001',
+            'host_status' => 'approved',
             'email_verified_at' => now(),
         ]);
 
-        $guest = User::firstOrCreate(['email' => 'musa@example.com'], [
+        $pendingHost = User::updateOrCreate(['email' => 'amina@example.com'], [
+            'name' => 'Amina Bello',
+            'phone' => '+2348030000000',
+            'password' => Hash::make('password123'),
+            'role' => 'host',
+            'business_name' => 'Bello & Sons Serviced Villas Ltd',
+            'cac_number' => 'BN-482910',
+            'tin_number' => '84920184-0002',
+            'host_status' => 'pending_approval',
+            'email_verified_at' => now(),
+        ]);
+
+        $guest = User::updateOrCreate(['email' => 'musa@example.com'], [
             'name' => 'Musa Danjuma',
             'phone' => '+2348039998877',
             'password' => Hash::make('password123'),
             'role' => 'guest',
+            'host_status' => 'approved',
             'email_verified_at' => now(),
         ]);
 

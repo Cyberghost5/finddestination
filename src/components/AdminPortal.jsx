@@ -17,24 +17,56 @@ import {
   AlertCircle,
   CreditCard,
   Settings,
-  Save
+  Save,
+  UserCheck,
+  AlertTriangle,
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 
-export default function AdminPortal({ properties, onUpdateVerificationStatus }) {
-  const [activeTab, setActiveTab] = useState('verification'); // 'verification', 'escrow', or 'payment_settings'
+export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish }) {
+  const [activeTab, setActiveTab] = useState('host_approvals'); // 'host_approvals', 'verification', 'escrow', or 'payment_settings'
   const [payoutLogs, setPayoutLogs] = useState([]);
 
-  // Payment Gateway Settings State
+  // Host Level 1 Approval Queue State
+  const [hosts, setHosts] = useState([]);
+  const [isLoadingHosts, setIsLoadingHosts] = useState(false);
+  const [hostActionMsg, setHostActionMsg] = useState('');
+  const [hostActionError, setHostActionError] = useState('');
+  const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [rejectingHostId, setRejectingHostId] = useState(null);
+
+  // Payment Gateway & Auth Settings State
   const [activeGateway, setActiveGateway] = useState('paystack');
   const [paystackPublicKey, setPaystackPublicKey] = useState('pk_test_tafiya_paystack_public_key_2026');
   const [monnifyApiKey, setMonnifyApiKey] = useState('MK_TEST_TAFIYA_MONNIFY_API_KEY');
   const [monnifyContractCode, setMonnifyContractCode] = useState('8920184920');
+  const [googleClientId, setGoogleClientId] = useState('');
   const [isSavingGateway, setIsSavingGateway] = useState(false);
   const [gatewaySaveMsg, setGatewaySaveMsg] = useState('');
   const [gatewaySaveError, setGatewaySaveError] = useState('');
 
-  // Fetch Payment Gateway Settings on mount
+  // Fetch Host Applications
+  const fetchHosts = async () => {
+    setIsLoadingHosts(true);
+    try {
+      const response = await fetch('/api/v1/admin/hosts');
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.status === 'success' && resData.data) {
+          setHosts(resData.data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch admin hosts:', err);
+    } finally {
+      setIsLoadingHosts(false);
+    }
+  };
+
   useEffect(() => {
+    fetchHosts();
+
     const fetchSettings = async () => {
       try {
         const response = await fetch('/api/v1/settings/payment-gateway');
@@ -45,14 +77,52 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
             setPaystackPublicKey(resData.data.paystack_public_key || '');
             setMonnifyApiKey(resData.data.monnify_api_key || '');
             setMonnifyContractCode(resData.data.monnify_contract_code || '');
+            setGoogleClientId(resData.data.google_client_id || '');
           }
         }
       } catch (err) {
-        console.error('Failed to fetch payment gateway settings:', err);
+        console.error('Failed to fetch platform settings:', err);
       }
     };
     fetchSettings();
   }, []);
+
+  const handleUpdateHostApproval = async (hostId, newStatus, reason = '') => {
+    setIsLoadingHosts(true);
+    setHostActionMsg('');
+    setHostActionError('');
+
+    try {
+      const token = localStorage.getItem('tafiya_token');
+      const response = await fetch(`/api/v1/admin/hosts/${hostId}/approval`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          host_status: newStatus,
+          rejection_reason: reason
+        })
+      });
+
+      const resData = await response.json();
+
+      if (response.ok && resData.status === 'success') {
+        setHostActionMsg(`Host application ${newStatus === 'approved' ? 'APPROVED' : 'REJECTED'} successfully!`);
+        setRejectingHostId(null);
+        setRejectionReasonInput('');
+        fetchHosts();
+      } else {
+        setHostActionError(resData.message || 'Failed to update host approval status');
+      }
+    } catch (err) {
+      setHostActionError('Network error updating host approval');
+    } finally {
+      setIsLoadingHosts(false);
+    }
+  };
 
   const handleSavePaymentSettings = async (e) => {
     e.preventDefault();
@@ -73,21 +143,23 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
           active_gateway: activeGateway,
           paystack_public_key: paystackPublicKey,
           monnify_api_key: monnifyApiKey,
-          monnify_contract_code: monnifyContractCode
+          monnify_contract_code: monnifyContractCode,
+          google_client_id: googleClientId
         })
       });
 
       const resData = await response.json();
       if (response.ok && resData.status === 'success') {
-        setGatewaySaveMsg(`Payment gateway configuration saved! Active Gateway is now set to ${activeGateway.toUpperCase()}.`);
+        setGatewaySaveMsg(`Platform settings saved successfully!`);
         if (resData.data) {
           setActiveGateway(resData.data.active_gateway);
           setPaystackPublicKey(resData.data.paystack_public_key || '');
           setMonnifyApiKey(resData.data.monnify_api_key || '');
           setMonnifyContractCode(resData.data.monnify_contract_code || '');
+          setGoogleClientId(resData.data.google_client_id || '');
         }
       } else {
-        setGatewaySaveError(resData.message || 'Failed to update payment gateway settings.');
+        setGatewaySaveError(resData.message || 'Failed to update platform settings.');
       }
     } catch (err) {
       setGatewaySaveError('Error connecting to server. Please check your connection.');
@@ -100,6 +172,8 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
   const escrowTotal = 4850000;
   const platformFee = Math.round(escrowTotal * 0.125);
   const netHostPayout = escrowTotal - platformFee;
+
+  const pendingHostsCount = hosts.filter(h => h.host_status === 'pending_approval').length;
 
   const handleTriggerPayout = (hostName, amount) => {
     const newLog = {
@@ -124,24 +198,33 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black">Super Admin & Field Agent Portal</h1>
+              <h1 className="text-xl font-black">Super Admin & Verification Console</h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white">
-                Platform Verification Control
+                2-Level Verification Governance
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">Northern Nigeria Regional Anti-Fraud Queue & Escrow Settlement</p>
+            <p className="text-xs text-slate-400 mt-0.5">CAC Business Verification & Level 2 Property Publishing Control</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
           <Sparkles className="w-4 h-4 text-tafiya-gold" />
-          <span>PRD Section 6 Anti-Fraud Engine</span>
+          <span>Super Admin Authority</span>
         </div>
       </div>
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         
+        {/* Pending Level 1 Host Approvals */}
+        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Pending Host CAC Queue</span>
+          <div className="text-2xl font-black text-amber-600">{pendingHostsCount} Hosts</div>
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+            <Clock className="w-3 h-3 text-amber-600" /> Level 1 Check Required
+          </span>
+        </div>
+
         {/* Total Escrow */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Escrow Funds</span>
@@ -151,25 +234,18 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
           </span>
         </div>
 
-        {/* 12.5% Commission Retained */}
+        {/* Platform Fee */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Platform Fee Retained (12.5%)</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Platform Fee (12.5%)</span>
           <div className="text-2xl font-black text-tafiya-blue">₦{platformFee.toLocaleString()}</div>
           <span className="text-[11px] font-medium text-slate-500">FindDestination Revenue</span>
         </div>
 
-        {/* Net Host Payout Balance */}
+        {/* Total Listings */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Host Payable Balance</span>
-          <div className="text-2xl font-black text-tafiya-orange">₦{netHostPayout.toLocaleString()}</div>
-          <span className="text-[11px] font-medium text-slate-500">Scheduled Payouts</span>
-        </div>
-
-        {/* Pending Audits */}
-        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Verification Submissions</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Active Listings Audit</span>
           <div className="text-2xl font-black text-slate-900">{properties.length} Properties</div>
-          <span className="text-[11px] font-medium text-slate-500">Active Portfolio</span>
+          <span className="text-[11px] font-medium text-slate-500">Level 2 Verified Stays</span>
         </div>
 
       </div>
@@ -177,17 +253,39 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
       {/* Main Tab Controls */}
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-4 border-b border-slate-200">
+          
+          {/* TAB 1: Host CAC Approvals */}
+          <button
+            onClick={() => setActiveTab('host_approvals')}
+            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+              activeTab === 'host_approvals'
+                ? 'border-tafiya-blue text-tafiya-blue'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Host CAC Approvals (Level 1)</span>
+            {pendingHostsCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+                {pendingHostsCount}
+              </span>
+            )}
+          </button>
+
+          {/* TAB 2: Property Verification & Publishing */}
           <button
             onClick={() => setActiveTab('verification')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer ${
+            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'verification'
                 ? 'border-tafiya-blue text-tafiya-blue'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            Property Verification Queue (Tier 1 → Tier 2 → Tier 3)
+            <Building2 className="w-4 h-4" />
+            <span>Level 2 Property Audit & Publishing</span>
           </button>
 
+          {/* TAB 3: Escrow Settlement */}
           <button
             onClick={() => setActiveTab('escrow')}
             className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer ${
@@ -199,6 +297,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
             Escrow Settlement & Host Payouts API
           </button>
 
+          {/* TAB 4: Payment Gateway Settings */}
           <button
             onClick={() => setActiveTab('payment_settings')}
             className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
@@ -212,13 +311,181 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
           </button>
         </div>
 
-        {/* Verification Queue View */}
+        {/* VIEW 1: HOST CAC LEVEL 1 APPROVAL QUEUE */}
+        {activeTab === 'host_approvals' && (
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900">Level 1 Governance: Host CAC & Business Verification Queue</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Hosts must pass Super Admin CAC credential audit before accessing host workspace or uploading properties.
+                </p>
+              </div>
+
+              <button
+                onClick={fetchHosts}
+                disabled={isLoadingHosts}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingHosts ? 'animate-spin' : ''}`} />
+                <span>Refresh Queue</span>
+              </button>
+            </div>
+
+            {/* Status Notifications */}
+            {hostActionMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{hostActionMsg}</span>
+              </div>
+            )}
+
+            {hostActionError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{hostActionError}</span>
+              </div>
+            )}
+
+            {/* Host Applications Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th className="p-4">Host / Applicant</th>
+                    <th className="p-4">Corporate Business Details</th>
+                    <th className="p-4">CAC Reg Number</th>
+                    <th className="p-4">TIN Number</th>
+                    <th className="p-4">Level 1 Status</th>
+                    <th className="p-4 text-right">Super Admin Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {hosts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-500 text-xs">
+                        No host applications currently in queue.
+                      </td>
+                    </tr>
+                  ) : (
+                    hosts.map((host) => (
+                      <tr key={host.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="p-4">
+                          <span className="font-bold text-slate-900 block">{host.name}</span>
+                          <span className="text-[11px] text-slate-500">{host.email}</span>
+                          <span className="text-[10px] text-slate-400 block">{host.phone}</span>
+                        </td>
+
+                        <td className="p-4 font-semibold text-slate-800">
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="w-4 h-4 text-tafiya-blue shrink-0" />
+                            <span>{host.business_name || 'N/A'}</span>
+                          </div>
+                        </td>
+
+                        <td className="p-4 font-mono font-bold text-slate-900">
+                          {host.cac_number ? (
+                            <span className="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                              {host.cac_number}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-normal italic">Not Provided</span>
+                          )}
+                        </td>
+
+                        <td className="p-4 font-mono text-xs text-slate-600">
+                          {host.tin_number || 'N/A'}
+                        </td>
+
+                        <td className="p-4">
+                          {host.host_status === 'pending_approval' && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 flex items-center gap-1 inline-flex">
+                              <Clock className="w-3 h-3 text-amber-600" /> Pending Review
+                            </span>
+                          )}
+                          {host.host_status === 'approved' && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 inline-flex">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Level 1 Approved
+                            </span>
+                          )}
+                          {host.host_status === 'rejected' && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-800 border border-red-200 flex items-center gap-1 inline-flex">
+                              <AlertTriangle className="w-3 h-3 text-red-600" /> Audit Rejected
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {host.host_status !== 'approved' && (
+                              <button
+                                onClick={() => handleUpdateHostApproval(host.id, 'approved')}
+                                disabled={isLoadingHosts}
+                                className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-[11px] font-bold hover:bg-emerald-700 transition-colors shadow-sm cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                              >
+                                <Check className="w-3.5 h-3.5" /> Approve CAC
+                              </button>
+                            )}
+
+                            {host.host_status !== 'rejected' && (
+                              <button
+                                onClick={() => setRejectingHostId(rejectingHostId === host.id ? null : host.id)}
+                                disabled={isLoadingHosts}
+                                className="px-3.5 py-1.5 bg-slate-100 hover:bg-red-50 text-red-600 rounded-xl text-[11px] font-bold transition-colors cursor-pointer border border-slate-200 flex items-center gap-1"
+                              >
+                                <X className="w-3.5 h-3.5" /> Reject
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Rejection Modal Inline */}
+                          {rejectingHostId === host.id && (
+                            <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-left space-y-2 animate-in fade-in duration-200">
+                              <label className="text-[10px] font-extrabold text-red-900 block uppercase">
+                                State Rejection Reason for Host
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. CAC Registration Number not found on corporate registry."
+                                value={rejectionReasonInput}
+                                onChange={(e) => setRejectionReasonInput(e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-xs border border-red-200 rounded-lg bg-white focus:outline-none font-semibold text-slate-800"
+                              />
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setRejectingHostId(null)}
+                                  className="px-2.5 py-1 text-[10px] font-bold text-slate-600 hover:text-slate-800"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateHostApproval(host.id, 'rejected', rejectionReasonInput)}
+                                  className="px-3 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg shadow-sm hover:bg-red-700"
+                                >
+                                  Confirm Rejection
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 2: LEVEL 2 PROPERTY AUDIT & PUBLISHING */}
         {activeTab === 'verification' && (
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900">Anti-Fraud Property Verification Pipeline</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Review CAC documents and log Field Agent on-site location audits.</p>
+                <h3 className="text-sm font-extrabold text-slate-900">Level 2 Governance: Property Verification & Publishing Control</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Review property details, award Tier 2/3 verification badges, and approve live publishing.</p>
               </div>
             </div>
 
@@ -240,11 +507,11 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
                         <MapPin className="w-3 h-3 text-tafiya-blue" />
                         <span>{prop.address}, {prop.city} ({prop.state})</span>
                       </p>
-                      <p className="text-[11px] text-slate-400">Host: {prop.host?.name || 'Local Provider'}</p>
+                      <p className="text-[11px] text-slate-400">Host: {prop.host?.name || 'Approved Host Provider'}</p>
                     </div>
                   </div>
 
-                  {/* Tier Action Controls */}
+                  {/* Tier & Publishing Action Controls */}
                   <div className="flex flex-wrap items-center gap-2">
                     {prop.verification_tier === 'tier_1_docs' && (
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
@@ -261,8 +528,22 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
                     {prop.verification_tier === 'tier_3_certified' && (
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span>Tier 3 Verified Badge</span>
+                        <span>Tier 3 Certified</span>
                       </span>
+                    )}
+
+                    {/* Level 2 Publishing Toggle */}
+                    {onTogglePublish && (
+                      <button
+                        onClick={() => onTogglePublish(prop.id)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer ${
+                          prop.is_published 
+                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {prop.is_published ? 'Published Live' : 'Publish to Public Site'}
+                      </button>
                     )}
 
                     {/* Action buttons to upgrade tiers */}
@@ -281,7 +562,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
                         className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] font-bold hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-1"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Award Tier 3 Badge</span>
+                        <span>Award Tier 3</span>
                       </button>
                     )}
                   </div>
@@ -292,7 +573,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
           </div>
         )}
 
-        {/* Escrow Payout Monitoring View */}
+        {/* VIEW 3: ESCROW PAYOUT MONITORING */}
         {activeTab === 'escrow' && (
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-6">
             <div className="flex items-center justify-between">
@@ -350,7 +631,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
           </div>
         )}
 
-        {/* Payment Gateway Configuration View */}
+        {/* VIEW 4: PAYMENT GATEWAY CONFIGURATION */}
         {activeTab === 'payment_settings' && (
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-6">
             <div>
@@ -462,7 +743,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
                   2. Gateway API Credentials & Public Keys
                 </label>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {/* Paystack Public Key */}
                   <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -505,6 +786,22 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus }) 
                         className="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-tafiya-blue text-slate-800"
                       />
                     </div>
+                  </div>
+
+                  {/* Google OAuth Client ID */}
+                  <div className="space-y-1.5 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-tafiya-blue" />
+                      <span>Google OAuth Client ID</span>
+                    </label>
+                    <input 
+                      type="text"
+                      value={googleClientId}
+                      onChange={(e) => setGoogleClientId(e.target.value)}
+                      placeholder="...apps.googleusercontent.com"
+                      className="w-full px-3 py-2 text-xs font-mono border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-tafiya-blue text-slate-800"
+                    />
+                    <p className="text-[10px] text-slate-400">Google Cloud Console OAuth 2.0 Web Client ID for live login popup.</p>
                   </div>
                 </div>
               </div>

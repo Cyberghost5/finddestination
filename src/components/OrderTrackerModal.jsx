@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Package, 
-  Calendar, 
-  MapPin, 
-  CheckCircle2, 
-  Clock, 
-  ShieldCheck, 
-  X, 
-  QrCode, 
-  Building2, 
-  Phone, 
-  User, 
+import {
+  Search,
+  Package,
+  Calendar,
+  MapPin,
+  CheckCircle2,
+  Clock,
+  ShieldCheck,
+  X,
+  QrCode,
+  Building2,
+  Phone,
+  User,
   ArrowRight,
   ExternalLink,
   Receipt,
@@ -160,7 +160,7 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 my-8">
-        
+
         {/* Header Modal Banner */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-tafiya-blue p-6 text-white relative">
           <button
@@ -186,26 +186,24 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
           <div className="flex items-center gap-2 mt-6 pt-4 border-t border-white/10">
             <button
               onClick={() => setActiveTab('lookup')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'lookup'
-                  ? 'bg-white text-slate-900 shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-white/10'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'lookup'
+                ? 'bg-white text-slate-900 shadow-md'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
             >
               <Search className="w-3.5 h-3.5" />
-              <span>Lookup by Reference (No Login Required)</span>
+              <span>Lookup by Reference</span>
             </button>
 
             <button
               onClick={() => setActiveTab('trips')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'trips'
-                  ? 'bg-white text-slate-900 shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-white/10'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'trips'
+                ? 'bg-white text-slate-900 shadow-md'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>My Saved Trips ({(currentUser && currentUser.name) ? currentUser.name : 'Guest Account'})</span>
+              <span>My Saved Trips</span>
             </button>
           </div>
         </div>
@@ -214,7 +212,7 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
         <div className="p-6">
           {activeTab === 'lookup' ? (
             <div className="space-y-6">
-              
+
               {/* Lookup Form */}
               <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/80">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
@@ -231,7 +229,7 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
                     />
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   </div>
-                  
+
                   <button
                     onClick={() => handleTrack()}
                     disabled={loading}
@@ -250,15 +248,6 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
 
                 <div className="flex items-center justify-between mt-3 text-xs text-slate-500">
                   <span>Don't have your code? Check your SMS or payment receipt email.</span>
-                  <button 
-                    onClick={() => {
-                      setBookingRef('FND-BA-2026-8920');
-                      handleTrack('FND-BA-2026-8920');
-                    }}
-                    className="text-tafiya-blue font-bold hover:underline"
-                  >
-                    Try Sample Ref
-                  </button>
                 </div>
               </div>
 
@@ -286,9 +275,9 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
                   <div className="p-5 space-y-4">
                     {/* Property Details */}
                     <div className="flex items-start gap-4">
-                      <img 
-                        src={trackedBooking.property.cover_image} 
-                        alt={trackedBooking.property.title} 
+                      <img
+                        src={trackedBooking.property.cover_image}
+                        alt={trackedBooking.property.title}
                         className="w-20 h-20 rounded-xl object-cover border border-slate-200 shrink-0 shadow-sm"
                       />
                       <div>
@@ -374,14 +363,14 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
               ) : myTrips.length > 0 ? (
                 <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
                   {myTrips.map((trip) => (
-                    <div 
+                    <div
                       key={trip.booking_reference}
                       className="p-4 border border-slate-200 rounded-2xl hover:border-tafiya-blue transition-all bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
                     >
                       <div className="flex items-start gap-3">
-                        <img 
-                          src={trip.cover_image} 
-                          alt={trip.property_title} 
+                        <img
+                          src={trip.cover_image}
+                          alt={trip.property_title}
                           className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0"
                         />
                         <div>
@@ -435,12 +424,6 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             FindDestination Escrow Protected Payments
           </span>
-          <button 
-            onClick={onClose}
-            className="text-xs font-bold text-slate-700 hover:underline cursor-pointer"
-          >
-            Close Window
-          </button>
         </div>
 
       </div>

@@ -233,12 +233,22 @@ export default function App() {
   }, [properties, selectedCategory, filters, searchParams]);
 
   const [activeBookingDates, setActiveBookingDates] = useState({ checkIn: '', checkOut: '' });
+  const gridScrollPosRef = useMemo(() => ({ current: 0 }), []);
 
   const handleSelectProperty = (property) => {
+    gridScrollPosRef.current = window.scrollY || window.pageYOffset || 0;
     setSelectedProperty(property);
     setSelectedRoom(property.rooms[0] || null);
     setGuestSubView('detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
+  const handleBackToFeed = () => {
+    const savedPos = gridScrollPosRef.current || 0;
+    setGuestSubView('feed');
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: savedPos, behavior: 'instant' });
+    });
   };
 
   const handleInitiateBooking = (property, room, nights, checkIn, checkOut) => {
@@ -363,8 +373,8 @@ export default function App() {
         {/* 3. Render Role-Specific Portal */}
         {currentRole === 'guest' ? (
           /* GUEST / TRAVELER ROLE */
-          guestSubView === 'feed' ? (
-            <>
+          <>
+            <div className={guestSubView === 'feed' ? 'animate-in fade-in duration-300' : 'hidden'}>
               <CategoryRail
                 activeCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
@@ -402,17 +412,22 @@ export default function App() {
                 />
 
               </main>
-            </>
-          ) : (
-            <PropertyDetail
-              property={selectedProperty}
-              onBack={() => setGuestSubView('feed')}
-              onInitiateBooking={handleInitiateBooking}
-            />
-          )
+            </div>
+
+            {guestSubView === 'detail' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+                <PropertyDetail
+                  property={selectedProperty}
+                  onBack={handleBackToFeed}
+                  onInitiateBooking={handleInitiateBooking}
+                />
+              </div>
+            )}
+          </>
         ) : currentRole === 'host' ? (
           /* HOST / PROPERTY MANAGER ROLE */
           <HostDashboard
+            currentUser={currentUser}
             properties={properties}
             onOpenWizard={() => setIsWizardOpen(true)}
             onTogglePublish={handleTogglePublish}
@@ -428,6 +443,7 @@ export default function App() {
           <AdminPortal
             properties={properties}
             onUpdateVerificationStatus={handleUpdateVerificationStatus}
+            onTogglePublish={handleTogglePublish}
           />
         )}
       </div>
