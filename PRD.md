@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD): Tafiya Accommodation Marketplace
+# Product Requirements Document (PRD): FindDestination Accommodation Marketplace
 
 ## 1. Executive Summary & Product Architecture
 
@@ -12,7 +12,7 @@ The platform operates as a modern web application designed API-first using **PHP
 
 ```
                 +---------------------------------------+
-                |        Tafiya RBAC Hierarchy          |
+                |        FindDestination RBAC Hierarchy          |
                 +---------------------------------------+
                                     |
      +------------------+-----------+-----------+-------------------+
@@ -42,7 +42,7 @@ The platform operates as a modern web application designed API-first using **PHP
 
 ## 3. High-Priority Payment Gateway Architecture (Paystack & Monnify)
 
-To maximize conversion across Northern Nigerian payment preferences, Tafiya implements a multi-rail gateway using the **Strategy Pattern**.
+To maximize conversion across Northern Nigerian payment preferences, FindDestination implements a multi-rail gateway using the **Strategy Pattern**.
 
 ### 3.1 Gateway Responsibilities
 
@@ -411,7 +411,7 @@ public function createBooking(array $validated): Booking
       "payment_mode": "bank_transfer",
       "account_number": "8930219401",
       "bank_name": "Wema Bank / Moniepoint",
-      "account_name": "Tafiya Escrow / Musa Danjuma",
+      "account_name": "FindDestination Escrow / Musa Danjuma",
       "instructions": "Transfer exact amount to the virtual account before expiration."
     }
   }
@@ -451,14 +451,14 @@ To resolve the trust deficit in regional accommodations, listings progress throu
  | Super Admin
 
  | `Docs Verified` (Gray Tag) |
-| **Tier 2: Location Verified**<br> | Tafiya Field Agent conducts physical on-site audit; logs device GPS coordinates within 50m of property address; verifies 24/7 power backup and water availability.
+| **Tier 2: Location Verified**<br> | FindDestination Field Agent conducts physical on-site audit; logs device GPS coordinates within 50m of property address; verifies 24/7 power backup and water availability.
 
  | Field Agent / Admin
 
  | `Location Verified` (Blue Tag)
 
  |
-| **Tier 3: Tafiya Verified**<br> | Passed Tiers 1 & 2, banking settlement details connected, minimum 3 high-resolution verified facade/room photos captured by agent.
+| **Tier 3: FindDestination Verified**<br> | Passed Tiers 1 & 2, banking settlement details connected, minimum 3 high-resolution verified facade/room photos captured by agent.
 
  | Super Admin
 

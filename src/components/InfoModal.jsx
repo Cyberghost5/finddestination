@@ -6,7 +6,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
 
   const contentMap = {
     help: {
-      title: "Tafiya Help Center & Support",
+      title: "FindDestination Help Center & Support",
       icon: HelpCircle,
       badge: "24/7 Customer Support",
       content: (
@@ -18,7 +18,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
               <PhoneCall className="w-5 h-5 text-tafiya-blue mb-1" />
               <h4 className="text-xs font-bold text-slate-900">Phone Support Hotline</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">+234 800 TAFIYA (0800 823492)</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">+234 800 FindDestination (0800 823492)</p>
             </div>
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
               <Mail className="w-5 h-5 text-tafiya-orange mb-1" />
@@ -29,7 +29,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
           <div className="p-4 bg-tafiya-blue-50/60 rounded-2xl border border-tafiya-blue-100 text-xs space-y-2">
             <h4 className="font-extrabold text-tafiya-blue">Frequently Asked Questions</h4>
             <ul className="space-y-1.5 text-slate-700 list-disc pl-4 text-[11px]">
-              <li><strong>How does Tafiya Escrow work?</strong> Your payment is held securely in escrow and only released to the host 24 hours after check-in.</li>
+              <li><strong>How does FindDestination Escrow work?</strong> Your payment is held securely in escrow and only released to the host 24 hours after check-in.</li>
               <li><strong>What if a property does not match its listing?</strong> Contact support within 24 hours of arrival for an immediate replacement stay or full refund.</li>
             </ul>
           </div>
@@ -37,13 +37,13 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       )
     },
     verification: {
-      title: "Tafiya 4-Tier Verification System",
+      title: "FindDestination 4-Tier Verification System",
       icon: ShieldCheck,
       badge: "Marketplace Security Protocol",
       content: (
         <div className="space-y-4 text-xs text-slate-600">
           <p className="leading-relaxed">
-            To eliminate fake listings and ensure guest safety, every stay on Tafiya passes through our rigorous 4-tier verification protocol:
+            To eliminate fake listings and ensure guest safety, every stay on FindDestination passes through our rigorous 4-tier verification protocol:
           </p>
           <div className="space-y-2.5">
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-start gap-3">
@@ -57,13 +57,13 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
               <span className="px-2 py-0.5 bg-tafiya-blue-50 text-tafiya-blue font-bold rounded-lg text-[10px] shrink-0 mt-0.5">Tier 2</span>
               <div>
                 <h4 className="font-bold text-slate-900 text-xs">Field Agent GPS Location Clearance</h4>
-                <p className="text-[11px] text-slate-500">On-site device GPS coordinate verification within 50-meter radius by regional Tafiya Field Agents.</p>
+                <p className="text-[11px] text-slate-500">On-site device GPS coordinate verification within 50-meter radius by regional FindDestination Field Agents.</p>
               </div>
             </div>
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-start gap-3">
               <span className="px-2 py-0.5 bg-tafiya-orange-50 text-tafiya-orange font-bold rounded-lg text-[10px] shrink-0 mt-0.5">Tier 3</span>
               <div>
-                <h4 className="font-bold text-slate-900 text-xs">Tafiya Certified Gold Badge</h4>
+                <h4 className="font-bold text-slate-900 text-xs">FindDestination Certified Gold Badge</h4>
                 <p className="text-[11px] text-slate-500">Physical inspection passing 24/7 power audit (solar/inverter/generator), water supply, and security verification.</p>
               </div>
             </div>
@@ -81,7 +81,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
             Your safety in Northern Nigeria is our top priority. We implement strict safety standards across Bauchi, Kaduna, Kano, Plateau, Adamawa, and Gombe:
           </p>
           <ul className="space-y-2 list-disc pl-4 text-[11px] text-slate-700">
-            <li><strong>Verified Host Contacts:</strong> Only communicate and pay through the Tafiya platform. Never send funds directly to personal bank accounts.</li>
+            <li><strong>Verified Host Contacts:</strong> Only communicate and pay through the FindDestination platform. Never send funds directly to personal bank accounts.</li>
             <li><strong>24/7 Armed Guarded Properties:</strong> Look for the "Armed Security" amenity badge on listed villas and hotels.</li>
             <li><strong>Emergency Hotline:</strong> Immediate escalation team available for guests during their stay.</li>
           </ul>
@@ -95,7 +95,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            Tafiya eliminates accommodation scams through digital escrow holding and verified physical property badges.
+            FindDestination eliminates accommodation scams through digital escrow holding and verified physical property badges.
           </p>
           <div className="p-3.5 bg-emerald-50 text-emerald-900 rounded-2xl border border-emerald-200 text-xs space-y-1">
             <h4 className="font-extrabold flex items-center gap-1.5">
@@ -110,13 +110,13 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       )
     },
     escrow: {
-      title: "Tafiya Escrow Refund Policy",
+      title: "FindDestination Escrow Refund Policy",
       icon: Lock,
       badge: "Payment Protection",
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            Under the Tafiya Escrow Guarantee, guest payments (processed via Monnify or Paystack) are held in secure escrow.
+            Under the FindDestination Escrow Guarantee, guest payments (processed via Monnify or Paystack) are held in secure escrow.
           </p>
           <ul className="space-y-1.5 text-[11px] text-slate-700 list-disc pl-4">
             <li><strong>Full Refund:</strong> Granted if check-in fails or property is materially different from listing.</li>
@@ -126,13 +126,13 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       )
     },
     "host-cover": {
-      title: "Tafiya Cover for Hosts",
+      title: "FindDestination Cover for Hosts",
       icon: Award,
       badge: "Host Protection Program",
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            Tafiya Cover provides up to ₦5,000,000 in property damage protection and host liability insurance for verified property owners in Northern Nigeria.
+            FindDestination Cover provides up to ₦5,000,000 in property damage protection and host liability insurance for verified property owners in Northern Nigeria.
           </p>
           <button
             onClick={() => { onClose(); onOpenAuthModal && onOpenAuthModal('signup'); }}
@@ -153,7 +153,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
             Tafiya.ng is Northern Nigeria's premier digital accommodation marketplace connecting travelers, NGO teams, and corporate personnel with verified hotels, serviced apartments, resorts, and guest houses.
           </p>
           <p className="leading-relaxed text-[11px] text-slate-500">
-            Registered with the Corporate Affairs Commission (CAC RC: 7890123), Tafiya operates across Bauchi, Kaduna, Kano, Plateau (Jos), Adamawa (Yola), Gombe, Zaria, and Sokoto.
+            Registered with the Corporate Affairs Commission (CAC RC: 7890123), FindDestination operates across Bauchi, Kaduna, Kano, Plateau (Jos), Adamawa (Yola), Gombe, Zaria, and Sokoto.
           </p>
         </div>
       )
@@ -178,13 +178,13 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            Tafiya complies strictly with the Nigeria Data Protection Regulation (NDPR). Your personal data, phone numbers, and payment details are encrypted and protected.
+            FindDestination complies strictly with the Nigeria Data Protection Regulation (NDPR). Your personal data, phone numbers, and payment details are encrypted and protected.
           </p>
         </div>
       )
     },
     sitemap: {
-      title: "Tafiya Platform Sitemap",
+      title: "FindDestination Platform Sitemap",
       icon: Globe,
       badge: "Navigation Directory",
       content: (
@@ -211,7 +211,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
   };
 
   const currentTopic = contentMap[topicKey] || {
-    title: "Tafiya Information & Policy",
+    title: "FindDestination Information & Policy",
     icon: Sparkles,
     badge: "Official Information",
     content: (
@@ -228,7 +228,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[85vh]">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-2">

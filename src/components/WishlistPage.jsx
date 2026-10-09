@@ -1,8 +1,53 @@
 import React from 'react';
 import ListingCard from './ListingCard';
-import { Heart, Search, ShieldCheck, MapPin, Building2, Sparkles } from 'lucide-react';
+import { Heart, Search, ShieldCheck, MapPin, Building2, Sparkles, Lock, ChevronRight } from 'lucide-react';
 
-export default function WishlistPage({ properties, wishlistIds = [], onToggleWishlist, onSelectProperty, onNavigateExplore }) {
+export default function WishlistPage({ 
+  properties, 
+  wishlistIds = [], 
+  onToggleWishlist, 
+  onSelectProperty, 
+  onNavigateExplore,
+  currentUser,
+  onOpenAuthModal 
+}) {
+  // Enforce Authentication Check
+  if (!currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 animate-in fade-in duration-300">
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-slate-200/80 space-y-5 max-w-lg mx-auto shadow-md">
+          <div className="w-16 h-16 rounded-3xl bg-tafiya-orange-50 text-tafiya-orange flex items-center justify-center mx-auto border border-tafiya-orange-100 shadow-sm">
+            <Lock className="w-8 h-8 stroke-[2]" />
+          </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-lg font-black text-slate-900">Sign In to Access Your Wishlist</h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Save your favorite verified shortlet stays across Northern Nigeria, sync them across all your devices, and receive price drop alerts.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
+              className="w-full sm:w-auto px-6 py-3 bg-tafiya-blue text-white font-bold text-xs rounded-2xl shadow-md hover:bg-tafiya-blue-600 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Log In</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onOpenAuthModal && onOpenAuthModal('signup')}
+              className="w-full sm:w-auto px-6 py-3 bg-white text-tafiya-blue border border-tafiya-blue/30 font-bold text-xs rounded-2xl hover:bg-tafiya-blue-50 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-tafiya-gold" />
+              <span>Create Account</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const wishlistProperties = properties.filter(p => wishlistIds.includes(p.id));
 
   return (

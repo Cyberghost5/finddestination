@@ -331,7 +331,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
               <div className="max-w-md mx-auto space-y-1">
                 <h3 className="text-sm font-black text-slate-900">Login or Register to Complete Booking</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  To ensure instant escrow protection, secure vouchers, and automated booking confirmation, please sign in to your Tafiya account or register.
+                  To ensure instant escrow protection, secure vouchers, and automated booking confirmation, please sign in to your FindDestination account or register.
                 </p>
               </div>
               <div className="flex items-center justify-center gap-3 pt-2">
@@ -395,8 +395,8 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
                     type="button"
                     onClick={() => setMonnifyMethod('sdk')}
                     className={`p-3 rounded-xl border text-xs font-bold transition-all ${monnifyMethod === 'sdk'
-                        ? 'border-tafiya-blue bg-tafiya-blue-50/50 text-tafiya-blue ring-2 ring-tafiya-blue/20'
-                        : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300'
+                      ? 'border-tafiya-blue bg-tafiya-blue-50/50 text-tafiya-blue ring-2 ring-tafiya-blue/20'
+                      : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300'
                       }`}
                   >
                     Monnify Inline SDK Modal
@@ -405,8 +405,8 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
                     type="button"
                     onClick={() => setMonnifyMethod('transfer')}
                     className={`p-3 rounded-xl border text-xs font-bold transition-all ${monnifyMethod === 'transfer'
-                        ? 'border-tafiya-blue bg-tafiya-blue-50/50 text-tafiya-blue ring-2 ring-tafiya-blue/20'
-                        : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300'
+                      ? 'border-tafiya-blue bg-tafiya-blue-50/50 text-tafiya-blue ring-2 ring-tafiya-blue/20'
+                      : 'border-slate-200 text-slate-600 bg-white hover:border-slate-300'
                       }`}
                   >
                     Virtual Account Transfer
@@ -431,7 +431,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
                     <div className="p-3 bg-slate-900 text-white rounded-xl text-[11px] space-y-1">
                       <span className="text-tafiya-gold font-bold block">Automated Bank Webhook Verification</span>
                       <p className="text-slate-300 text-[10px] leading-relaxed">
-                        Clicking proceed will trigger the Monnify payment modal with direct bank app transfers, cards, and account numbers.
+                        Clicking proceed will trigger the payment process with direct bank app transfers, cards, and account numbers.
                       </p>
                     </div>
                   </div>
@@ -461,7 +461,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
                     </div>
 
                     <p className="text-[10px] text-slate-300 leading-relaxed">
-                      Transfer exact amount (<strong>₦{totalAmount.toLocaleString()}</strong>) via your mobile banking app. Payment triggers instant webhook verification.
+                      Transfer exact amount (<strong>₦{totalAmount.toLocaleString()}</strong>) via your mobile banking app.
                     </p>
                   </div>
                 )}
@@ -475,7 +475,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
         {/* Modal Footer */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-100">
           <div className="text-xs">
-            <span className="text-slate-500 block">Total Payable Escrow</span>
+            <span className="text-slate-500 block">Total Payable Amount</span>
             <span className="text-base font-black text-slate-900">₦{totalAmount.toLocaleString()}</span>
           </div>
 
@@ -486,10 +486,10 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
               className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-full font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               {isProcessing ? (
-                <span>Initializing {activeGateway === 'paystack' ? 'Paystack' : 'Monnify'} SDK...</span>
+                <span>Proceesing, please wait...</span>
               ) : (
                 <>
-                  <span>Proceed with {activeGateway === 'paystack' ? 'Paystack' : 'Monnify'} Payment</span>
+                  <span>Proceed</span>
                   <ChevronRight className="w-4 h-4 stroke-[2.5]" />
                 </>
               )}

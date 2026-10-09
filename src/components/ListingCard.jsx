@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  Heart, 
-  Star, 
-  ChevronLeft, 
-  ChevronRight, 
-  ShieldCheck, 
-  MapPin, 
+import {
+  Heart,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+  ShieldCheck,
+  MapPin,
   CheckCircle2,
   Building2
 } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function ListingCard({ property, onSelectProperty, isSaved, onTog
       return (
         <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-extrabold shadow-md border border-emerald-400/50">
           <CheckCircle2 className="w-3 h-3 fill-white text-emerald-600" />
-          <span>Tafiya Verified</span>
+          <span>FindDestination Verified</span>
         </div>
       );
     }
@@ -56,17 +56,17 @@ export default function ListingCard({ property, onSelectProperty, isSaved, onTog
   const activeSaved = isSaved !== undefined ? isSaved : isLiked;
 
   return (
-    <div 
+    <div
       onClick={() => onSelectProperty(property)}
       className="group cursor-pointer flex flex-col space-y-3 active:scale-[0.98] transition-all duration-200"
     >
-      
+
       {/* Photo Carousel Container */}
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-200/50">
-        
-        <img 
-          src={images[currentImageIndex]} 
-          alt={property.name} 
+
+        <img
+          src={images[currentImageIndex]}
+          alt={property.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
@@ -87,9 +87,8 @@ export default function ListingCard({ property, onSelectProperty, isSaved, onTog
           }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full hover:scale-110 transition-transform cursor-pointer"
         >
-          <Heart className={`w-5 h-5 drop-shadow-md transition-all ${
-            activeSaved ? 'text-tafiya-orange fill-tafiya-orange scale-110' : 'text-white/90 fill-slate-900/30 stroke-[2]'
-          }`} />
+          <Heart className={`w-5 h-5 drop-shadow-md transition-all ${activeSaved ? 'text-tafiya-orange fill-tafiya-orange scale-110' : 'text-white/90 fill-slate-900/30 stroke-[2]'
+            }`} />
         </button>
 
         {/* Carousel Prev/Next Arrows (Show on Hover) */}
@@ -113,9 +112,8 @@ export default function ListingCard({ property, onSelectProperty, isSaved, onTog
               {images.map((_, idx) => (
                 <div
                   key={idx}
-                  className={`h-1.5 rounded-full transition-all ${
-                    idx === currentImageIndex ? 'w-4 bg-white shadow-sm' : 'w-1.5 bg-white/60'
-                  }`}
+                  className={`h-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'w-4 bg-white shadow-sm' : 'w-1.5 bg-white/60'
+                    }`}
                 />
               ))}
             </div>

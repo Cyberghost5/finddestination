@@ -29,7 +29,7 @@ class MonnifyService implements PaymentGatewayInterface
             'payment_mode' => 'bank_transfer',
             'account_number' => $accountNumber,
             'bank_name' => 'Wema Bank / Moniepoint MFB',
-            'account_name' => 'Tafiya Escrow / ' . ($booking->user->name ?? 'Guest'),
+            'account_name' => 'FindDestination Escrow / ' . ($booking->user->name ?? 'Guest'),
             'instructions' => 'Transfer exact amount to the virtual account before 15-minute hold expiration.',
             'expires_at' => $booking->hold_expires_at ? $booking->hold_expires_at->toIso8601String() : null,
         ];

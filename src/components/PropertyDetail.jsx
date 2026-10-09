@@ -71,7 +71,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking, is
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-extrabold">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 fill-emerald-100" />
-          <span>Tier 3 Tafiya Verified</span>
+          <span>Tier 3 FindDestination Verified</span>
         </span>
       );
     }
@@ -105,7 +105,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking, is
         </button>
 
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => {
               if (navigator.share) {
                 navigator.share({
@@ -228,7 +228,7 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking, is
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              This property has undergone physical on-site audit by Tafiya Field Agents in {property.city}, {property.state}.
+              This property has undergone physical on-site audit by FindDestination Field Agents in {property.city}, {property.state}.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Building2, 
-  MapPin, 
-  DollarSign, 
-  ShieldCheck, 
-  Upload, 
-  CheckCircle2, 
-  ChevronRight, 
+import {
+  X,
+  Building2,
+  MapPin,
+  DollarSign,
+  ShieldCheck,
+  Upload,
+  CheckCircle2,
+  ChevronRight,
   ChevronLeft,
   Zap,
   FileText,
@@ -51,7 +51,7 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
   const handleAmenityToggle = (amenity) => {
     setFormData(prev => {
       const exists = prev.amenities.includes(amenity);
-      const updated = exists 
+      const updated = exists
         ? prev.amenities.filter(a => a !== amenity)
         : [...prev.amenities, amenity];
       return { ...prev, amenities: updated };
@@ -112,7 +112,7 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
-        
+
         {/* Wizard Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-2">
@@ -134,9 +134,8 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
             {[1, 2, 3, 4, 5].map((s) => (
               <div
                 key={s}
-                className={`h-2 rounded-full transition-all ${
-                  s === currentStep ? 'w-6 bg-tafiya-blue' : s < currentStep ? 'w-2 bg-tafiya-blue-500/50' : 'w-2 bg-slate-300'
-                }`}
+                className={`h-2 rounded-full transition-all ${s === currentStep ? 'w-6 bg-tafiya-blue' : s < currentStep ? 'w-2 bg-tafiya-blue-500/50' : 'w-2 bg-slate-300'
+                  }`}
               />
             ))}
           </div>
@@ -151,12 +150,12 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
 
         {/* Wizard Step Content */}
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
-          
+
           {/* STEP 1: Basic Property Details */}
           {currentStep === 1 && (
             <div className="space-y-4">
               <h3 className="text-sm font-extrabold text-slate-900">1. Basic Property Information</h3>
-              
+
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Property / Hotel Name</label>
                 <input
@@ -211,7 +210,7 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
                 <MapPin className="w-4 h-4 text-tafiya-blue" />
                 <span>2. Physical Address & GPS Coordinate Capture</span>
               </h3>
-              <p className="text-xs text-slate-500">Tafiya Field Agents verify location within 50m of logged coordinates.</p>
+              <p className="text-xs text-slate-500">FindDestination Field Agents verify location within 50m of logged coordinates.</p>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Street Address</label>
@@ -235,18 +234,18 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
                 <div className="grid grid-cols-2 gap-3 font-mono text-xs">
                   <div>
                     <span className="text-[10px] text-slate-400 font-sans uppercase font-bold block">Latitude</span>
-                    <input 
-                      type="text" 
-                      value={formData.latitude} 
+                    <input
+                      type="text"
+                      value={formData.latitude}
                       onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
                       className="w-full p-2 border border-slate-200 rounded-lg bg-white"
                     />
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 font-sans uppercase font-bold block">Longitude</span>
-                    <input 
-                      type="text" 
-                      value={formData.longitude} 
+                    <input
+                      type="text"
+                      value={formData.longitude}
                       onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
                       className="w-full p-2 border border-slate-200 rounded-lg bg-white"
                     />
@@ -260,7 +259,7 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
           {currentStep === 3 && (
             <div className="space-y-4">
               <h3 className="text-sm font-extrabold text-slate-900">3. Room Tier & Base Nightly Pricing</h3>
-              
+
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Room Tier Name</label>
                 <input
@@ -312,9 +311,8 @@ export default function ListingWizard({ isOpen, onClose, onPropertyCreated }) {
                   return (
                     <label
                       key={amenity}
-                      className={`flex items-center gap-3 p-3 border rounded-2xl cursor-pointer text-xs font-semibold transition-all ${
-                        isChecked ? 'border-tafiya-blue bg-tafiya-blue-50/40 text-tafiya-blue' : 'border-slate-200 text-slate-700'
-                      }`}
+                      className={`flex items-center gap-3 p-3 border rounded-2xl cursor-pointer text-xs font-semibold transition-all ${isChecked ? 'border-tafiya-blue bg-tafiya-blue-50/40 text-tafiya-blue' : 'border-slate-200 text-slate-700'
+                        }`}
                     >
                       <input
                         type="checkbox"

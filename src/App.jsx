@@ -19,6 +19,10 @@ import InfoModal from './components/InfoModal';
 import OrderTrackerModal from './components/OrderTrackerModal';
 import ShareModal from './components/ShareModal';
 import WishlistPage from './components/WishlistPage';
+import TripsPage from './components/TripsPage';
+import InboxPage from './components/InboxPage';
+import ProfilePage from './components/ProfilePage';
+import AuthGuard from './components/AuthGuard';
 import { MOCK_PROPERTIES } from './data/mockProperties';
 import { 
   Building2, 
@@ -291,6 +295,14 @@ export default function App() {
     setIsCheckoutModalOpen(false);
     setActiveBookingData(bookingData);
     setIsVoucherModalOpen(true);
+    try {
+      const savedStr = localStorage.getItem('tafiya_recent_bookings');
+      const saved = savedStr ? JSON.parse(savedStr) : [];
+      const updated = [bookingData, ...saved.filter(b => b.reference !== bookingData.reference)];
+      localStorage.setItem('tafiya_recent_bookings', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save booking to local storage', e);
+    }
   };
 
   const handlePropertyCreated = async (newProp) => {
@@ -407,6 +419,38 @@ export default function App() {
                 onToggleWishlist={handleToggleWishlist}
                 onSelectProperty={handleSelectProperty}
                 onNavigateExplore={() => setActiveMobileTab('explore')}
+                currentUser={currentUser}
+                onOpenAuthModal={handleOpenAuthModal}
+              />
+            ) : activeMobileTab === 'trips' ? (
+              <TripsPage
+                currentUser={currentUser}
+                onOpenAuthModal={handleOpenAuthModal}
+                onOpenVoucher={(booking) => {
+                  setActiveBookingData(booking);
+                  setIsVoucherModalOpen(true);
+                }}
+                onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
+                onNavigateExplore={() => setActiveMobileTab('explore')}
+              />
+            ) : activeMobileTab === 'inbox' ? (
+              <InboxPage
+                currentUser={currentUser}
+                onOpenAuthModal={handleOpenAuthModal}
+                onNavigateExplore={() => setActiveMobileTab('explore')}
+              />
+            ) : activeMobileTab === 'profile' ? (
+              <ProfilePage
+                currentUser={currentUser}
+                currentRole={currentRole}
+                onOpenAuthModal={handleOpenAuthModal}
+                onLogout={handleLogout}
+                onSelectRole={(role) => {
+                  setCurrentRole(role);
+                  if (role === 'guest') setGuestSubView('feed');
+                }}
+                onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
+                onOpenInfoModal={(key) => handleOpenInfoTopic(key)}
               />
             ) : (
               <>
@@ -469,25 +513,61 @@ export default function App() {
           </>
         ) : currentRole === 'host' ? (
           /* HOST / PROPERTY MANAGER ROLE */
-          <HostDashboard
+          <AuthGuard
             currentUser={currentUser}
-            properties={properties}
-            onOpenWizard={() => setIsWizardOpen(true)}
-            onTogglePublish={handleTogglePublish}
-          />
+            requiredRole="host"
+            portalName="Host Dashboard"
+            onOpenAuthModal={handleOpenAuthModal}
+            onSelectRole={(role) => {
+              setCurrentRole(role);
+              if (role === 'guest') setGuestSubView('feed');
+            }}
+            onLogout={handleLogout}
+          >
+            <HostDashboard
+              currentUser={currentUser}
+              properties={properties}
+              onOpenWizard={() => setIsWizardOpen(true)}
+              onTogglePublish={handleTogglePublish}
+            />
+          </AuthGuard>
         ) : currentRole === 'agent' ? (
           /* FIELD VERIFICATION AGENT ROLE */
-          <FieldAgentPortal
-            properties={properties}
-            onCompleteLocationAudit={handleLocationAudit}
-          />
+          <AuthGuard
+            currentUser={currentUser}
+            requiredRole="agent"
+            portalName="Field Agent Desk"
+            onOpenAuthModal={handleOpenAuthModal}
+            onSelectRole={(role) => {
+              setCurrentRole(role);
+              if (role === 'guest') setGuestSubView('feed');
+            }}
+            onLogout={handleLogout}
+          >
+            <FieldAgentPortal
+              properties={properties}
+              onCompleteLocationAudit={handleLocationAudit}
+            />
+          </AuthGuard>
         ) : (
           /* SUPER ADMIN ROLE */
-          <AdminPortal
-            properties={properties}
-            onUpdateVerificationStatus={handleUpdateVerificationStatus}
-            onTogglePublish={handleTogglePublish}
-          />
+          <AuthGuard
+            currentUser={currentUser}
+            requiredRole="admin"
+            portalName="Super Admin Portal"
+            onOpenAuthModal={handleOpenAuthModal}
+            onSelectRole={(role) => {
+              setCurrentRole(role);
+              if (role === 'guest') setGuestSubView('feed');
+            }}
+            onLogout={handleLogout}
+          >
+            <AdminPortal
+              properties={properties}
+              onUpdateVerificationStatus={handleUpdateVerificationStatus}
+              onTogglePublish={handleTogglePublish}
+            />
+          </AuthGuard>
         )}
       </div>
 

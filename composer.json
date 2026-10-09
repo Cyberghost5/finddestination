@@ -1,8 +1,14 @@
 {
     "name": "tafiya/backend",
     "type": "project",
-    "description": "Tafiya Digital Accommodation Marketplace API for Northern Nigeria",
-    "keywords": ["laravel", "framework", "marketplace", "tafiya", "accommodation"],
+    "description": "FindDestination Digital Accommodation Marketplace API for Northern Nigeria",
+    "keywords": [
+        "laravel",
+        "framework",
+        "marketplace",
+        "tafiya",
+        "accommodation"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
