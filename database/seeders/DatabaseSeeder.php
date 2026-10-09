@@ -44,6 +44,7 @@ class DatabaseSeeder extends Seeder
             'host_status' => 'approved',
             'email_verified_at' => now(),
         ]);
+        $host = $approvedHost;
 
         $pendingHost = User::updateOrCreate(['email' => 'amina@example.com'], [
             'name' => 'Amina Bello',
