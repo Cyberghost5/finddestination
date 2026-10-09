@@ -1,30 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  FileText, 
-  Lock, 
-  Award, 
-  Globe, 
-  Copy, 
-  Check, 
-  ExternalLink, 
+import {
+  ShieldCheck,
+  FileText,
+  Lock,
+  Award,
+  Globe,
   ArrowLeft,
-  PhoneCall,
-  Mail,
   Building2,
   MapPin,
   Search
 } from 'lucide-react';
 
-export default function LegalPolicyPage({ 
-  activePolicyKey = 'privacy', 
-  onNavigateTab, 
+export default function LegalPolicyPage({
+  activePolicyKey = 'privacy',
+  onNavigateTab,
   onClose,
   onSelectStateFilter,
   onOpenAuthModal
 }) {
   const [currentTab, setCurrentTab] = useState(activePolicyKey);
-  const [copiedType, setCopiedType] = useState(null); // 'text' or 'link'
 
   useEffect(() => {
     if (activePolicyKey) {
@@ -72,13 +66,9 @@ d) Immediate Cancellation within Free Window: Guest cancels within the free canc
 
 4. DISPUTE RESOLUTION & CLAIM TIMELINE
 To request a refund or report a stay issue:
-- Contact FindDestination Customer Support within 24 hours of scheduled check-in time via the in-app Booking Tracker or email disputes@finddestination.com.ng.
+- Submit a request within 24 hours of scheduled check-in time via the in-app Booking Tracker.
 - Attach photo/video evidence if reporting listing inaccuracy.
-- Approved refunds are credited back to the original payment source (Monnify/Paystack bank transfer or card) within 3 to 5 business days.
-
-5. CONTACT FOR ESCROW DISPUTES
-Email: disputes@finddestination.com.ng / support@finddestination.com.ng
-Hotline: +234 800 FindDestination (0800 823492)`
+- Approved refunds are credited back to the original payment source (Monnify/Paystack bank transfer or card) within 3 to 5 business days.`
         };
 
       case 'terms':
@@ -185,7 +175,7 @@ Website: https://finddestination.com.ng
 - Adamawa State Stays (Yola Riverfront Stays): https://finddestination.com.ng/#adamawa
 - Gombe State Stays (Modern City Lodges & Hotels): https://finddestination.com.ng/#gombe
 
-3. LEGAL, POLICIES & SUPPORT DIRECTORY
+3. LEGAL & POLICIES DIRECTORY
 - Privacy Policy: https://finddestination.com.ng/#privacy-policy
 - Refund & Escrow Policy: https://finddestination.com.ng/#refund-policy
 - Terms of Service: https://finddestination.com.ng/#terms-and-conditions
@@ -197,7 +187,7 @@ Website: https://finddestination.com.ng
         return {
           id: 'privacy',
           title: 'FindDestination Privacy Policy & NDPR Compliance Notice',
-          subtitle: 'Google Play Store & Nigeria Data Protection Regulation (NDPR) Compliant Data Notice',
+          subtitle: 'Nigeria Data Protection Regulation (NDPR) Compliant Data Notice',
           updated: 'January 1, 2026',
           icon: ShieldCheck,
           badge: 'Privacy Policy',
@@ -235,11 +225,7 @@ FindDestination requests location permissions strictly to log property coordinat
 
 6. DATA RETENTION, SECURITY & USER RIGHTS
 - All data is encrypted in transit (TLS 1.3/SSL) and at rest (AES-256).
-- Users have the right to request access to, correction of, or permanent deletion of their account data by contacting privacy@finddestination.com.ng.
-
-7. CONTACT DATA PROTECTION OFFICER
-Email: privacy@finddestination.com.ng / support@finddestination.com.ng
-Hotline: +234 800 FindDestination (0800 823492)`
+- Users have the right to request access to, correction of, or permanent deletion of their account data.`
         };
     }
   };
@@ -247,23 +233,10 @@ Hotline: +234 800 FindDestination (0800 823492)`
   const currentPolicy = getPolicyContent(currentTab);
   const IconComponent = currentPolicy.icon;
 
-  const handleCopyText = () => {
-    navigator.clipboard.writeText(currentPolicy.plainText);
-    setCopiedType('text');
-    setTimeout(() => setCopiedType(null), 3000);
-  };
-
-  const handleCopyLink = () => {
-    const fullUrl = `${window.location.origin}${window.location.pathname}${currentPolicy.hash}`;
-    navigator.clipboard.writeText(fullUrl);
-    setCopiedType('link');
-    setTimeout(() => setCopiedType(null), 3000);
-  };
-
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in duration-300 min-h-screen">
-      
-      {/* Top Header & Navigation Bar */}
+
+      {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl">
         <div className="flex items-center gap-4">
           {onClose && (
@@ -289,27 +262,6 @@ Hotline: +234 800 FindDestination (0800 823492)`
             <p className="text-xs text-slate-400 font-medium mt-0.5">{currentPolicy.subtitle}</p>
           </div>
         </div>
-
-        {/* Copy Actions for Play Store Submission */}
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-          <button
-            onClick={handleCopyLink}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Copy public URL for Google Play Console"
-          >
-            {copiedType === 'link' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <ExternalLink className="w-3.5 h-3.5 text-slate-400" />}
-            <span>{copiedType === 'link' ? 'Link Copied!' : 'Copy Page Link'}</span>
-          </button>
-
-          <button
-            onClick={handleCopyText}
-            className="px-4 py-2 bg-tafiya-blue hover:bg-tafiya-blue-600 text-white rounded-xl font-bold text-xs shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-            title="Copy full policy text for Play Store / App Store legal submission"
-          >
-            {copiedType === 'text' ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5 text-white" />}
-            <span>{copiedType === 'text' ? 'Text Copied!' : 'Copy Policy Text'}</span>
-          </button>
-        </div>
       </div>
 
       {/* Policy Navigation Tabs Bar */}
@@ -327,11 +279,10 @@ Hotline: +234 800 FindDestination (0800 823492)`
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                isActive 
-                  ? 'bg-slate-900 text-white shadow-md' 
+              className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${isActive
+                  ? 'bg-slate-900 text-white shadow-md'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
+                }`}
             >
               <TabIcon className={`w-4 h-4 ${isActive ? 'text-tafiya-gold' : 'text-slate-400'}`} />
               <span>{tab.label}</span>
@@ -340,20 +291,9 @@ Hotline: +234 800 FindDestination (0800 823492)`
         })}
       </div>
 
-      {copiedType && (
-        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-in fade-in duration-200">
-          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>
-            {copiedType === 'text' 
-              ? 'Full policy text copied to clipboard! Ready to paste into Google Play Console.' 
-              : 'Direct policy URL copied to clipboard! Available for public web access.'}
-          </span>
-        </div>
-      )}
+      {/* Main Legal Document Prose Card */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-10 space-y-8">
 
-      {/* Main Copyable Prose View Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-10 space-y-8 select-text">
-        
         {/* Document Metadata Bar */}
         <div className="flex items-center justify-between pb-6 border-b border-slate-100 text-xs text-slate-500">
           <div>
@@ -367,7 +307,7 @@ Hotline: +234 800 FindDestination (0800 823492)`
         {/* Formatted Legal Text */}
         <div className="prose prose-slate max-w-none space-y-6 text-slate-700 text-xs sm:text-sm leading-relaxed">
           {currentTab === 'sitemap' ? (
-            <div className="space-y-6 select-text">
+            <div className="space-y-6">
               <p className="text-slate-600 leading-relaxed font-medium">
                 Explore the complete directory of Stay Portals, Northern Nigeria State Hubs, and Legal Verification Documents for FindDestination.com.ng:
               </p>
@@ -415,25 +355,10 @@ Hotline: +234 800 FindDestination (0800 823492)`
               </div>
             </div>
           ) : (
-            <div className="whitespace-pre-line font-mono text-slate-800 bg-slate-50/70 p-6 sm:p-8 rounded-2xl border border-slate-200 text-xs leading-relaxed overflow-x-auto select-text">
+            <div className="whitespace-pre-line font-mono text-slate-800 bg-slate-50/70 p-6 sm:p-8 rounded-2xl border border-slate-200 text-xs leading-relaxed overflow-x-auto">
               {currentPolicy.plainText}
             </div>
           )}
-        </div>
-
-        {/* Footer Support Info */}
-        <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1 font-bold text-slate-700">
-              <PhoneCall className="w-3.5 h-3.5 text-tafiya-blue" />
-              <span>+234 800 823492</span>
-            </span>
-            <span className="flex items-center gap-1 font-bold text-slate-700">
-              <Mail className="w-3.5 h-3.5 text-tafiya-orange" />
-              <span>legal@finddestination.com.ng</span>
-            </span>
-          </div>
-          <p className="text-[11px]">FindDestination.com.ng • CAC RC: 7890123</p>
         </div>
 
       </div>
