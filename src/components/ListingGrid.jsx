@@ -3,7 +3,7 @@ import ListingCard from './ListingCard';
 import MapView from './MapView';
 import { Map, ListFilter, Building2, SlidersHorizontal, ShieldCheck } from 'lucide-react';
 
-export default function ListingGrid({ properties, onSelectProperty, onOpenFilterModal }) {
+export default function ListingGrid({ properties, onSelectProperty, onOpenFilterModal, wishlistIds = [], onToggleWishlist }) {
   const [showMap, setShowMap] = useState(false);
   const [includeTaxes, setIncludeTaxes] = useState(false);
 
@@ -68,6 +68,8 @@ export default function ListingGrid({ properties, onSelectProperty, onOpenFilter
               key={property.id}
               property={property}
               onSelectProperty={onSelectProperty}
+              isSaved={wishlistIds.includes(property.id)}
+              onToggleWishlist={onToggleWishlist}
             />
           ))}
         </div>

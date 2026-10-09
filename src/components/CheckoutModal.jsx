@@ -11,10 +11,11 @@ import {
   ChevronRight,
   AlertCircle,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  UserCheck
 } from 'lucide-react';
 
-export default function CheckoutModal({ isOpen, onClose, property, selectedRoom, totalNights, bookingDates, onPaymentComplete }) {
+export default function CheckoutModal({ isOpen, onClose, property, selectedRoom, totalNights, bookingDates, onPaymentComplete, currentUser, onOpenAuthModal }) {
   const [activeGateway, setActiveGateway] = useState('paystack'); // 'paystack' or 'monnify'
   const [paystackPublicKey, setPaystackPublicKey] = useState('pk_test_tafiya_paystack_public_key_2026');
   const [monnifyApiKey, setMonnifyApiKey] = useState('MK_TEST_TAFIYA_MONNIFY_API_KEY');
@@ -22,12 +23,25 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
 
   const [monnifyMethod, setMonnifyMethod] = useState('sdk'); // 'sdk' or 'transfer'
 
-  const [guestName, setGuestName] = useState('Musa Danjuma');
-  const [guestPhone, setGuestPhone] = useState('+234 802 111 2233');
-  const [guestEmail, setGuestEmail] = useState('musa.danjuma@example.com');
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [apiError, setApiError] = useState('');
+
+  // Sync guest information with logged in currentUser
+  useEffect(() => {
+    if (currentUser) {
+      setGuestName(currentUser.name || currentUser.full_name || 'Guest User');
+      setGuestPhone(currentUser.phone || currentUser.phone_number || currentUser.phone_no || '');
+      setGuestEmail(currentUser.email || '');
+    } else {
+      setGuestName('');
+      setGuestPhone('');
+      setGuestEmail('');
+    }
+  }, [currentUser, isOpen]);
 
   // Fetch Payment Gateway Settings on modal open
   useEffect(() => {
@@ -286,38 +300,66 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
             </div>
           </div>
 
-          {/* Guest Details Form */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">1. Guest Information</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-slate-600 block mb-1">Full Name</label>
-                <input
-                  type="text"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-tafiya-blue font-semibold text-slate-800"
-                  required
-                />
+          {/* Guest Account Identification Card or Login Prompt */}
+          {currentUser ? (
+            <div className="p-4 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
+                  {(guestName || currentUser.name || currentUser.full_name || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-slate-900">{guestName || currentUser.name || currentUser.full_name || 'Verified User'}</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Account Verified
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    {guestEmail || currentUser.email} {guestPhone ? `• ${guestPhone}` : ''}
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-600 block mb-1">Phone Number</label>
-                <input
-                  type="text"
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-tafiya-blue font-semibold text-slate-800"
-                  required
-                />
+              <span className="text-[10px] font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-200/80">
+                Escrow Linked
+              </span>
+            </div>
+          ) : (
+            <div className="p-6 bg-gradient-to-br from-tafiya-blue-50/80 via-slate-50 to-amber-50/30 border-2 border-dashed border-tafiya-blue/30 rounded-2xl text-center space-y-4">
+              <div className="w-12 h-12 bg-tafiya-blue text-white rounded-2xl flex items-center justify-center mx-auto shadow-md">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div className="max-w-md mx-auto space-y-1">
+                <h3 className="text-sm font-black text-slate-900">Login or Register to Complete Booking</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  To ensure instant escrow protection, secure vouchers, and automated booking confirmation, please sign in to your Tafiya account or register.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
+                  className="px-5 py-2.5 bg-tafiya-blue text-white font-bold text-xs rounded-xl hover:bg-tafiya-blue-600 transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Log In</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAuthModal && onOpenAuthModal('signup')}
+                  className="px-5 py-2.5 bg-white text-tafiya-blue border border-tafiya-blue/30 font-bold text-xs rounded-xl hover:bg-tafiya-blue-50 transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-tafiya-gold" />
+                  <span>Create Account</span>
+                </button>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Active Gateway Details & Interaction Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
-                2. Active Gateway ({activeGateway === 'paystack' ? 'Paystack' : 'Monnify'})
+                Active Gateway ({activeGateway === 'paystack' ? 'Paystack' : 'Monnify'})
               </h3>
             </div>
 
@@ -437,20 +479,30 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
             <span className="text-base font-black text-slate-900">₦{totalAmount.toLocaleString()}</span>
           </div>
 
-          <button
-            onClick={handleStartPayment}
-            disabled={isProcessing}
-            className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-full font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer"
-          >
-            {isProcessing ? (
-              <span>Initializing {activeGateway === 'paystack' ? 'Paystack' : 'Monnify'} SDK...</span>
-            ) : (
-              <>
-                <span>Proceed with {activeGateway === 'paystack' ? 'Paystack' : 'Monnify'} Payment</span>
-                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-              </>
-            )}
-          </button>
+          {currentUser ? (
+            <button
+              onClick={handleStartPayment}
+              disabled={isProcessing}
+              className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-full font-bold text-xs shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              {isProcessing ? (
+                <span>Initializing {activeGateway === 'paystack' ? 'Paystack' : 'Monnify'} SDK...</span>
+              ) : (
+                <>
+                  <span>Proceed with {activeGateway === 'paystack' ? 'Paystack' : 'Monnify'} Payment</span>
+                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
+              className="flex items-center gap-2 px-8 py-3.5 bg-tafiya-blue text-white rounded-full font-bold text-xs shadow-lg hover:bg-tafiya-blue-600 transition-all duration-200 active:scale-95 cursor-pointer"
+            >
+              <span>Log In to Continue</span>
+              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          )}
         </div>
 
       </div>

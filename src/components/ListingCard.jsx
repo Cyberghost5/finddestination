@@ -10,7 +10,7 @@ import {
   Building2
 } from 'lucide-react';
 
-export default function ListingCard({ property, onSelectProperty }) {
+export default function ListingCard({ property, onSelectProperty, isSaved, onToggleWishlist }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
 
@@ -53,6 +53,8 @@ export default function ListingCard({ property, onSelectProperty }) {
     );
   };
 
+  const activeSaved = isSaved !== undefined ? isSaved : isLiked;
+
   return (
     <div 
       onClick={() => onSelectProperty(property)}
@@ -77,12 +79,16 @@ export default function ListingCard({ property, onSelectProperty }) {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setIsLiked(!isLiked);
+            if (onToggleWishlist) {
+              onToggleWishlist(property.id);
+            } else {
+              setIsLiked(!isLiked);
+            }
           }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full hover:scale-110 transition-transform cursor-pointer"
         >
-          <Heart className={`w-5 h-5 drop-shadow-md ${
-            isLiked ? 'text-tafiya-orange fill-tafiya-orange' : 'text-white/90 fill-slate-900/30 stroke-[2]'
+          <Heart className={`w-5 h-5 drop-shadow-md transition-all ${
+            activeSaved ? 'text-tafiya-orange fill-tafiya-orange scale-110' : 'text-white/90 fill-slate-900/30 stroke-[2]'
           }`} />
         </button>
 

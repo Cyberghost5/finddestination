@@ -25,7 +25,7 @@ import {
   Award
 } from 'lucide-react';
 
-export default function PropertyDetail({ property, onBack, onInitiateBooking }) {
+export default function PropertyDetail({ property, onBack, onInitiateBooking, isSaved, onToggleWishlist, onOpenShareModal }) {
   if (!property) return null;
 
   const formatDateForInput = (dateObj) => {
@@ -46,7 +46,6 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
   const [nightsCount, setNightsCount] = useState(2);
   const [guestCount, setGuestCount] = useState(1);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
 
   // Recalculate nights whenever check-in or check-out changes
   useEffect(() => {
@@ -106,15 +105,28 @@ export default function PropertyDetail({ property, onBack, onInitiateBooking }) 
         </button>
 
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 text-xs font-bold text-slate-700 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors">
+          <button 
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({
+                  title: `Check out ${property.name} on FindDestination`,
+                  text: `Verified stay in ${property.city}, ${property.state}`,
+                  url: `${window.location.origin}/?stay=${property.id}`
+                }).catch(() => onOpenShareModal && onOpenShareModal(property));
+              } else {
+                onOpenShareModal && onOpenShareModal(property);
+              }
+            }}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-700 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+          >
             <Share2 className="w-4 h-4 text-slate-500" />
             <span className="hidden sm:inline">Share</span>
           </button>
           <button
-            onClick={() => setIsSaved(!isSaved)}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-700 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors"
+            onClick={() => onToggleWishlist && onToggleWishlist(property.id)}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-700 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <Heart className={`w-4 h-4 ${isSaved ? 'text-tafiya-orange fill-tafiya-orange' : 'text-slate-500'}`} />
+            <Heart className={`w-4 h-4 transition-all ${isSaved ? 'text-tafiya-orange fill-tafiya-orange scale-110' : 'text-slate-500'}`} />
             <span className="hidden sm:inline">{isSaved ? 'Saved' : 'Save'}</span>
           </button>
         </div>

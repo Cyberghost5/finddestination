@@ -17,6 +17,8 @@ import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import InfoModal from './components/InfoModal';
 import OrderTrackerModal from './components/OrderTrackerModal';
+import ShareModal from './components/ShareModal';
+import WishlistPage from './components/WishlistPage';
 import { MOCK_PROPERTIES } from './data/mockProperties';
 import { 
   Building2, 
@@ -101,6 +103,30 @@ export default function App() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState('explore');
   const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Wishlist State (persisted in localStorage)
+  const [wishlistIds, setWishlistIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tafiya_wishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Share Property Modal State
+  const [shareProperty, setShareProperty] = useState(null);
+
+  const handleToggleWishlist = (propertyId) => {
+    setWishlistIds(prev => {
+      const exists = prev.includes(propertyId);
+      const updated = exists ? prev.filter(id => id !== propertyId) : [...prev, propertyId];
+      try {
+        localStorage.setItem('tafiya_wishlist', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
 
   const handleOpenAuthModal = (mode = 'login') => {
     setAuthModalMode(mode);
@@ -374,54 +400,71 @@ export default function App() {
         {currentRole === 'guest' ? (
           /* GUEST / TRAVELER ROLE */
           <>
-            <div className={guestSubView === 'feed' ? 'animate-in fade-in duration-300' : 'hidden'}>
-              <CategoryRail
-                activeCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                onOpenFilterModal={() => setIsFilterModalOpen(true)}
-                activeFilterCount={activeFilterCount}
+            {activeMobileTab === 'wishlist' ? (
+              <WishlistPage
+                properties={properties}
+                wishlistIds={wishlistIds}
+                onToggleWishlist={handleToggleWishlist}
+                onSelectProperty={handleSelectProperty}
+                onNavigateExplore={() => setActiveMobileTab('explore')}
               />
+            ) : (
+              <>
+                <div className={guestSubView === 'feed' ? 'animate-in fade-in duration-300' : 'hidden'}>
+                  <CategoryRail
+                    activeCategory={selectedCategory}
+                    onSelectCategory={setSelectedCategory}
+                    onOpenFilterModal={() => setIsFilterModalOpen(true)}
+                    activeFilterCount={activeFilterCount}
+                  />
 
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-                
-                <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-tafiya-dark to-slate-900 text-white rounded-3xl shadow-md border border-slate-800 flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tafiya-orange/20 text-tafiya-orange text-[11px] font-bold">
-                      <User className="w-3 h-3" />
-                      <span>Role 1: Guest / Traveler Portal</span>
+                  <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                    
+                    <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-tafiya-dark to-slate-900 text-white rounded-3xl shadow-md border border-slate-800 flex items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tafiya-orange/20 text-tafiya-orange text-[11px] font-bold">
+                          <User className="w-3 h-3" />
+                          <span>Role 1: Guest / Traveler Portal</span>
+                        </div>
+                        <h2 className="text-base sm:text-lg font-extrabold text-white">
+                          Explore Verified Accommodations in Northern Nigeria
+                        </h2>
+                        <p className="text-xs text-slate-400 hidden sm:block">
+                          Bauchi • Kaduna • Kano • Plateau • Adamawa • Gombe
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="hidden md:inline-block text-xs font-bold text-slate-300">
+                          {filteredProperties.length} Stays Available
+                        </span>
+                      </div>
                     </div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-white">
-                      Explore Verified Accommodations in Northern Nigeria
-                    </h2>
-                    <p className="text-xs text-slate-400 hidden sm:block">
-                      Bauchi • Kaduna • Kano • Plateau • Adamawa • Gombe
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="hidden md:inline-block text-xs font-bold text-slate-300">
-                      {filteredProperties.length} Stays Available
-                    </span>
-                  </div>
+                    <ListingGrid 
+                      properties={filteredProperties}
+                      onSelectProperty={handleSelectProperty}
+                      onOpenFilterModal={() => setIsFilterModalOpen(true)}
+                      wishlistIds={wishlistIds}
+                      onToggleWishlist={handleToggleWishlist}
+                    />
+
+                  </main>
                 </div>
 
-                <ListingGrid 
-                  properties={filteredProperties}
-                  onSelectProperty={handleSelectProperty}
-                  onOpenFilterModal={() => setIsFilterModalOpen(true)}
-                />
-
-              </main>
-            </div>
-
-            {guestSubView === 'detail' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
-                <PropertyDetail
-                  property={selectedProperty}
-                  onBack={handleBackToFeed}
-                  onInitiateBooking={handleInitiateBooking}
-                />
-              </div>
+                {guestSubView === 'detail' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+                    <PropertyDetail
+                      property={selectedProperty}
+                      onBack={handleBackToFeed}
+                      onInitiateBooking={handleInitiateBooking}
+                      isSaved={wishlistIds.includes(selectedProperty?.id)}
+                      onToggleWishlist={handleToggleWishlist}
+                      onOpenShareModal={(p) => setShareProperty(p)}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </>
         ) : currentRole === 'host' ? (
@@ -469,6 +512,8 @@ export default function App() {
       <CheckoutModal
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
+        currentUser={currentUser}
+        onOpenAuthModal={handleOpenAuthModal}
         property={selectedProperty}
         selectedRoom={selectedRoom}
         totalNights={bookingNights}
@@ -508,6 +553,13 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
         onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* Share Property Modal */}
+      <ShareModal
+        isOpen={!!shareProperty}
+        onClose={() => setShareProperty(null)}
+        property={shareProperty}
       />
 
       {/* Informational Policy & Help Modal */}
