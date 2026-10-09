@@ -127,7 +127,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
 
               const data = await response.json();
               if (response.ok && data.status === 'success' && data.data?.user) {
-                if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
+                if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '', { isRegistration: !!data.data?.is_new_user });
                 onClose();
               } else {
                 setErrorMessage(data.message || 'Failed to authenticate Google user');
@@ -174,7 +174,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
       const data = await response.json();
 
       if (response.ok && data.status === 'success' && data.data?.user) {
-        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
+        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '', { isRegistration: false });
         onClose();
       } else if (data.requires_verification || data.status === 'unverified') {
         setUnverifiedEmail(data.data?.email || loginInput);
@@ -280,7 +280,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
       const data = await response.json();
 
       if (response.ok && data.status === 'success' && data.data?.user) {
-        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '');
+        if (onAuthSuccess) onAuthSuccess(data.data.user, data.data.token || '', { isRegistration: true });
         onClose();
       } else {
         setErrorMessage(data.message || 'Invalid verification code');

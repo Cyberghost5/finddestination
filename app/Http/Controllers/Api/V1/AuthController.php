@@ -316,6 +316,7 @@ class AuthController extends Controller
             ->orWhere('google_id', $googleId)
             ->first();
 
+        $isNewUser = false;
         if ($user) {
             $user->update([
                 'google_id' => $user->google_id ?? $googleId,
@@ -323,6 +324,7 @@ class AuthController extends Controller
                 'email_verified_at' => $user->email_verified_at ?? now(),
             ]);
         } else {
+            $isNewUser = true;
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $email,
@@ -344,6 +346,7 @@ class AuthController extends Controller
                 'user' => $user,
                 'token' => $token,
                 'token_type' => 'Bearer',
+                'is_new_user' => $isNewUser,
             ]
         ]);
     }

@@ -156,6 +156,7 @@ export default function App() {
 
   const handleUpdateUser = (updatedUser) => {
     setCurrentUser(updatedUser);
+    setIsOnboardingModalOpen(false);
     if (updatedUser && updatedUser.role && updatedUser.role !== 'guest') {
       setActiveMobileTab('dashboard');
     }
@@ -166,11 +167,8 @@ export default function App() {
     }
   };
 
-  // Compulsory Onboarding Modal Trigger
-  const isOnboardingModalOpen = useMemo(() => {
-    if (!currentUser) return false;
-    return !currentUser.onboarding_completed;
-  }, [currentUser]);
+  // Onboarding Modal Trigger (Only shown after registration)
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
   const handleOpenAuthModal = (mode = 'login') => {
     setAuthModalMode(mode);
@@ -195,7 +193,7 @@ export default function App() {
     setGuestSubView('feed');
   };
 
-  const handleAuthSuccess = (user, token) => {
+  const handleAuthSuccess = (user, token, options = {}) => {
     if (!user) return;
     setCurrentUser(user);
     if (token) setAuthToken(token);
@@ -207,6 +205,14 @@ export default function App() {
         setActiveMobileTab('explore');
       }
     }
+
+    // Trigger onboarding modal ONLY after new registration
+    if (options.isRegistration) {
+      setIsOnboardingModalOpen(true);
+    } else {
+      setIsOnboardingModalOpen(false);
+    }
+
     try {
       localStorage.setItem('tafiya_user', JSON.stringify(user));
       if (token) localStorage.setItem('tafiya_token', token);
