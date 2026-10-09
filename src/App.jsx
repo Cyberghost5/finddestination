@@ -24,6 +24,7 @@ import InboxPage from './components/InboxPage';
 import ProfilePage from './components/ProfilePage';
 import AuthGuard from './components/AuthGuard';
 import OnboardingModal from './components/OnboardingModal';
+import LegalPolicyPage from './components/LegalPolicyPage';
 import { MOCK_PROPERTIES } from './data/mockProperties';
 import { 
   Building2, 
@@ -97,6 +98,39 @@ export default function App() {
   // Info Modal State for Footer Links
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [infoTopicKey, setInfoTopicKey] = useState('help');
+
+  // Legal Policy Dedicated Page State & Hash Router
+  const [activeLegalPolicy, setActiveLegalPolicy] = useState(() => {
+    const hash = window.location.hash;
+    if (hash === '#privacy-policy' || hash === '#privacy') return 'privacy';
+    if (hash === '#refund-policy' || hash === '#refund' || hash === '#escrow') return 'refund';
+    if (hash === '#terms-and-conditions' || hash === '#terms') return 'terms';
+    if (hash === '#host-partner-policy' || hash === '#host-policy') return 'host-policy';
+    if (hash === '#sitemap') return 'sitemap';
+    return null;
+  });
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#privacy-policy' || hash === '#privacy') {
+        setActiveLegalPolicy('privacy');
+      } else if (hash === '#refund-policy' || hash === '#refund' || hash === '#escrow') {
+        setActiveLegalPolicy('refund');
+      } else if (hash === '#terms-and-conditions' || hash === '#terms') {
+        setActiveLegalPolicy('terms');
+      } else if (hash === '#host-partner-policy' || hash === '#host-policy') {
+        setActiveLegalPolicy('host-policy');
+      } else if (hash === '#sitemap') {
+        setActiveLegalPolicy('sitemap');
+      } else if (!hash) {
+        setActiveLegalPolicy(null);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Order Tracker Modal State
   const [isTrackerModalOpen, setIsTrackerModalOpen] = useState(false);
@@ -181,8 +215,30 @@ export default function App() {
   };
 
   const handleOpenInfoTopic = (topicKey) => {
-    setInfoTopicKey(topicKey);
-    setIsInfoModalOpen(true);
+    if (topicKey === 'privacy') {
+      setActiveLegalPolicy('privacy');
+      window.location.hash = '#privacy-policy';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (topicKey === 'refund' || topicKey === 'escrow') {
+      setActiveLegalPolicy('refund');
+      window.location.hash = '#refund-policy';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (topicKey === 'terms') {
+      setActiveLegalPolicy('terms');
+      window.location.hash = '#terms-and-conditions';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (topicKey === 'host-policy' || topicKey === 'host-cover') {
+      setActiveLegalPolicy('host-policy');
+      window.location.hash = '#host-partner-policy';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (topicKey === 'sitemap') {
+      setActiveLegalPolicy('sitemap');
+      window.location.hash = '#sitemap';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setInfoTopicKey(topicKey);
+      setIsInfoModalOpen(true);
+    }
   };
 
   const handleSelectDestinationState = (stateName) => {
@@ -454,10 +510,30 @@ export default function App() {
           onLogout={handleLogout}
           searchParams={searchParams}
           onOpenTracker={handleOpenTrackerModal}
+          onLogoClick={() => {
+            setActiveLegalPolicy(null);
+            if (window.location.hash) {
+              history.pushState("", document.title, window.location.pathname + window.location.search);
+            }
+            setGuestSubView('feed');
+          }}
         />
 
         {/* 3. Render Role-Specific Portal or Mobile Sub-Page */}
-        {activeMobileTab === 'wishlist' ? (
+        {activeLegalPolicy ? (
+          <LegalPolicyPage
+            activePolicyKey={activeLegalPolicy}
+            onNavigateTab={(key) => setActiveLegalPolicy(key)}
+            onClose={() => {
+              setActiveLegalPolicy(null);
+              if (window.location.hash) {
+                history.pushState("", document.title, window.location.pathname + window.location.search);
+              }
+            }}
+            onSelectStateFilter={handleSelectDestinationState}
+            onOpenAuthModal={handleOpenAuthModal}
+          />
+        ) : activeMobileTab === 'wishlist' ? (
           <WishlistPage
             properties={properties}
             wishlistIds={wishlistIds}
@@ -693,10 +769,14 @@ export default function App() {
 
       {/* Airbnb Style Full Footer Component */}
       <Footer 
+        currentUser={currentUser}
+        currentRole={currentRole}
         onOpenAuthModal={handleOpenAuthModal}
         onOpenInfoTopic={handleOpenInfoTopic}
         onSelectDestinationState={handleSelectDestinationState}
         onOpenTracker={handleOpenTrackerModal}
+        onOpenWizard={() => setIsWizardOpen(true)}
+        onSelectTab={(tab) => setActiveMobileTab(tab)}
       />
 
       {/* Mobile Bottom Navigation */}

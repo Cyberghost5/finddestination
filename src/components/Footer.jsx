@@ -16,7 +16,16 @@ import {
   Award
 } from 'lucide-react';
 
-export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDestinationState }) {
+export default function Footer({
+  currentUser,
+  currentRole = 'guest',
+  onOpenAuthModal,
+  onOpenInfoTopic,
+  onSelectDestinationState,
+  onOpenTracker,
+  onOpenWizard,
+  onSelectTab
+}) {
   const [activeTab, setActiveTab] = useState('destinations');
 
   const destinationCategories = {
@@ -54,6 +63,12 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
 
   const handleInfoClick = (e, topicKey) => {
     e.preventDefault();
+    if (topicKey === 'privacy') window.location.hash = '#privacy-policy';
+    else if (topicKey === 'refund' || topicKey === 'escrow') window.location.hash = '#refund-policy';
+    else if (topicKey === 'terms') window.location.hash = '#terms-and-conditions';
+    else if (topicKey === 'host-policy' || topicKey === 'host-cover') window.location.hash = '#host-partner-policy';
+    else if (topicKey === 'sitemap') window.location.hash = '#sitemap';
+
     if (onOpenInfoTopic) {
       onOpenInfoTopic(topicKey);
     }
@@ -70,29 +85,99 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
               <img src="/logo.jpeg" alt="FindDestination.com.ng" className="w-12 h-12 object-contain rounded-xl" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-extrabold text-white">FindDestination<span className="text-tafiya-orange">.com.ng</span></span>
-              </div>
-              <p className="text-slate-400 text-xs mt-1 max-w-xl">
-                The trusted digital accommodation portal for Northern Nigeria. Verified property documents, on-site GPS agent audits, and 100% escrow backed payment security.
-              </p>
+              {currentUser ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-base font-extrabold text-white">Welcome back, {currentUser.name || currentUser.full_name || 'Traveler'}</span>
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-tafiya-blue/30 text-tafiya-gold border border-tafiya-gold/30">
+                      {currentRole === 'host' ? 'Host Account' : currentRole === 'agent' ? 'Field Agent' : currentRole === 'admin' ? 'Super Admin' : 'Traveler'}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs">
+                    FindDestination Escrow Protected • Bauchi, Kaduna, Kano, Jos, Yola, Gombe
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-extrabold text-white">FindDestination<span className="text-tafiya-orange">.com.ng</span></span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1 max-w-xl">
+                    The trusted digital accommodation portal for Northern Nigeria. Verified property documents, on-site GPS agent audits, and 100% escrow backed payment security.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => onOpenAuthModal && onOpenAuthModal('host_signup')}
-              className="px-5 py-2.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
-            >
-              <Building2 className="w-4 h-4" />
-              <span>List Your Property</span>
-            </button>
-            <button
-              onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
-            >
-              Log In
-            </button>
+            {currentUser ? (
+              currentRole === 'host' ? (
+                <>
+                  <button
+                    onClick={() => onOpenWizard && onOpenWizard()}
+                    className="px-5 py-2.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <span>+ Add New Stay</span>
+                  </button>
+                  <button
+                    onClick={() => onSelectTab && onSelectTab('dashboard')}
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Host Dashboard
+                  </button>
+                </>
+              ) : currentRole === 'agent' ? (
+                <button
+                  onClick={() => onSelectTab && onSelectTab('dashboard')}
+                  className="px-5 py-2.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Agent Field Desk</span>
+                </button>
+              ) : currentRole === 'admin' ? (
+                <button
+                  onClick={() => onSelectTab && onSelectTab('dashboard')}
+                  className="px-5 py-2.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Super Admin Panel</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => onOpenAuthModal && onOpenAuthModal('host_signup')}
+                    className="px-5 py-2.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
+                  >
+                    <Building2 className="w-4 h-4" />
+                    <span>Become a Host</span>
+                  </button>
+                  <button
+                    onClick={() => onOpenTracker && onOpenTracker('')}
+                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    Track Booking
+                  </button>
+                </>
+              )
+            ) : (
+              <>
+                <button
+                  onClick={() => onOpenAuthModal && onOpenAuthModal('host_signup')}
+                  className="px-5 py-2.5 bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white rounded-2xl font-bold text-xs shadow-md hover:shadow-lg transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
+                >
+                  <Building2 className="w-4 h-4" />
+                  <span>List Your Property</span>
+                </button>
+                <button
+                  onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Log In
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -223,7 +308,11 @@ export default function Footer({ onOpenAuthModal, onOpenInfoTopic, onSelectDesti
             <span>•</span>
             <button onClick={(e) => handleInfoClick(e, 'privacy')} className="hover:text-white transition-colors cursor-pointer">Privacy Policy</button>
             <span>•</span>
+            <button onClick={(e) => handleInfoClick(e, 'refund')} className="hover:text-white transition-colors cursor-pointer">Refund & Escrow Policy</button>
+            <span>•</span>
             <button onClick={(e) => handleInfoClick(e, 'terms')} className="hover:text-white transition-colors cursor-pointer">Terms & Conditions</button>
+            <span>•</span>
+            <button onClick={(e) => handleInfoClick(e, 'host-policy')} className="hover:text-white transition-colors cursor-pointer">Host Partner Policy</button>
             <span>•</span>
             <button onClick={(e) => handleInfoClick(e, 'sitemap')} className="hover:text-white transition-colors cursor-pointer">Sitemap</button>
             <span>•</span>

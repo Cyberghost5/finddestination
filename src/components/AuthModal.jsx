@@ -34,8 +34,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   }, [isOpen, initialMode]);
 
   // Login State
-  const [loginInput, setLoginInput] = useState('musa@example.com');
-  const [loginPassword, setLoginPassword] = useState('password123');
+  const [loginInput, setLoginInput] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Sign Up State
   const [signUpName, setSignUpName] = useState('');
@@ -405,15 +405,19 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
         {/* Mode Switcher Tabs (Login vs Signup) */}
         {mode !== 'forgot' && mode !== 'verify' && (
           <div className="flex border-b border-slate-100 bg-slate-50/60 p-1">
+            {mode !== 'host_signup' && (
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setErrorMessage(''); }}
+                className={`flex-1 py-2 text-xs font-bold rounded-2xl transition-all ${mode === 'login' ? 'bg-white text-tafiya-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+              >
+                Log In
+              </button>
+            )}
             <button
-              onClick={() => { setMode('login'); setErrorMessage(''); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-2xl transition-all ${mode === 'login' ? 'bg-white text-tafiya-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                }`}
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => { setMode('signup'); setErrorMessage(''); }}
+              type="button"
+              onClick={() => { setMode(mode === 'host_signup' ? 'host_signup' : 'signup'); setErrorMessage(''); }}
               className={`flex-1 py-2 text-xs font-bold rounded-2xl transition-all ${mode === 'signup' || mode === 'host_signup' ? 'bg-white text-tafiya-blue shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
             >
@@ -725,15 +729,27 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
                   {isLoading ? 'Submitting Application...' : 'Register as Host & Submit CAC Details'}
                 </button>
 
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between gap-2 mt-2">
-                  <span className="text-xs text-slate-600 font-medium">Looking to book stays instead?</span>
-                  <button
-                    type="button"
-                    onClick={() => { setMode('signup'); setErrorMessage(''); }}
-                    className="text-xs font-bold text-tafiya-blue hover:underline shrink-0 cursor-pointer"
-                  >
-                    Register as Guest &rarr;
-                  </button>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 mt-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-slate-600 font-medium">Already have an account?</span>
+                    <button
+                      type="button"
+                      onClick={() => { setMode('login'); setErrorMessage(''); }}
+                      className="text-xs font-bold text-tafiya-blue hover:underline shrink-0 cursor-pointer"
+                    >
+                      Log In &rarr;
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/60">
+                    <span className="text-xs text-slate-600 font-medium">Looking to book stays instead?</span>
+                    <button
+                      type="button"
+                      onClick={() => { setMode('signup'); setErrorMessage(''); }}
+                      className="text-xs font-bold text-tafiya-blue hover:underline shrink-0 cursor-pointer"
+                    >
+                      Register as Guest &rarr;
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

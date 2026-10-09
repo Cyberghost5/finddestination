@@ -17,7 +17,7 @@ import {
   Package
 } from 'lucide-react';
 
-export default function Header({ onOpenSearchModal, activeTab, setActiveTab, currentUser, onOpenAuthModal, onLogout, searchParams, onOpenTracker }) {
+export default function Header({ onOpenSearchModal, activeTab, setActiveTab, currentUser, onOpenAuthModal, onLogout, searchParams, onOpenTracker, onLogoClick }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -43,7 +43,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
         <div className="flex items-center justify-between gap-4">
 
           {/* Logo & Brand */}
-          <div className="flex items-center gap-3 cursor-pointer group">
+          <div onClick={() => onLogoClick && onLogoClick()} className="flex items-center gap-3 cursor-pointer group">
             <div className="relative overflow-hidden rounded-xl border border-slate-200/60 p-1 bg-white shadow-sm transition-transform duration-300 group-hover:scale-105">
               <img
                 src="/logo.jpeg"
