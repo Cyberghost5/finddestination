@@ -63,4 +63,30 @@ class User extends Authenticatable
     {
         return $this->hasMany(ChatThread::class, 'host_id');
     }
+
+    public function agentWallet()
+    {
+        return $this->hasOne(AgentWallet::class, 'agent_id');
+    }
+
+    public function agentInspections()
+    {
+        return $this->hasMany(AgentInspection::class, 'agent_id');
+    }
+
+    public function withdrawalRequests()
+    {
+        return $this->hasMany(WithdrawalRequest::class, 'agent_id');
+    }
+
+    public function getOrCreateAgentWallet(): AgentWallet
+    {
+        return $this->agentWallet()->firstOrCreate(
+            ['agent_id' => $this->id],
+            [
+                'balance' => 0.00,
+                'total_earned' => 0.00,
+            ]
+        );
+    }
 }

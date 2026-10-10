@@ -29,7 +29,13 @@ import {
   Search,
   User,
   Phone,
-  Mail
+  Mail,
+  Unlock,
+  Video,
+  Landmark,
+  ArrowDownLeft,
+  CheckCircle,
+  ExternalLink
 } from 'lucide-react';
 
 export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish, currentUser }) {
@@ -43,6 +49,23 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
   const [hostActionError, setHostActionError] = useState('');
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [rejectingHostId, setRejectingHostId] = useState(null);
+
+  // Field Agent Inspection Management State
+  const [adminInspectionsSubTab, setAdminInspectionsSubTab] = useState('bounties'); // 'bounties', 'applications', 'reports'
+  const [inspectionProperties, setInspectionProperties] = useState([]);
+  const [inspectionApplications, setInspectionApplications] = useState([]);
+  const [inspectionReports, setInspectionReports] = useState([]);
+  const [agentWithdrawals, setAgentWithdrawals] = useState([]);
+  const [isLoadingInspections, setIsLoadingInspections] = useState(false);
+  const [isLoadingWithdrawals, setIsLoadingWithdrawals] = useState(false);
+  const [inspectActionMsg, setInspectActionMsg] = useState('');
+  const [inspectActionError, setInspectActionError] = useState('');
+
+  // Modals for Agent Inspections & Payouts
+  const [bountyConfigModal, setBountyConfigModal] = useState(null); // { property, fee, is_open }
+  const [appReviewModal, setAppReviewModal] = useState(null); // { application, action, notes }
+  const [reportVerifyModal, setReportVerifyModal] = useState(null); // { report, action, notes }
+  const [withdrawalActionModal, setWithdrawalActionModal] = useState(null); // { withdrawal, action, note }
 
   // Payment Gateway & Auth Settings State
   const [activeGateway, setActiveGateway] = useState('paystack');
@@ -203,8 +226,184 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     }
   };
 
+  const fetchInspectionProperties = async () => {
+    setIsLoadingInspections(true);
+    try {
+      const res = await fetch('/api/v1/admin/inspections/properties', { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setInspectionProperties(data.data);
+      }
+    } catch (e) {
+      console.error('Failed to load inspection properties', e);
+    } finally {
+      setIsLoadingInspections(false);
+    }
+  };
+
+  const fetchInspectionApplications = async () => {
+    try {
+      const res = await fetch('/api/v1/admin/inspections/applications', { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setInspectionApplications(data.data);
+      }
+    } catch (e) {
+      console.error('Failed to load inspection applications', e);
+    }
+  };
+
+  const fetchInspectionReports = async () => {
+    try {
+      const res = await fetch('/api/v1/admin/inspections/reports', { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setInspectionReports(data.data);
+      }
+    } catch (e) {
+      console.error('Failed to load inspection reports', e);
+    }
+  };
+
+  const fetchAgentWithdrawals = async () => {
+    setIsLoadingWithdrawals(true);
+    try {
+      const res = await fetch('/api/v1/admin/withdrawals', { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setAgentWithdrawals(data.data);
+      }
+    } catch (e) {
+      console.error('Failed to load agent withdrawals', e);
+    } finally {
+      setIsLoadingWithdrawals(false);
+    }
+  };
+
+  const fetchAllAgentAdminData = async () => {
+    await Promise.all([
+      fetchInspectionProperties(),
+      fetchInspectionApplications(),
+      fetchInspectionReports(),
+      fetchAgentWithdrawals(),
+    ]);
+  };
+
+  const handleSaveBountyConfig = async (e) => {
+    e.preventDefault();
+    if (!bountyConfigModal) return;
+    setInspectActionMsg('');
+    setInspectActionError('');
+
+    try {
+      const res = await fetch(`/api/v1/admin/inspections/properties/${bountyConfigModal.property.id}/open`, {
+        method: 'POST',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify({
+          is_open_for_inspection: bountyConfigModal.is_open,
+          inspection_fee: parseFloat(bountyConfigModal.fee) || 0,
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setInspectActionMsg(data.message || 'Property bounty configuration updated!');
+        setBountyConfigModal(null);
+        fetchInspectionProperties();
+      } else {
+        setInspectActionError(data.message || 'Failed to update bounty configuration.');
+      }
+    } catch (err) {
+      setInspectActionError('Network error updating bounty configuration: ' + err.message);
+    }
+  };
+
+  const handleRespondApplication = async (e) => {
+    e.preventDefault();
+    if (!appReviewModal) return;
+    setInspectActionMsg('');
+    setInspectActionError('');
+
+    try {
+      const res = await fetch(`/api/v1/admin/inspections/applications/${appReviewModal.application.id}/respond`, {
+        method: 'POST',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify({
+          action: appReviewModal.action,
+          admin_review_notes: appReviewModal.notes,
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setInspectActionMsg(data.message || 'Application response recorded!');
+        setAppReviewModal(null);
+        fetchAllAgentAdminData();
+      } else {
+        setInspectActionError(data.message || 'Failed to process application response.');
+      }
+    } catch (err) {
+      setInspectActionError('Network error: ' + err.message);
+    }
+  };
+
+  const handleVerifyReport = async (e) => {
+    e.preventDefault();
+    if (!reportVerifyModal) return;
+    setInspectActionMsg('');
+    setInspectActionError('');
+
+    try {
+      const res = await fetch(`/api/v1/admin/inspections/${reportVerifyModal.report.id}/verify`, {
+        method: 'POST',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify({
+          action: reportVerifyModal.action,
+          admin_review_notes: reportVerifyModal.notes,
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setInspectActionMsg(data.message || 'Inspection report processed successfully!');
+        setReportVerifyModal(null);
+        fetchAllAgentAdminData();
+      } else {
+        setInspectActionError(data.message || 'Failed to verify inspection report.');
+      }
+    } catch (err) {
+      setInspectActionError('Network error: ' + err.message);
+    }
+  };
+
+  const handleProcessWithdrawal = async (e) => {
+    e.preventDefault();
+    if (!withdrawalActionModal) return;
+    setInspectActionMsg('');
+    setInspectActionError('');
+
+    try {
+      const res = await fetch(`/api/v1/admin/withdrawals/${withdrawalActionModal.withdrawal.id}/process`, {
+        method: 'POST',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify({
+          action: withdrawalActionModal.action,
+          admin_note: withdrawalActionModal.note,
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setInspectActionMsg(data.message || 'Withdrawal request updated!');
+        setWithdrawalActionModal(null);
+        fetchAgentWithdrawals();
+      } else {
+        setInspectActionError(data.message || 'Failed to process withdrawal.');
+      }
+    } catch (err) {
+      setInspectActionError('Network error: ' + err.message);
+    }
+  };
+
   useEffect(() => {
     fetchHosts();
+    fetchAllAgentAdminData();
 
     const fetchSettings = async () => {
       try {
@@ -313,6 +512,9 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
   const netHostPayout = escrowTotal - platformFee;
 
   const pendingHostsCount = hosts.filter(h => h.host_status === 'pending_approval').length;
+  const pendingApplicationsCount = inspectionApplications.filter(a => a.status === 'pending').length;
+  const submittedReportsCount = inspectionReports.filter(r => r.status === 'submitted').length;
+  const pendingWithdrawalsCount = agentWithdrawals.filter(w => w.status === 'pending').length;
 
   const handleTriggerPayout = (hostName, amount) => {
     const newLog = {
@@ -339,28 +541,57 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black">Super Admin & Verification Console</h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white">
-                2-Level Verification Governance
+                Multi-Level Governance
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">CAC Business Verification & Level 2 Property Publishing Control</p>
+            <p className="text-xs text-slate-400 mt-0.5">Host CAC Audits • Field Agent Bounties • Tier 3 Certified Verification • Escrow Payouts</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
-          <Sparkles className="w-4 h-4 text-tafiya-gold" />
-          <span>Super Admin Authority</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchAllAgentAdminData}
+            title="Refresh All Admin Queues"
+            className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-2xl transition-all cursor-pointer flex items-center gap-2 text-xs font-bold"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
+            <span>Sync Queues</span>
+          </button>
+
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
+            <Sparkles className="w-4 h-4 text-tafiya-gold" />
+            <span>Super Admin Authority</span>
+          </div>
         </div>
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         
         {/* Pending Level 1 Host Approvals */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Pending Host CAC Queue</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Host CAC Queue</span>
           <div className="text-2xl font-black text-amber-600">{pendingHostsCount} Hosts</div>
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-            <Clock className="w-3 h-3 text-amber-600" /> Level 1 Check Required
+            <Clock className="w-3 h-3 text-amber-600" /> CAC Check Needed
+          </span>
+        </div>
+
+        {/* Inspector Applications & Audits */}
+        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Inspection Queue</span>
+          <div className="text-2xl font-black text-tafiya-blue">{pendingApplicationsCount + submittedReportsCount} Active</div>
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+            <Navigation className="w-3 h-3 text-tafiya-blue" /> {submittedReportsCount} Audits for Review
+          </span>
+        </div>
+
+        {/* Pending Agent Withdrawals */}
+        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Payout Requests</span>
+          <div className="text-2xl font-black text-emerald-600">{pendingWithdrawalsCount} Payouts</div>
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+            <DollarSign className="w-3 h-3 text-emerald-600" /> Bank Transfer Ready
           </span>
         </div>
 
@@ -373,18 +604,11 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
           </span>
         </div>
 
-        {/* Platform Fee */}
-        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Platform Fee (12.5%)</span>
-          <div className="text-2xl font-black text-tafiya-blue">₦{platformFee.toLocaleString()}</div>
-          <span className="text-[11px] font-medium text-slate-500">FindDestination Revenue</span>
-        </div>
-
         {/* Total Listings */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Active Listings Audit</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Active Listings</span>
           <div className="text-2xl font-black text-slate-900">{properties.length} Properties</div>
-          <span className="text-[11px] font-medium text-slate-500">Level 2 Verified Stays</span>
+          <span className="text-[11px] font-medium text-slate-500">Tier 1-3 Verified</span>
         </div>
 
       </div>
@@ -411,7 +635,43 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
             )}
           </button>
 
-          {/* TAB 2: Property Verification & Publishing */}
+          {/* TAB 2: Field Agent Inspections & Bounties (NEW) */}
+          <button
+            onClick={() => setActiveTab('agent_inspections')}
+            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+              activeTab === 'agent_inspections'
+                ? 'border-tafiya-blue text-tafiya-blue'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Navigation className="w-4 h-4 text-tafiya-blue" />
+            <span>Agent Inspections & Bounties</span>
+            {(pendingApplicationsCount + submittedReportsCount) > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white font-black text-[10px]">
+                {pendingApplicationsCount + submittedReportsCount}
+              </span>
+            )}
+          </button>
+
+          {/* TAB 3: Agent Payouts & Withdrawals (NEW) */}
+          <button
+            onClick={() => setActiveTab('agent_withdrawals')}
+            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
+              activeTab === 'agent_withdrawals'
+                ? 'border-tafiya-blue text-tafiya-blue'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <DollarSign className="w-4 h-4 text-emerald-600" />
+            <span>Agent Withdrawals</span>
+            {pendingWithdrawalsCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
+                {pendingWithdrawalsCount}
+              </span>
+            )}
+          </button>
+
+          {/* TAB 4: Property Verification & Publishing */}
           <button
             onClick={() => setActiveTab('verification')}
             className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
@@ -421,10 +681,10 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>Level 2 Property Audit & Publishing</span>
+            <span>Level 2 Property Publishing</span>
           </button>
 
-          {/* TAB 3: Escrow Settlement */}
+          {/* TAB 5: Escrow Settlement */}
           <button
             onClick={() => setActiveTab('escrow')}
             className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer ${
@@ -433,23 +693,10 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            Escrow Settlement & Host Payouts API
+            Escrow Settlement & Host Payouts
           </button>
 
-          {/* TAB 4: Payment Gateway Settings */}
-          <button
-            onClick={() => setActiveTab('payment_settings')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'payment_settings'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Payment Gateway Settings ({activeGateway.toUpperCase()})</span>
-          </button>
-
-          {/* TAB 5: Super Admin Support Desk */}
+          {/* TAB 6: Super Admin Support Desk */}
           <button
             onClick={() => setActiveTab('support_desk')}
             className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
@@ -465,6 +712,19 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                 {supportUnreadTotal}
               </span>
             )}
+          </button>
+
+          {/* TAB 7: Payment Gateway Settings */}
+          <button
+            onClick={() => setActiveTab('payment_settings')}
+            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'payment_settings'
+                ? 'border-tafiya-blue text-tafiya-blue'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Gateway Settings ({activeGateway.toUpperCase()})</span>
           </button>
         </div>
 
@@ -633,6 +893,586 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* VIEW: FIELD AGENT INSPECTIONS & BOUNTIES */}
+        {activeTab === 'agent_inspections' && (
+          <div className="space-y-6">
+            
+            {/* Top Sub-tabs Bar */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Field Agent Inspection Governance & Bounties</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Set inspection fee bounties, review inspector applications, and verify on-site audit evidence to release wallet bounties.
+                </p>
+              </div>
+
+              {/* Sub-tab pills */}
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl shrink-0">
+                <button
+                  onClick={() => setAdminInspectionsSubTab('bounties')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    adminInspectionsSubTab === 'bounties'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Bounty Setup ({inspectionProperties.filter(p => p.is_open_for_inspection).length} Open)
+                </button>
+
+                <button
+                  onClick={() => setAdminInspectionsSubTab('applications')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    adminInspectionsSubTab === 'applications'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Inspector Applications</span>
+                  {pendingApplicationsCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black flex items-center justify-center">
+                      {pendingApplicationsCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setAdminInspectionsSubTab('reports')}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                    adminInspectionsSubTab === 'reports'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Audit Reports</span>
+                  {submittedReportsCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center">
+                      {submittedReportsCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Notifications */}
+            {inspectActionMsg && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{inspectActionMsg}</span>
+              </div>
+            )}
+            {inspectActionError && (
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{inspectActionError}</span>
+              </div>
+            )}
+
+            {/* SUB-VIEW 1: BOUNTY SETUP & FEES */}
+            {adminInspectionsSubTab === 'bounties' && (
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900">Properties Open for Regional Field Bounty</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">Toggle inspection availability and configure bounty payout amounts.</p>
+                  </div>
+                  <button
+                    onClick={fetchInspectionProperties}
+                    disabled={isLoadingInspections}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingInspections ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                      <tr>
+                        <th className="p-4">Property</th>
+                        <th className="p-4">Location</th>
+                        <th className="p-4">Host Liaison</th>
+                        <th className="p-4">Bounty Amount</th>
+                        <th className="p-4">Inspection Status</th>
+                        <th className="p-4">Assigned Agent</th>
+                        <th className="p-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {inspectionProperties.map((prop) => (
+                        <tr key={prop.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <img src={prop.cover_image} alt={prop.name} className="w-12 h-12 rounded-xl object-cover shrink-0 border border-slate-200" />
+                              <div>
+                                <span className="font-bold text-slate-900 block line-clamp-1">{prop.name}</span>
+                                <span className="text-[10px] text-slate-400 capitalize">{prop.property_type.replace('_', ' ')}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4 font-semibold text-slate-600">
+                            {prop.city}, {prop.state}
+                          </td>
+                          <td className="p-4">
+                            <span className="font-bold text-slate-900 block">{prop.host?.name || '—'}</span>
+                            <span className="text-[11px] text-slate-400">{prop.host?.phone || '—'}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-black text-emerald-600 font-mono text-sm">
+                              {prop.inspection_fee_formatted}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            {prop.is_open_for_inspection ? (
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                                prop.inspection_status === 'verified'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : prop.inspection_status === 'submitted'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : prop.inspection_status === 'assigned'
+                                  ? 'bg-indigo-100 text-indigo-800'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}>
+                                {prop.inspection_status || 'Open / Unassigned'}
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400">
+                                Closed
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            {prop.assigned_agent ? (
+                              <div>
+                                <span className="font-bold text-slate-900 block">{prop.assigned_agent.name}</span>
+                                <span className="text-[11px] text-slate-400">{prop.assigned_agent.phone}</span>
+                              </div>
+                            ) : prop.pending_applications_count > 0 ? (
+                              <span className="text-amber-600 font-bold text-[11px]">
+                                {prop.pending_applications_count} Application(s) Pending
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic text-[11px]">No Inspector</span>
+                            )}
+                          </td>
+                          <td className="p-4 text-right">
+                            <button
+                              onClick={() => setBountyConfigModal({
+                                property: prop,
+                                fee: prop.inspection_fee || 25000,
+                                is_open: prop.is_open_for_inspection,
+                              })}
+                              className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[11px] font-bold shadow-sm transition-all cursor-pointer"
+                            >
+                              Configure Bounty
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW 2: INSPECTOR APPLICATIONS QUEUE */}
+            {adminInspectionsSubTab === 'applications' && (
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900">Regional Field Inspector Applications</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">Authorizing an application unlocks confidential host contact details and exact address for the agent.</p>
+                  </div>
+                  <button
+                    onClick={fetchInspectionApplications}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {inspectionApplications.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 text-xs font-bold">
+                    No inspection applications submitted yet.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                        <tr>
+                          <th className="p-4">Inspector</th>
+                          <th className="p-4">Target Property</th>
+                          <th className="p-4">Bounty Amount</th>
+                          <th className="p-4">Applied Date</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4 text-right">Super Admin Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        {inspectionApplications.map((app) => (
+                          <tr key={app.id} className="hover:bg-slate-50/60 transition-colors">
+                            <td className="p-4">
+                              <span className="font-bold text-slate-900 block">{app.agent_name}</span>
+                              <span className="text-[11px] text-slate-400">{app.agent_phone} • {app.agent_email}</span>
+                            </td>
+                            <td className="p-4">
+                              <span className="font-bold text-slate-900 block">{app.property_name}</span>
+                              <span className="text-[11px] text-slate-500">{app.property_city}, {app.property_state}</span>
+                            </td>
+                            <td className="p-4 font-black text-emerald-600 font-mono">
+                              {app.inspection_fee_formatted}
+                            </td>
+                            <td className="p-4 text-slate-500">{app.applied_at}</td>
+                            <td className="p-4">
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                                app.status === 'approved'
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                  : app.status === 'declined'
+                                  ? 'bg-red-50 text-red-800 border border-red-200'
+                                  : 'bg-amber-50 text-amber-800 border border-amber-200'
+                              }`}>
+                                {app.status === 'approved' ? 'Authorized' : app.status}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right">
+                              {app.status === 'pending' ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => setAppReviewModal({
+                                      application: app,
+                                      action: 'approved',
+                                      notes: 'Authorized by Super Admin. Property and host contact details unlocked.'
+                                    })}
+                                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Authorize Inspector</span>
+                                  </button>
+                                  <button
+                                    onClick={() => setAppReviewModal({
+                                      application: app,
+                                      action: 'declined',
+                                      notes: 'Application declined by Super Admin.'
+                                    })}
+                                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-red-50 text-red-600 rounded-xl text-[11px] font-bold transition-all cursor-pointer border border-slate-200 flex items-center gap-1"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>Decline</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 font-semibold italic">
+                                  {app.status === 'approved' ? 'Inspector Authorized' : 'Application Processed'}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* SUB-VIEW 3: ON-SITE FIELD AUDIT VERIFICATION */}
+            {adminInspectionsSubTab === 'reports' && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900">Physical Site Audit Evidence Review Queue</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Verify GPS coordinates, photographic proof, video walkthrough, and amenities checklist. Approving automatically upgrades the property to Tier 3 Certified badge and deposits the bounty into the agent's wallet.
+                    </p>
+                  </div>
+                  <button
+                    onClick={fetchInspectionReports}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {inspectionReports.length === 0 ? (
+                  <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-xs font-bold text-slate-400">
+                    No field audit reports awaiting review.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {inspectionReports.map((report) => {
+                      const isSubmitted = report.status === 'submitted';
+                      const isVerified = report.status === 'verified';
+
+                      return (
+                        <div
+                          key={report.id}
+                          className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-5"
+                        >
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-base font-black text-slate-900">{report.property_name}</h4>
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                  isVerified ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {isVerified ? 'Tier 3 Certified & Bounty Paid' : 'Awaiting Super Admin Audit'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                                <span>{report.address}, {report.city}</span>
+                                <span>•</span>
+                                <span>Inspector: <strong className="text-slate-800">{report.agent?.name}</strong> ({report.agent?.phone})</span>
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-4 shrink-0">
+                              <div className="text-right">
+                                <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Bounty Payout</span>
+                                <span className="text-lg font-black text-emerald-600">{report.inspection_fee_formatted}</span>
+                              </div>
+
+                              {isSubmitted && (
+                                <button
+                                  onClick={() => setReportVerifyModal({
+                                    report: report,
+                                    action: 'approved',
+                                    notes: 'Field evidence confirmed. GPS reading within perimeter. Tier 3 Certified badge awarded.'
+                                  })}
+                                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  <span>Approve Audit & Release {report.inspection_fee_formatted}</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Audit Evidence Grid */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* 1. GPS Coordinates */}
+                            <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-2">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider flex items-center gap-1">
+                                <Navigation className="w-3.5 h-3.5 text-tafiya-blue" />
+                                <span>GPS Coordinates Reading</span>
+                              </span>
+                              <div className="font-mono text-xs text-emerald-400 font-black">
+                                <div>Lat: {report.gps_latitude || 'N/A'}</div>
+                                <div>Lng: {report.gps_longitude || 'N/A'}</div>
+                              </div>
+                              <span className="text-[10px] text-slate-400 block">Verified within on-site geolocation boundaries</span>
+                            </div>
+
+                            {/* 2. Walkthrough Video Link */}
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider flex items-center gap-1">
+                                <Video className="w-3.5 h-3.5 text-tafiya-orange" />
+                                <span>Video Walkthrough</span>
+                              </span>
+                              {report.video_url ? (
+                                <a
+                                  href={report.video_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs font-bold text-tafiya-blue hover:underline flex items-center gap-1"
+                                >
+                                  <span>Watch Field Tour Video</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">No video link provided</span>
+                              )}
+                            </div>
+
+                            {/* 3. Amenities Checklist */}
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider flex items-center gap-1">
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Amenities Verification</span>
+                              </span>
+                              <div className="text-[11px] space-y-1 font-semibold text-slate-700">
+                                {report.amenities_check && typeof report.amenities_check === 'object' ? (
+                                  Object.entries(report.amenities_check).slice(0, 3).map(([k, v]) => (
+                                    <div key={k} className="flex items-center gap-1.5">
+                                      {v ? <Check className="w-3 h-3 text-emerald-600" /> : <X className="w-3 h-3 text-red-500" />}
+                                      <span className="capitalize">{k.replace('_', ' ')}: {v ? 'Confirmed' : 'Deficient'}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <span className="text-slate-400 italic">No checklist recorded</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Photos Evidence Gallery */}
+                          {report.photos && report.photos.length > 0 && (
+                            <div className="space-y-2">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                                Field Audit Photo Evidence ({report.photos.length} Captured)
+                              </span>
+                              <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
+                                {report.photos.map((photo, pIdx) => (
+                                  <a key={pIdx} href={photo} target="_blank" rel="noreferrer" className="shrink-0 group">
+                                    <img
+                                      src={photo}
+                                      alt={`Evidence ${pIdx + 1}`}
+                                      className="w-24 h-24 rounded-xl object-cover border border-slate-200 group-hover:opacity-90 transition-opacity"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Auditor Notes */}
+                          {report.report_notes && (
+                            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-700 space-y-1">
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">Inspector Field Remarks:</span>
+                              <p className="leading-relaxed">{report.report_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* VIEW: AGENT PAYOUTS & WITHDRAWALS */}
+        {activeTab === 'agent_withdrawals' && (
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">Field Agent Withdrawal & Payout Processing Desk</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Process bank disbursements to regional inspectors. Rejecting automatically refunds the debited amount back to the agent's wallet.
+                </p>
+              </div>
+              <button
+                onClick={fetchAgentWithdrawals}
+                disabled={isLoadingWithdrawals}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingWithdrawals ? 'animate-spin' : ''}`} />
+                <span>Refresh Requests</span>
+              </button>
+            </div>
+
+            {/* Notifications */}
+            {inspectActionMsg && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{inspectActionMsg}</span>
+              </div>
+            )}
+            {inspectActionError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{inspectActionError}</span>
+              </div>
+            )}
+
+            {/* Withdrawals Table */}
+            {agentWithdrawals.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs font-bold">
+                No agent withdrawal requests in queue.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="p-4">Inspector</th>
+                      <th className="p-4">Payout Amount</th>
+                      <th className="p-4">Destination Bank Account</th>
+                      <th className="p-4">Reference</th>
+                      <th className="p-4">Requested At</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Super Admin Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {agentWithdrawals.map((w) => {
+                      const isPending = w.status === 'pending';
+                      const isApproved = w.status === 'approved';
+                      const isRejected = w.status === 'rejected';
+
+                      return (
+                        <tr key={w.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="p-4">
+                            <span className="font-bold text-slate-900 block">{w.agent_name}</span>
+                            <span className="text-[11px] text-slate-400">{w.agent_phone} • {w.agent_email}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-black text-slate-900 font-mono text-sm">
+                              {w.amount_formatted}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span className="font-bold text-slate-900 block">{w.bank_name}</span>
+                            <span className="text-[11px] font-mono text-slate-600 font-bold">{w.account_number} ({w.account_name})</span>
+                          </td>
+                          <td className="p-4 font-mono text-slate-500 text-[11px]">{w.transaction_reference}</td>
+                          <td className="p-4 text-slate-500">{w.created_at}</td>
+                          <td className="p-4">
+                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                              isApproved
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                : isRejected
+                                ? 'bg-red-50 text-red-800 border border-red-200'
+                                : 'bg-amber-50 text-amber-800 border border-amber-200'
+                            }`}>
+                              {isApproved ? 'Disbursed / Paid' : isRejected ? 'Refunded' : 'Pending Disbursal'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            {isPending ? (
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => setWithdrawalActionModal({
+                                    withdrawal: w,
+                                    action: 'approved',
+                                    note: 'Disbursed via automated bank transfer reference NIBSS-' + Math.floor(100000 + Math.random() * 900000)
+                                  })}
+                                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Mark Paid</span>
+                                </button>
+                                <button
+                                  onClick={() => setWithdrawalActionModal({
+                                    withdrawal: w,
+                                    action: 'rejected',
+                                    note: 'Withdrawal rejected and balance refunded back to agent wallet.'
+                                  })}
+                                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-red-50 text-red-600 rounded-xl text-[11px] font-bold transition-all cursor-pointer border border-slate-200 flex items-center gap-1"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  <span>Decline & Refund</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic font-semibold">
+                                {isApproved ? 'Transfer Completed' : 'Declined & Refunded'}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -1215,6 +2055,380 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
               )}
             </div>
 
+          </div>
+        )}
+
+        {/* MODAL 1: CONFIGURE INSPECTION BOUNTY */}
+        {bountyConfigModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-tafiya-blue-50 text-tafiya-blue flex items-center justify-center font-bold">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Configure Inspection Bounty</h3>
+                    <p className="text-[11px] text-slate-400 truncate max-w-[240px]">{bountyConfigModal.property?.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setBountyConfigModal(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveBountyConfig} className="space-y-4">
+                {/* Toggle open for inspection */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Open for Field Agent Bounties</span>
+                    <span className="text-[10px] text-slate-400">Listed on certified regional agents explore view</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBountyConfigModal(prev => ({ ...prev, is_open: !prev.is_open }))}
+                    className={`w-12 h-6.5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+                      bountyConfigModal.is_open ? 'bg-tafiya-blue' : 'bg-slate-300'
+                    }`}
+                  >
+                    <div
+                      className={`w-5.5 h-5.5 rounded-full bg-white shadow-md transform transition-transform ${
+                        bountyConfigModal.is_open ? 'translate-x-5.5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Bounty Fee Input */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Inspection Payout Bounty Amount (₦)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₦</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={bountyConfigModal.fee}
+                      onChange={(e) => setBountyConfigModal(prev => ({ ...prev, fee: e.target.value }))}
+                      placeholder="e.g. 25000"
+                      className="w-full pl-8 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl font-mono font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                      required
+                    />
+                  </div>
+
+                  {/* Preset fee chips */}
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold text-slate-400">Presets:</span>
+                    {[15000, 25000, 35000, 50000].map(val => (
+                      <button
+                        type="button"
+                        key={val}
+                        onClick={() => setBountyConfigModal(prev => ({ ...prev, fee: val }))}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                          Number(bountyConfigModal.fee) === val
+                            ? 'bg-tafiya-blue text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        ₦{val.toLocaleString()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-2xl text-[11px] text-blue-900/80 leading-relaxed">
+                  Upon successful on-site audit verification by Super Admin, this bounty amount will be automatically deposited directly into the inspector's verified wallet.
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBountyConfigModal(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-tafiya-blue hover:bg-tafiya-blue-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-tafiya-blue/20 cursor-pointer"
+                  >
+                    Save Configuration
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL 2: INSPECTOR APPLICATION REVIEW */}
+        {appReviewModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+                    appReviewModal.action === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                  }`}>
+                    {appReviewModal.action === 'approved' ? <ShieldCheck className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">
+                      {appReviewModal.action === 'approved' ? 'Authorize Inspector Assignment' : 'Decline Bounty Application'}
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Agent: {appReviewModal.application?.agent_name}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setAppReviewModal(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleRespondApplication} className="space-y-4">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs space-y-1">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Property:</span>
+                    <span className="font-bold text-slate-900">{appReviewModal.application?.property_name}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Bounty Fee:</span>
+                    <span className="font-mono font-bold text-emerald-700">₦{Number(appReviewModal.application?.bounty_fee || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+
+                {appReviewModal.action === 'approved' ? (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-[11px] text-emerald-900 leading-relaxed flex items-start gap-2">
+                    <Unlock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>
+                      Authorizing will immediately unlock full host liaison contacts (phone, WhatsApp, and exact gated directions) in this agent's portal.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-[11px] text-red-900 leading-relaxed">
+                    Declining will notify the agent and reopen the property bounty for other regional verifiers.
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Super Admin Review Remarks / Guidance (Optional)
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={appReviewModal.notes}
+                    onChange={(e) => setAppReviewModal(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder={appReviewModal.action === 'approved' ? 'e.g. Please prioritize verification of electrical backup and water pressure.' : 'e.g. Inspector currently has max pending assignments.'}
+                    className="w-full p-3 bg-white border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAppReviewModal(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+                      appReviewModal.action === 'approved'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                        : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
+                    }`}
+                  >
+                    {appReviewModal.action === 'approved' ? 'Confirm Approval & Release Info' : 'Confirm Decline'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL 3: AUDIT VERIFICATION & TIER 3 CERTIFICATION */}
+        {reportVerifyModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+                    reportVerifyModal.action === 'verified' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                  }`}>
+                    {reportVerifyModal.action === 'verified' ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">
+                      {reportVerifyModal.action === 'verified' ? 'Approve Audit & Release Bounty' : 'Request Report Revision'}
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Report #{reportVerifyModal.report?.id} • {reportVerifyModal.report?.property_name}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setReportVerifyModal(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleVerifyReport} className="space-y-4">
+                {reportVerifyModal.action === 'verified' ? (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-950 space-y-2">
+                    <div className="font-bold flex items-center gap-2 text-emerald-800">
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      <span>Automated Post-Verification Pipeline:</span>
+                    </div>
+                    <ul className="list-disc list-inside space-y-1 text-[11px] text-emerald-900/90 pl-1">
+                      <li>Upgrades property to <strong>Tier 3 Certified</strong> with verified badge</li>
+                      <li>Credits <strong>₦{Number(reportVerifyModal.report?.bounty_fee || 0).toLocaleString()}</strong> bounty immediately into inspector's wallet</li>
+                      <li>Generates an immutable credit transaction receipt</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-[11px] text-amber-900 leading-relaxed">
+                    Please provide specific guidance on deficient photos or checklist details so the inspector can update their field evidence.
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    Super Admin Audit Certification Notes
+                  </label>
+                  <textarea
+                    rows="3"
+                    value={reportVerifyModal.notes}
+                    onChange={(e) => setReportVerifyModal(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder={reportVerifyModal.action === 'verified' ? 'Audit evidence verified and approved by Super Admin.' : 'Please upload clearer photo evidence of the generator and master bedroom.'}
+                    className="w-full p-3 bg-white border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setReportVerifyModal(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+                      reportVerifyModal.action === 'verified'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                        : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
+                    }`}
+                  >
+                    {reportVerifyModal.action === 'verified' ? 'Certify & Credit Bounty' : 'Send Revision Notice'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL 4: WITHDRAWAL ACTION */}
+        {withdrawalActionModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+                    withdrawalActionModal.action === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                  }`}>
+                    {withdrawalActionModal.action === 'approved' ? <Landmark className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">
+                      {withdrawalActionModal.action === 'approved' ? 'Confirm Bank Payout Disbursal' : 'Decline Payout & Refund Wallet'}
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Ref: {withdrawalActionModal.withdrawal?.transaction_reference}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setWithdrawalActionModal(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleProcessWithdrawal} className="space-y-4">
+                {/* Payout Summary Card */}
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Inspector:</span>
+                    <span className="font-bold text-slate-900">{withdrawalActionModal.withdrawal?.agent_name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Disbursal Amount:</span>
+                    <span className="font-mono font-black text-sm text-slate-900">
+                      {withdrawalActionModal.withdrawal?.amount_formatted}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Destination:</span>
+                    <span className="font-bold text-slate-800">
+                      {withdrawalActionModal.withdrawal?.bank_name} ({withdrawalActionModal.withdrawal?.account_number})
+                    </span>
+                  </div>
+                </div>
+
+                {withdrawalActionModal.action === 'rejected' && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-[11px] text-red-900 leading-relaxed">
+                    Declining this request will immediately refund the debited payout amount back to the agent's available wallet balance.
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    {withdrawalActionModal.action === 'approved' ? 'Bank Transfer Reference / Notes' : 'Reason for Declining (Sent to Agent)'}
+                  </label>
+                  <textarea
+                    rows="2"
+                    value={withdrawalActionModal.note}
+                    onChange={(e) => setWithdrawalActionModal(prev => ({ ...prev, note: e.target.value }))}
+                    placeholder={withdrawalActionModal.action === 'approved' ? 'e.g. NIBSS Instant Settlement #NIP-99827361' : 'e.g. Incorrect account name matching bank record.'}
+                    className="w-full p-3 bg-white border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawalActionModal(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+                      withdrawalActionModal.action === 'approved'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                        : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
+                    }`}
+                  >
+                    {withdrawalActionModal.action === 'approved' ? 'Confirm Disbursal' : 'Decline & Refund Wallet'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

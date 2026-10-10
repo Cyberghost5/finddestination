@@ -727,7 +727,9 @@ export default function App() {
           >
             <FieldAgentPortal
               properties={properties}
-              onCompleteLocationAudit={handleLocationAudit}
+              currentUser={currentUser}
+              authToken={authToken}
+              onCompleteLocationAudit={() => {}}
             />
           </AuthGuard>
         ) : (
