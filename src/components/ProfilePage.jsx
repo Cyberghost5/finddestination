@@ -70,10 +70,20 @@ export default function ProfilePage({
 
   // Load guest/user bookings from localStorage & API
   useEffect(() => {
-    loadReservations();
+    if (currentUser) {
+      loadReservations();
+    } else {
+      setBookings([]);
+      setBookingsLoading(false);
+    }
   }, [currentUser, newBookingAlert]);
 
   const loadReservations = async () => {
+    if (!currentUser) {
+      setBookings([]);
+      setBookingsLoading(false);
+      return;
+    }
     setBookingsLoading(true);
     let allReservations = [];
 
@@ -220,6 +230,58 @@ export default function ProfilePage({
     return status === 'completed' || status === 'checked_out';
   }).length;
 
+  // Enforce Authentication Check for unauthenticated guests
+  if (!currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-6 animate-in fade-in duration-300">
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-slate-200/80 space-y-5 max-w-lg mx-auto shadow-md">
+          <div className="w-16 h-16 rounded-3xl bg-tafiya-blue-50 text-tafiya-blue flex items-center justify-center mx-auto border border-tafiya-blue-100 shadow-sm">
+            <Lock className="w-8 h-8 stroke-[2]" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-lg font-black text-slate-900">Sign In to Access Your Profile</h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Log in to view your verified stay reservations, manage digital vouchers, and update your personal account details.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
+              className="w-full sm:w-auto px-6 py-3 bg-tafiya-blue text-white font-bold text-xs rounded-2xl shadow-md hover:bg-tafiya-blue-600 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Log In</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenAuthModal && onOpenAuthModal('signup')}
+              className="w-full sm:w-auto px-6 py-3 bg-white text-tafiya-blue border border-tafiya-blue/30 font-bold text-xs rounded-2xl hover:bg-tafiya-blue-50 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-tafiya-gold" />
+              <span>Create Account</span>
+            </button>
+          </div>
+
+          {/* Quick Track Order Option for Guest Checkouts */}
+          <div className="pt-4 border-t border-slate-100 text-center">
+            <p className="text-[11px] text-slate-500 mb-2">Have a reservation reference from a guest booking?</p>
+            <button
+              type="button"
+              onClick={() => onOpenTracker && onOpenTracker()}
+              className="text-xs font-bold text-tafiya-blue hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Track Reservation Status</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-in fade-in duration-300">
 
@@ -277,82 +339,50 @@ export default function ProfilePage({
       )}
 
       {/* 2. Profile Header / User Card */}
-      {currentUser ? (
-        <div className="p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-tafiya-blue-600 text-white font-black text-2xl flex items-center justify-center shadow-md shrink-0">
-              {(currentUser.name || currentUser.full_name || 'G').charAt(0).toUpperCase()}
-            </div>
-
-            <div className="space-y-1 min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg font-black text-white truncate">{currentUser.name || currentUser.full_name || 'Verified Guest'}</h1>
-                <span className="text-[10px] font-extrabold uppercase bg-tafiya-blue/30 text-tafiya-gold px-2.5 py-0.5 rounded-full border border-tafiya-gold/30">
-                  {currentRole === 'host' ? 'Host Account' : currentRole === 'agent' ? 'Field Agent' : currentRole === 'admin' ? 'Super Admin' : 'Guest / Traveler'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-medium truncate">{currentUser.email || 'Guest Traveler Session'}</p>
-              {currentUser.phone && (
-                <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <PhoneCall className="w-3 h-3 text-tafiya-blue" />
-                  <span>{currentUser.phone}</span>
-                </p>
-              )}
-            </div>
+      <div className="p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl space-y-4">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-tafiya-blue-600 text-white font-black text-2xl flex items-center justify-center shadow-md shrink-0">
+            {(currentUser.name || currentUser.full_name || 'G').charAt(0).toUpperCase()}
           </div>
 
-          {/* Quick Account Badges */}
-          <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-300">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Escrow Protected Traveler</span>
-              </div>
-              <span className="text-slate-600 hidden sm:inline">•</span>
-              <span className="text-slate-400 text-[11px] hidden sm:inline">{bookings.length} Reservation{bookings.length !== 1 ? 's' : ''} on record</span>
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg font-black text-white truncate">{currentUser.name || currentUser.full_name || 'Verified Guest'}</h1>
+              <span className="text-[10px] font-extrabold uppercase bg-tafiya-blue/30 text-tafiya-gold px-2.5 py-0.5 rounded-full border border-tafiya-gold/30">
+                {currentRole === 'host' ? 'Host Account' : currentRole === 'agent' ? 'Field Agent' : currentRole === 'admin' ? 'Super Admin' : 'Guest / Traveler'}
+              </span>
             </div>
-
-            <button
-              type="button"
-              onClick={onLogout}
-              className="flex items-center gap-1 text-slate-400 hover:text-red-400 transition-colors font-bold text-xs cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Log Out</span>
-            </button>
+            <p className="text-xs text-slate-400 font-medium truncate">{currentUser.email || 'Guest Traveler Session'}</p>
+            {currentUser.phone && (
+              <p className="text-[11px] text-slate-400 flex items-center gap-1">
+                <PhoneCall className="w-3 h-3 text-tafiya-blue" />
+                <span>{currentUser.phone}</span>
+              </p>
+            )}
           </div>
         </div>
-      ) : (
-        /* Guest Unauthenticated Card with Session Notice */
-        <div className="p-6 bg-gradient-to-br from-tafiya-blue-50/90 via-slate-50 to-indigo-50 border-2 border-dashed border-tafiya-blue/30 rounded-3xl text-center space-y-4 shadow-sm">
-          <div className="w-14 h-14 bg-tafiya-blue text-white rounded-2xl flex items-center justify-center mx-auto shadow-md">
-            <User className="w-7 h-7" />
+
+        {/* Quick Account Badges */}
+        <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-300">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Escrow Protected Traveler</span>
+            </div>
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="text-slate-400 text-[11px] hidden sm:inline">{bookings.length} Reservation{bookings.length !== 1 ? 's' : ''} on record</span>
           </div>
-          <div className="max-w-md mx-auto space-y-1">
-            <h2 className="text-base font-black text-slate-900">FindDestination Guest Profile</h2>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Your reservations and vouchers booked during this session are saved and tracked below.
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-3 pt-1">
-            <button
-              type="button"
-              onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
-              className="px-6 py-2.5 bg-tafiya-blue text-white font-bold text-xs rounded-xl hover:bg-tafiya-blue-600 transition-all shadow-md active:scale-95 cursor-pointer"
-            >
-              Log In
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenAuthModal && onOpenAuthModal('signup')}
-              className="px-6 py-2.5 bg-white text-tafiya-blue border border-tafiya-blue/30 font-bold text-xs rounded-xl hover:bg-tafiya-blue-50 transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-tafiya-gold" />
-              <span>Create Account</span>
-            </button>
-          </div>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex items-center gap-1 text-slate-400 hover:text-red-400 transition-colors font-bold text-xs cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Log Out</span>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* 3. My Reservations & Trips Section (PROMINENTLY FEATURED) */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-5">

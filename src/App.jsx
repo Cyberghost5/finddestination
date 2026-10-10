@@ -315,6 +315,8 @@ export default function App() {
     localStorage.removeItem('finddestination_token');
     localStorage.removeItem('tafiya_user');
     localStorage.removeItem('tafiya_token');
+    localStorage.removeItem('finddestination_recent_bookings');
+    localStorage.removeItem('tafiya_recent_bookings');
   };
 
   // Search Parameters State
