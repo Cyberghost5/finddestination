@@ -327,13 +327,27 @@ export default function OrderTrackerModal({ isOpen, onClose, currentUser, onOpen
                         onClick={() => {
                           onClose();
                           onOpenVoucher && onOpenVoucher({
+                            reference: trackedBooking.booking_reference,
                             bookingRef: trackedBooking.booking_reference,
-                            propertyTitle: trackedBooking.property.title,
-                            location: `${trackedBooking.property.city}, ${trackedBooking.property.state}`,
+                            property: {
+                              name: trackedBooking.property?.title || trackedBooking.property?.name || 'FindDestination Stay',
+                              address: trackedBooking.property?.address || `${trackedBooking.property?.city}, ${trackedBooking.property?.state}`,
+                              city: trackedBooking.property?.city || 'Kaduna',
+                              state: trackedBooking.property?.state || '',
+                              images: trackedBooking.property?.images || ['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80']
+                            },
+                            propertyTitle: trackedBooking.property?.title || trackedBooking.property?.name,
+                            location: `${trackedBooking.property?.city || ''}, ${trackedBooking.property?.state || ''}`,
+                            checkInDate: trackedBooking.check_in_date,
+                            checkOutDate: trackedBooking.check_out_date,
                             checkIn: trackedBooking.check_in_date,
                             checkOut: trackedBooking.check_out_date,
-                            totalAmount: trackedBooking.total_amount_formatted,
-                            guestName: (currentUser && currentUser.name) ? currentUser.name : 'Verified Guest'
+                            totalAmount: trackedBooking.total_amount_formatted || trackedBooking.total_price || 112500,
+                            guestName: (currentUser && currentUser.name) ? currentUser.name : (trackedBooking.guest_name || 'Verified Guest'),
+                            guestPhone: trackedBooking.guest_phone || (currentUser && currentUser.phone) || '',
+                            nights: trackedBooking.nights || 2,
+                            status: trackedBooking.booking_status || 'confirmed',
+                            escrowStatus: trackedBooking.escrow_status || 'held'
                           });
                         }}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"

@@ -170,12 +170,6 @@ export default function Footer({
                   <Building2 className="w-4 h-4" />
                   <span>List Your Property</span>
                 </button>
-                <button
-                  onClick={() => onOpenAuthModal && onOpenAuthModal('login')}
-                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-2xl font-bold text-xs transition-colors cursor-pointer"
-                >
-                  Log In
-                </button>
               </>
             )}
           </div>
