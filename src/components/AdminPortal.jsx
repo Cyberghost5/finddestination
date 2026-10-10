@@ -2556,8 +2556,6 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
             </div>
           </div>
         )}
-
-<<<<<<< HEAD
         {/* MODAL 5: QOREID CAC VERIFICATION DETAILS REPORT */}
         {cacDetailsModal && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -2791,9 +2789,6 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
             </div>
           </div>
         )}
-
-=======
->>>>>>> b08fac5c63ad3342301a399d5faed503c9ba3e21
       </div>
 
     </div>
