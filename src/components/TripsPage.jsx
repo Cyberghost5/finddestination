@@ -67,43 +67,44 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
     setLoading(true);
     let loadedBookings = [];
 
-    // 1. Try fetching real bookings from Laravel API if token exists
+    // 1. Fetch real bookings from Laravel API
     const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
-    if (token) {
-      try {
-        const response = await fetch('/api/v1/bookings', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        if (response.ok) {
-          const resData = await response.json();
-          if (resData.status === 'success' && Array.isArray(resData.data)) {
-            loadedBookings = resData.data.map(b => ({
-              reference: b.booking_reference || `FD-TRIP-${b.id}`,
-              property: b.room_type?.property || {
-                name: b.property_name || 'FindDestination Shortlet Stay',
-                city: b.property_city || 'Bauchi',
-                address: b.property_address || 'Central Area',
-                images: ['https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80']
-              },
-              room: { name: b.room_type?.name || 'Standard Suite' },
-              guestName: b.guest_name || currentUser?.name || 'Guest User',
-              guestPhone: b.guest_phone || currentUser?.phone || '',
-              guestEmail: b.guest_email || currentUser?.email || '',
-              checkInDate: b.check_in_date,
-              checkOutDate: b.check_out_date,
-              nights: b.nights_count || 2,
-              totalAmount: b.total_price_kobo ? b.total_price_kobo / 100 : 112500,
-              status: b.booking_status || 'confirmed',
-              escrowStatus: b.escrow_status || 'held'
-            }));
-          }
+    const userEmail = currentUser?.email || '';
+    const url = userEmail ? `/api/v1/bookings?email=${encodeURIComponent(userEmail)}` : '/api/v1/bookings';
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
-      } catch (err) {
-        console.error('Failed to load user bookings from API:', err);
+      });
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.status === 'success' && Array.isArray(resData.data) && resData.data.length > 0) {
+          loadedBookings = resData.data.map(b => ({
+            reference: b.booking_reference || `FD-TRIP-${b.id}`,
+            property: {
+              name: b.property_name || b.property_title || 'FindDestination Shortlet Stay',
+              city: b.property_city || 'Bauchi',
+              address: b.property_address || 'Central Area',
+              images: b.images && b.images.length > 0 ? b.images : [b.cover_image || '/logo.jpeg']
+            },
+            room: { name: b.room_type?.name || 'Standard Suite' },
+            guestName: b.guest_name || currentUser?.name || 'Guest User',
+            guestPhone: b.guest_phone || currentUser?.phone || '',
+            guestEmail: b.guest_email || currentUser?.email || '',
+            checkInDate: b.check_in_date,
+            checkOutDate: b.check_out_date,
+            nights: b.nights_count || b.total_nights || 2,
+            totalAmount: b.total_price_kobo ? b.total_price_kobo / 100 : 112500,
+            status: b.booking_status || 'confirmed',
+            escrowStatus: b.escrow_status || 'held'
+          }));
+        }
       }
+    } catch (err) {
+      console.error('Failed to load user bookings from API:', err);
     }
 
     // 2. Load from localStorage if present

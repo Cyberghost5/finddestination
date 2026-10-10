@@ -73,7 +73,9 @@ Route::prefix('v1')->group(function () {
     Route::patch('/properties/{id}/publish', [PropertyController::class, 'togglePublish']);
     Route::patch('/properties/{id}/verification', [PropertyController::class, 'updateVerification']);
 
-    // Booking Initiation, Tracking & Concurrency
+    // Booking Initiation, Retrieval & Tracking
+    Route::get('/bookings', [BookingController::class, 'index']);
+    Route::get('/host/bookings', [BookingController::class, 'hostBookings']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::post('/bookings/track', [BookingController::class, 'track']);
     Route::post('/bookings/send-voucher-email', [BookingController::class, 'sendVoucherEmail']);

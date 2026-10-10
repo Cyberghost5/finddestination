@@ -69,37 +69,43 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
     });
   }, [properties, currentUser]);
 
-  const mockReservations = [
-    {
-      id: 'RES-8910',
-      guestName: 'Musa Danjuma',
-      property: 'Yankari Safari & Luxury Suites',
-      room: 'Executive Royal Suite',
-      dates: '1 Nov - 3 Nov 2026',
-      amount: '₦90,000',
-      payoutStatus: 'Escrow Held',
-      rail: 'Monnify Transfer'
-    },
-    {
-      id: 'RES-8911',
-      guestName: 'Hajia Zainab Kabir',
-      property: 'Barnawa Crest Serviced Apartments',
-      room: '2-Bedroom Executive Flat',
-      dates: '5 Nov - 8 Nov 2026',
-      amount: '₦114,000',
-      payoutStatus: 'Escrow Held',
-      rail: 'Paystack Card'
-    }
-  ];
+  const [realReservations, setRealReservations] = useState([]);
+  const [loadingReservations, setLoadingReservations] = useState(false);
 
-  // Scoped Reservations: Only reservations for this host's managed listings
+  useEffect(() => {
+    const fetchHostReservations = async () => {
+      if (!currentUser?.id && !currentUser?.email) return;
+      setLoadingReservations(true);
+      try {
+        const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
+        const url = currentUser.id 
+          ? `/api/v1/host/bookings?host_id=${currentUser.id}` 
+          : `/api/v1/host/bookings`;
+        const res = await fetch(url, {
+          headers: {
+            'Accept': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'success' && Array.isArray(data.data)) {
+            setRealReservations(data.data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load host reservations from DB:', err);
+      } finally {
+        setLoadingReservations(false);
+      }
+    };
+    fetchHostReservations();
+  }, [currentUser]);
+
+  // Scoped Reservations from live database
   const hostReservations = useMemo(() => {
-    if (!managedProperties || managedProperties.length === 0) return [];
-    const managedPropertyNames = managedProperties.map(p => (p.name || '').toLowerCase());
-    return mockReservations.filter(res => 
-      managedPropertyNames.includes((res.property || '').toLowerCase())
-    );
-  }, [managedProperties]);
+    return realReservations;
+  }, [realReservations]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 animate-in fade-in duration-300">

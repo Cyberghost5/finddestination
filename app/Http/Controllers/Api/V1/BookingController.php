@@ -176,6 +176,117 @@ class BookingController extends Controller
     }
 
     /**
+     * GET /api/v1/bookings
+     * Universal Bookings Retrieval for Guest or Host
+     */
+    public function index(Request $request)
+    {
+        $query = Booking::with(['property.host', 'roomType', 'paymentTransactions', 'user']);
+
+        if ($request->has('host_id')) {
+            $hostId = $request->input('host_id');
+            $query->whereHas('property', function ($q) use ($hostId) {
+                $q->where('host_id', $hostId);
+            });
+        } elseif ($request->has('email')) {
+            $email = $request->input('email');
+            $query->whereHas('user', function ($q) use ($email) {
+                $q->where('email', $email);
+            });
+        } elseif (auth()->check()) {
+            $user = auth()->user();
+            if ($user->role === 'host') {
+                $query->whereHas('property', function ($q) use ($user) {
+                    $q->where('host_id', $user->id);
+                });
+            } else {
+                $query->where('user_id', $user->id);
+            }
+        }
+
+        $bookings = $query->orderBy('created_at', 'desc')->get()->map(function ($b) {
+            $propName = $b->property ? $b->property->name : 'FindDestination Verified Stay';
+            $propImages = $b->property && !empty($b->property->images) ? $b->property->images : ['/logo.jpeg'];
+            $latestPayment = $b->paymentTransactions->first();
+
+            return [
+                'id' => $b->id,
+                'booking_reference' => $b->booking_reference,
+                'booking_status' => $b->booking_status,
+                'property_id' => $b->property_id,
+                'property_name' => $propName,
+                'property_title' => $propName,
+                'property_city' => $b->property ? $b->property->city : 'Bauchi',
+                'property_state' => $b->property ? $b->property->state : 'Bauchi',
+                'property_address' => $b->property ? $b->property->address : 'Central Location',
+                'images' => $propImages,
+                'cover_image' => $propImages[0] ?? '/logo.jpeg',
+                'room_type' => [
+                    'id' => $b->roomType ? $b->roomType->id : null,
+                    'name' => $b->roomType ? $b->roomType->name : 'Standard Suite',
+                ],
+                'guest_name' => $b->user ? $b->user->name : 'Guest Traveler',
+                'guest_phone' => $b->user ? $b->user->phone : '',
+                'guest_email' => $b->user ? $b->user->email : '',
+                'check_in_date' => $b->check_in_date ? $b->check_in_date->format('Y-m-d') : null,
+                'check_out_date' => $b->check_out_date ? $b->check_out_date->format('Y-m-d') : null,
+                'nights_count' => $b->total_nights,
+                'total_nights' => $b->total_nights,
+                'total_price_kobo' => $b->total_amount_kobo,
+                'total_amount_formatted' => '₦' . number_format($b->total_amount_kobo / 100, 2),
+                'payment_gateway' => $latestPayment ? $latestPayment->gateway : 'paystack',
+                'created_at' => $b->created_at->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $bookings
+        ]);
+    }
+
+    /**
+     * GET /api/v1/host/bookings
+     * Returns all incoming bookings for a host's properties
+     */
+    public function hostBookings(Request $request)
+    {
+        $hostId = $request->input('host_id') ?? auth()->id();
+        $query = Booking::with(['property', 'roomType', 'paymentTransactions', 'user']);
+
+        if ($hostId) {
+            $query->whereHas('property', function ($q) use ($hostId) {
+                $q->where('host_id', $hostId);
+            });
+        }
+
+        $bookings = $query->orderBy('created_at', 'desc')->get()->map(function ($b) {
+            $latestPayment = $b->paymentTransactions->first();
+            $propName = $b->property ? $b->property->name : 'Host Property';
+
+            return [
+                'id' => $b->booking_reference,
+                'db_id' => $b->id,
+                'guestName' => $b->user ? $b->user->name : 'Guest Traveler',
+                'guestEmail' => $b->user ? $b->user->email : '',
+                'guestPhone' => $b->user ? $b->user->phone : '',
+                'property' => $propName,
+                'room' => $b->roomType ? $b->roomType->name : 'Executive Suite',
+                'dates' => ($b->check_in_date ? $b->check_in_date->format('j M') : '') . ' - ' . ($b->check_out_date ? $b->check_out_date->format('j M Y') : ''),
+                'amount' => '₦' . number_format($b->total_amount_kobo / 100),
+                'payoutStatus' => $b->booking_status === 'confirmed' ? 'Escrow Held' : ucfirst($b->booking_status),
+                'rail' => $latestPayment ? (ucfirst($latestPayment->gateway) . ' ' . ucfirst($latestPayment->payment_channel ?? 'Payment')) : 'Direct Transfer',
+                'created_at' => $b->created_at->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $bookings
+        ]);
+    }
+
+    /**
      * POST /api/v1/bookings/track
      * Public Booking & Order Tracker (Requires Reference + Email or Phone)
      */
@@ -200,16 +311,9 @@ class BookingController extends Controller
             ], 444);
         }
 
-        // Optional email/phone security match check if supplied
-        if (!empty($validated['email'])) {
-            $email = strtolower(trim($validated['email']));
-            $bookingUserEmail = strtolower($booking->user ? $booking->user->email : '');
-            if ($bookingUserEmail && $bookingUserEmail !== $email) {
-                // Allow matches if user matches or if fallback match
-            }
-        }
-
         $latestPayment = $booking->paymentTransactions->first();
+        $propName = $booking->property ? $booking->property->name : 'FindDestination Property';
+        $propImages = $booking->property && !empty($booking->property->images) ? $booking->property->images : ['/logo.jpeg'];
 
         return response()->json([
             'status' => 'success',
@@ -218,22 +322,23 @@ class BookingController extends Controller
                 'booking_status' => $booking->booking_status,
                 'hold_expires_at' => $booking->hold_expires_at ? $booking->hold_expires_at->toIso8601String() : null,
                 'property' => [
-                    'id' => $booking->property->id,
-                    'title' => $booking->property->title,
-                    'city' => $booking->property->city,
-                    'state' => $booking->property->state,
-                    'address' => $booking->property->address,
-                    'cover_image' => $booking->property->cover_image,
-                    'host_name' => $booking->property->host ? $booking->property->host->name : 'FindDestination Verified Host',
-                    'host_phone' => $booking->property->host ? $booking->property->host->phone : '+234 803 123 4567',
+                    'id' => $booking->property ? $booking->property->id : 1,
+                    'title' => $propName,
+                    'name' => $propName,
+                    'city' => $booking->property ? $booking->property->city : 'Bauchi',
+                    'state' => $booking->property ? $booking->property->state : 'Bauchi',
+                    'address' => $booking->property ? $booking->property->address : 'Central Location',
+                    'cover_image' => $propImages[0] ?? '/logo.jpeg',
+                    'host_name' => $booking->property && $booking->property->host ? $booking->property->host->name : 'FindDestination Verified Host',
+                    'host_phone' => $booking->property && $booking->property->host ? $booking->property->host->phone : '+234 803 123 4567',
                 ],
                 'room_type' => [
-                    'name' => $booking->roomType->name,
-                    'capacity' => $booking->roomType->capacity,
+                    'name' => $booking->roomType ? $booking->roomType->name : 'Executive Suite',
+                    'capacity' => $booking->roomType ? $booking->roomType->max_occupancy : 2,
                 ],
                 'rooms_count' => $booking->rooms_count,
-                'check_in_date' => $booking->check_in_date->format('Y-m-d'),
-                'check_out_date' => $booking->check_out_date->format('Y-m-d'),
+                'check_in_date' => $booking->check_in_date ? $booking->check_in_date->format('Y-m-d') : null,
+                'check_out_date' => $booking->check_out_date ? $booking->check_out_date->format('Y-m-d') : null,
                 'total_nights' => $booking->total_nights,
                 'total_amount_formatted' => '₦' . number_format($booking->total_amount_kobo / 100, 2),
                 'platform_fee_formatted' => '₦' . number_format($booking->platform_commission_kobo / 100, 2),
@@ -253,23 +358,34 @@ class BookingController extends Controller
      */
     public function myTrips(Request $request)
     {
-        $userId = auth()->id() ?? 1;
+        $query = Booking::with(['property', 'roomType', 'paymentTransactions']);
 
-        $bookings = Booking::with(['property', 'roomType', 'paymentTransactions'])
-            ->where('user_id', $userId)
-            ->orderBy('created_at', 'desc')
+        if ($request->has('email')) {
+            $email = $request->input('email');
+            $query->whereHas('user', function ($q) use ($email) {
+                $q->where('email', $email);
+            });
+        } elseif (auth()->check()) {
+            $query->where('user_id', auth()->id());
+        }
+
+        $bookings = $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($b) {
+                $propName = $b->property ? $b->property->name : 'FindDestination Stay';
+                $propImages = $b->property && !empty($b->property->images) ? $b->property->images : ['/logo.jpeg'];
+
                 return [
                     'booking_reference' => $b->booking_reference,
                     'booking_status' => $b->booking_status,
-                    'property_title' => $b->property->title,
-                    'city' => $b->property->city,
-                    'state' => $b->property->state,
-                    'cover_image' => $b->property->cover_image,
-                    'room_name' => $b->roomType->name,
-                    'check_in_date' => $b->check_in_date->format('Y-m-d'),
-                    'check_out_date' => $b->check_out_date->format('Y-m-d'),
+                    'property_title' => $propName,
+                    'property_name' => $propName,
+                    'city' => $b->property ? $b->property->city : 'Bauchi',
+                    'state' => $b->property ? $b->property->state : 'Bauchi',
+                    'cover_image' => $propImages[0] ?? '/logo.jpeg',
+                    'room_name' => $b->roomType ? $b->roomType->name : 'Standard Suite',
+                    'check_in_date' => $b->check_in_date ? $b->check_in_date->format('Y-m-d') : null,
+                    'check_out_date' => $b->check_out_date ? $b->check_out_date->format('Y-m-d') : null,
                     'total_nights' => $b->total_nights,
                     'total_amount_formatted' => '₦' . number_format($b->total_amount_kobo / 100, 2),
                     'created_at' => $b->created_at->toIso8601String(),

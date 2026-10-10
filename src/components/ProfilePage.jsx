@@ -105,16 +105,19 @@ export default function ProfilePage({
       console.error('Failed to parse local reservations', e);
     }
 
-    // 3. Load from API if token exists
+    // 3. Load from API
     const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
-    if (token) {
-      try {
-        const response = await fetch('/api/v1/bookings/my-trips', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
+    const url = currentUser?.email
+      ? `/api/v1/bookings/my-trips?email=${encodeURIComponent(currentUser.email)}`
+      : '/api/v1/bookings/my-trips';
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
         if (response.ok) {
           const resData = await response.json();
           if (resData.status === 'success' && Array.isArray(resData.data)) {
@@ -144,7 +147,6 @@ export default function ProfilePage({
       } catch (err) {
         console.error('Failed to fetch user trips from API', err);
       }
-    }
 
     // Deduplicate reservations by reference
     const seen = new Set();
