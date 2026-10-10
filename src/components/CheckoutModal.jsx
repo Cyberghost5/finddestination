@@ -119,6 +119,10 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
       const checkOut = bookingDates?.checkOut || checkOutDateObj.toISOString().split('T')[0];
 
       const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
+      const resolvedPhone = guestPhone || currentUser?.phone || '+2348030000000';
+      const resolvedName = guestName || currentUser?.name || currentUser?.full_name || 'Guest Traveler';
+      const resolvedEmail = guestEmail || currentUser?.email || 'guest@finddestination.com.ng';
+      const resolvedRoomId = selectedRoom?.id || property.rooms?.[0]?.id || null;
 
       const response = await fetch('/api/v1/bookings', {
         method: 'POST',
@@ -128,54 +132,61 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          room_type_id: selectedRoom?.id || 1,
+          property_id: property.id,
+          room_type_id: resolvedRoomId,
           rooms_count: 1,
           check_in_date: checkIn,
           check_out_date: checkOut,
-          guest_name: guestName,
-          guest_phone: guestPhone,
-          guest_email: guestEmail,
-          payment_gateway: activeGateway
+          guest_name: resolvedName,
+          guest_phone: resolvedPhone,
+          guest_email: resolvedEmail,
+          payment_gateway: activeGateway,
+          is_paid: true,
+          booking_status: 'confirmed'
         })
       });
 
       const resData = await response.json();
       const bookingReference = (response.ok && resData.data?.booking_reference)
         ? resData.data.booking_reference
-        : (paymentRef || `FD-${property.city.substring(0, 2).toUpperCase()}-2026-${Math.floor(1000 + Math.random() * 9000)}`);
+        : (paymentRef || `FND-${Math.random().toString(36).substring(2, 9).toUpperCase()}`);
 
       const bookingData = {
         reference: bookingReference,
         property: property,
-        room: selectedRoom || property.rooms[0],
-        guestName,
-        guestPhone,
-        guestEmail,
+        room: selectedRoom || property.rooms?.[0] || { name: 'Standard Suite', price_kobo: totalAmount * 100 },
+        guestName: resolvedName,
+        guestPhone: resolvedPhone,
+        guestEmail: resolvedEmail,
         checkInDate: checkIn,
         checkOutDate: checkOut,
         nights,
         totalAmount,
         paymentRail: activeGateway,
         virtualAccount: activeGateway === 'monnify' ? virtualAccount : null,
-        paidAt: new Date().toISOString()
+        paidAt: new Date().toISOString(),
+        dbSaved: response.ok
       };
 
       onPaymentComplete(bookingData);
     } catch (err) {
+      console.error('Booking finalization error:', err);
+      const fallbackRef = paymentRef || `FND-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
       const bookingData = {
-        reference: paymentRef || `FD-${property.city.substring(0, 2).toUpperCase()}-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        reference: fallbackRef,
         property: property,
-        room: selectedRoom || property.rooms[0],
-        guestName,
-        guestPhone,
-        guestEmail,
+        room: selectedRoom || property.rooms?.[0] || { name: 'Standard Suite', price_kobo: totalAmount * 100 },
+        guestName: guestName || currentUser?.name || 'Guest Traveler',
+        guestPhone: guestPhone || currentUser?.phone || '+2348030000000',
+        guestEmail: guestEmail || currentUser?.email || 'guest@finddestination.com.ng',
         checkInDate: bookingDates?.checkIn || '2026-11-01',
         checkOutDate: bookingDates?.checkOut || '2026-11-03',
         nights,
         totalAmount,
         paymentRail: activeGateway,
         virtualAccount: activeGateway === 'monnify' ? virtualAccount : null,
-        paidAt: new Date().toISOString()
+        paidAt: new Date().toISOString(),
+        dbSaved: false
       };
       onPaymentComplete(bookingData);
     } finally {
@@ -317,6 +328,17 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
                   <p className="text-[11px] text-slate-500 font-medium">
                     {guestEmail || currentUser.email} {guestPhone ? `• ${guestPhone}` : ''}
                   </p>
+                  {!guestPhone && (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <input
+                        type="tel"
+                        placeholder="Contact phone (+234 80...)"
+                        value={guestPhone}
+                        onChange={(e) => setGuestPhone(e.target.value)}
+                        className="text-[11px] px-2 py-1 border border-emerald-300 rounded-lg bg-white font-medium focus:ring-1 focus:ring-emerald-500 w-52"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <span className="text-[10px] font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-200/80">

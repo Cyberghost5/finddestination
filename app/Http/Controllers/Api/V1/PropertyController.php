@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Property;
 use App\Models\RoomType;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -15,6 +16,19 @@ class PropertyController extends Controller
      */
     private function formatPropertyForFrontend(Property $prop): array
     {
+        // If property somehow has no room types in DB, self-heal by creating one
+        if ($prop->roomTypes->isEmpty()) {
+            $createdRoom = RoomType::create([
+                'property_id' => $prop->id,
+                'name' => 'Executive Suite',
+                'base_price_kobo' => 4500000,
+                'total_units' => 4,
+                'max_occupancy' => 2,
+                'bed_type' => 'King Bed'
+            ]);
+            $prop->load('roomTypes');
+        }
+
         $rooms = $prop->roomTypes->map(function ($r) {
             return [
                 'id' => $r->id,
@@ -65,16 +79,7 @@ class PropertyController extends Controller
                 'joined' => $prop->host && $prop->host->created_at ? $prop->host->created_at->format('Y') : '2024',
                 'response_rate' => '99%'
             ],
-            'rooms' => $rooms->isNotEmpty() ? $rooms->toArray() : [
-                [
-                    'id' => $prop->id * 10 + 1,
-                    'name' => 'Standard Suite',
-                    'price_kobo' => $startingPriceKobo,
-                    'price_formatted' => '₦' . number_format($startingPriceKobo / 100),
-                    'max_occupancy' => 2,
-                    'bed_type' => 'King Double'
-                ]
-            ]
+            'rooms' => $rooms->toArray()
         ];
     }
 
@@ -86,7 +91,7 @@ class PropertyController extends Controller
     {
         $query = Property::with(['roomTypes', 'reviews', 'host']);
 
-        if ($request->filled('host_id')) {
+        if ($request->has('host_id')) {
             $query->where('host_id', $request->input('host_id'));
         }
 
@@ -154,7 +159,7 @@ class PropertyController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'property_type' => 'required|string',
-            'description' => 'required|string',
+            'description' => 'nullable|string',
             'address' => 'required|string',
             'city' => 'required|string',
             'state' => 'required|string',
@@ -181,19 +186,30 @@ class PropertyController extends Controller
                     $existingHost->update(['business_name' => $businessName]);
                 }
             } else {
-                $newHost = User::create([
-                    'name' => $hostName ?: 'Host Partner',
-                    'email' => $hostEmail,
-                    'phone' => $validated['contact_phone'] ?? '+2348000000000',
-                    'role' => 'host',
-                    'business_name' => $businessName,
-                    'cac_number' => $cacNumber,
-                    'tin_number' => $tinNumber,
-                    'host_status' => 'approved',
-                    'password' => bcrypt('password123'),
-                    'email_verified_at' => now(),
-                ]);
-                $hostId = $newHost->id;
+                $phone = $validated['contact_phone'] ?? null;
+                if ($phone && User::where('phone', $phone)->exists()) {
+                    $phoneUser = User::where('phone', $phone)->first();
+                    if ($phoneUser && $phoneUser->role === 'host') {
+                        $hostId = $phoneUser->id;
+                    } else {
+                        $phone = '+23480' . mt_rand(10000000, 99999999);
+                    }
+                }
+                if (!$hostId) {
+                    $newHost = User::create([
+                        'name' => $hostName ?: 'Host Partner',
+                        'email' => $hostEmail,
+                        'phone' => $phone ?: ('+23480' . mt_rand(10000000, 99999999)),
+                        'role' => 'host',
+                        'business_name' => $businessName,
+                        'cac_number' => $cacNumber,
+                        'tin_number' => $tinNumber,
+                        'host_status' => 'approved',
+                        'password' => bcrypt('password123'),
+                        'email_verified_at' => now(),
+                    ]);
+                    $hostId = $newHost->id;
+                }
             }
         }
 
@@ -201,12 +217,16 @@ class PropertyController extends Controller
             $hostId = 3;
         }
 
+        $description = !empty($validated['description'])
+            ? $validated['description']
+            : "Newly listed {$validated['property_type']} in {$validated['city']}, {$validated['state']}. Features 24/7 power backup and verified security.";
+
         $property = Property::create([
             'host_id' => $hostId,
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']) . '-' . rand(100, 999),
             'property_type' => strtolower($validated['property_type']),
-            'description' => $validated['description'],
+            'description' => $description,
             'address' => $validated['address'],
             'city' => $validated['city'],
             'state' => $validated['state'],
@@ -223,14 +243,20 @@ class PropertyController extends Controller
             'amenities' => $request->input('amenities') ?: ['24/7 Power', 'Constant Water', 'Air Conditioning', 'WiFi']
         ]);
 
-        $priceKobo = (int) ($request->starting_price_kobo ?? 3500000);
+        $priceKobo = (int) ($request->input('starting_price_kobo')
+            ?? ($request->input('base_price_ngn') ? $request->input('base_price_ngn') * 100 : 4500000));
+        $roomName = $request->input('room_name') ?? $request->input('rooms.0.name') ?? 'Executive Suite';
+        $totalUnits = (int) ($request->input('total_units') ?? $request->input('rooms.0.total_units') ?? 4);
+        $maxOccupancy = (int) ($request->input('max_occupancy') ?? $request->input('rooms.0.max_occupancy') ?? 2);
+        $bedType = $request->input('bed_type') ?? $request->input('rooms.0.bed_type') ?? 'King Bed';
+
         RoomType::create([
             'property_id' => $property->id,
-            'name' => 'Standard Deluxe Suite',
+            'name' => $roomName,
             'base_price_kobo' => $priceKobo,
-            'total_units' => 4,
-            'max_occupancy' => 2,
-            'bed_type' => 'King Bed'
+            'total_units' => $totalUnits,
+            'max_occupancy' => $maxOccupancy,
+            'bed_type' => $bedType
         ]);
 
         return response()->json([

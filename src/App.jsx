@@ -493,11 +493,11 @@ export default function App() {
         body: JSON.stringify({
           ...newProp,
           host_id: newProp.host_id || currentUser?.id,
-          host_email: currentUser?.email,
-          host_name: currentUser?.name,
-          business_name: currentUser?.business_name,
-          cac_number: currentUser?.cac_number,
-          tin_number: currentUser?.tin_number,
+          host_email: currentUser?.email || newProp.host_email || 'host@finddestination.com.ng',
+          host_name: currentUser?.name || newProp.host_name || 'Verified Host',
+          business_name: currentUser?.business_name || newProp.business_name || 'Accommodations Partner',
+          cac_number: currentUser?.cac_number || newProp.cac_number,
+          tin_number: currentUser?.tin_number || newProp.tin_number,
         })
       });
       if (response.ok) {
