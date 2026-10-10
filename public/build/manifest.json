@@ -1,16 +1,28 @@
 {
   "src/index.css": {
+<<<<<<< HEAD
     "file": "assets/css-CkSbzCT8.css",
+=======
+    "file": "assets/css-CmobVekp.css",
+>>>>>>> b08fac5c63ad3342301a399d5faed503c9ba3e21
     "src": "src/index.css",
     "isEntry": true
   },
   "src/main.jsx": {
+<<<<<<< HEAD
     "file": "assets/main-TMfivMjS.js",
+=======
+    "file": "assets/main-CNCMOtDM.js",
+>>>>>>> b08fac5c63ad3342301a399d5faed503c9ba3e21
     "name": "main",
     "src": "src/main.jsx",
     "isEntry": true,
     "css": [
+<<<<<<< HEAD
       "assets/css-CkSbzCT8.css"
+=======
+      "assets/css-CmobVekp.css"
+>>>>>>> b08fac5c63ad3342301a399d5faed503c9ba3e21
     ]
   }
 }
