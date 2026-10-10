@@ -153,6 +153,8 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
 
       const bookingData = {
         reference: bookingReference,
+        booking_reference: bookingReference,
+        userId: resData.data?.user_id || null,
         property: property,
         room: selectedRoom || property.rooms?.[0] || { name: 'Standard Suite', price_kobo: totalAmount * 100 },
         guestName: resolvedName,

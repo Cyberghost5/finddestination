@@ -163,6 +163,7 @@ class BookingController extends Controller
             'data' => [
                 'id' => $booking->id,
                 'booking_reference' => $booking->booking_reference,
+                'user_id' => $booking->user_id,
                 'booking_status' => $booking->booking_status,
                 'property_id' => $booking->property_id,
                 'room_type_id' => $booking->room_type_id,

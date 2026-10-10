@@ -145,6 +145,7 @@ export default function App() {
       setActiveChatBookingRef(bookingRef);
     }
     setActiveMobileTab('inbox');
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   // Modals & Triggers
@@ -428,6 +429,7 @@ export default function App() {
     // If guest was unauthenticated, establish guest session so profile recognizes them immediately
     if (!currentUser) {
       const guestUser = {
+        id: bookingData.userId || bookingData.user_id || null,
         name: bookingData.guestName || 'Guest Traveler',
         full_name: bookingData.guestName || 'Guest Traveler',
         email: bookingData.guestEmail || '',

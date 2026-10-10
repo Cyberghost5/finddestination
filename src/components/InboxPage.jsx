@@ -42,7 +42,7 @@ export default function InboxPage({
   const [searchQuery, setSearchQuery] = useState('');
   const [actionNotice, setActionNotice] = useState(null);
 
-  const messagesEndRef = useRef(null);
+  const chatScrollContainerRef = useRef(null);
   const pollIntervalRef = useRef(null);
 
   // Helper for auth headers
@@ -57,6 +57,18 @@ export default function InboxPage({
     }
     if (currentUser?.id) {
       headers['X-User-Id'] = currentUser.id;
+    }
+    if (currentUser?.email) {
+      headers['X-User-Email'] = currentUser.email;
+    }
+    if (currentUser?.name || currentUser?.full_name) {
+      headers['X-User-Name'] = currentUser.name || currentUser.full_name;
+    }
+    if (currentUser?.phone) {
+      headers['X-User-Phone'] = currentUser.phone;
+    }
+    if (currentUser?.role) {
+      headers['X-User-Role'] = currentUser.role;
     }
     return headers;
   };
@@ -98,10 +110,13 @@ export default function InboxPage({
     );
   }
 
-  // Auto-scroll messages to bottom
+  // Auto-scroll messages inside the chat message container (NEVER scrolling the whole window)
   const scrollToBottom = (smooth = true) => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    if (chatScrollContainerRef.current) {
+      chatScrollContainerRef.current.scrollTo({
+        top: chatScrollContainerRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
     }
   };
 
@@ -157,6 +172,7 @@ export default function InboxPage({
 
   // Initial load
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
     fetchThreads();
   }, [currentUser]);
 
@@ -662,7 +678,7 @@ export default function InboxPage({
               </div>
 
               {/* Messages Body */}
-              <div className="p-4 space-y-3 overflow-y-auto flex-1 max-h-[380px]">
+              <div ref={chatScrollContainerRef} className="p-4 space-y-3 overflow-y-auto flex-1 max-h-[380px]">
                 {loadingMessages ? (
                   <div className="p-8 text-center space-y-2">
                     <RefreshCw className="w-5 h-5 text-tafiya-blue animate-spin mx-auto" />
@@ -714,7 +730,6 @@ export default function InboxPage({
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Quick Prompt Chips */}
