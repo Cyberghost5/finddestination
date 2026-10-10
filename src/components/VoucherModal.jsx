@@ -11,16 +11,13 @@ import {
   QrCode,
   Lock,
   ArrowRight,
-  Check,
-  Mail
+  Check
 } from 'lucide-react';
 
 export default function VoucherModal({ isOpen, onClose, booking }) {
   if (!isOpen || !booking) return null;
 
   const [isCopied, setIsCopied] = useState(false);
-  const [isEmailSending, setIsEmailSending] = useState(false);
-  const [emailStatus, setEmailStatus] = useState(null);
 
   // Normalize data fields from different caller modals (Checkout, Trips, OrderTracker)
   const reference = booking.reference || booking.bookingRef || 'FD-TRIP-2026';
@@ -48,33 +45,6 @@ export default function VoucherModal({ isOpen, onClose, booking }) {
       navigator.clipboard.writeText(reference);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2500);
-    }
-  };
-
-  const handleSendEmail = async () => {
-    if (!reference) return;
-    setIsEmailSending(true);
-    setEmailStatus(null);
-    try {
-      const res = await fetch('/api/v1/bookings/send-voucher-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          booking_reference: reference,
-          recipient_email: guestEmail || undefined
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.status === 'success') {
-        setEmailStatus({ type: 'success', text: `Voucher sent to ${data.data?.recipient || 'your email'}!` });
-      } else {
-        setEmailStatus({ type: 'error', text: data.message || 'Could not send email right now.' });
-      }
-    } catch (err) {
-      setEmailStatus({ type: 'error', text: 'Network connection error.' });
-    } finally {
-      setIsEmailSending(false);
-      setTimeout(() => setEmailStatus(null), 6000);
     }
   };
 
@@ -536,46 +506,16 @@ export default function VoucherModal({ isOpen, onClose, booking }) {
 
         </div>
 
-        {/* Email Status Message Banner */}
-        {emailStatus && (
-          <div className={`mx-6 mb-2 p-3 rounded-xl text-xs font-semibold flex items-center justify-between ${
-            emailStatus.type === 'success' 
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-              : 'bg-rose-50 text-rose-800 border border-rose-200'
-          }`}>
-            <span>{emailStatus.text}</span>
-            <button 
-              type="button" 
-              onClick={() => setEmailStatus(null)} 
-              className="text-slate-400 hover:text-slate-600 ml-2"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-100 no-print">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-            >
-              <Printer className="w-4 h-4 text-tafiya-gold" />
-              <span>Print</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSendEmail}
-              disabled={isEmailSending}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-            >
-              <Mail className="w-4 h-4" />
-              <span>{isEmailSending ? 'Sending...' : 'Email Voucher'}</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <Printer className="w-4 h-4 text-tafiya-gold" />
+            <span>Print Voucher</span>
+          </button>
 
           <button
             type="button"

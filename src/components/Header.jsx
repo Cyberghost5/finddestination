@@ -139,6 +139,18 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                     </div>
 
                     <div className="py-1">
+                      {/* My Profile & Reservations */}
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setActiveTab && setActiveTab('profile');
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        <User className="w-4 h-4 text-tafiya-blue" />
+                        <span>My Profile & Reservations</span>
+                      </button>
+
                       {/* Track Booking Button for all users */}
                       <button
                         onClick={() => {

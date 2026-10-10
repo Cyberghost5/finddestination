@@ -55,7 +55,7 @@ export default function MobileFooterNav({ currentRole = 'guest', activeTab, setA
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id || (activeTab === 'explore' && item.id === 'explore');
+          const isActive = activeTab === item.id;
 
           if (item.isAction) {
             return (

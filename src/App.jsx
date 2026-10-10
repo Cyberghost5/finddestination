@@ -318,6 +318,7 @@ export default function App() {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [activeBookingData, setActiveBookingData] = useState(null);
+  const [newBookingAlert, setNewBookingAlert] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [bookingNights, setBookingNights] = useState(2);
 
@@ -409,7 +410,28 @@ export default function App() {
   const handlePaymentComplete = (bookingData) => {
     setIsCheckoutModalOpen(false);
     setActiveBookingData(bookingData);
-    setIsVoucherModalOpen(true);
+    setNewBookingAlert(bookingData);
+
+    // If guest was unauthenticated, establish guest session so profile recognizes them immediately
+    if (!currentUser) {
+      const guestUser = {
+        name: bookingData.guestName || 'Guest Traveler',
+        full_name: bookingData.guestName || 'Guest Traveler',
+        email: bookingData.guestEmail || '',
+        phone: bookingData.guestPhone || '',
+        role: 'guest',
+        state: bookingData.property?.state || 'Bauchi'
+      };
+      setCurrentUser(guestUser);
+      try {
+        localStorage.setItem('finddestination_user', JSON.stringify(guestUser));
+      } catch (e) {}
+    }
+
+    // Redirect guest directly to their Profile Page where reservations are displayed
+    setActiveMobileTab('profile');
+    setGuestSubView('feed');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // Automatically trigger booking confirmation & voucher email in background
     if (bookingData.reference && bookingData.guestEmail) {
@@ -418,7 +440,19 @@ export default function App() {
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
           booking_reference: bookingData.reference,
-          recipient_email: bookingData.guestEmail
+          recipient_email: bookingData.guestEmail,
+          guest_name: bookingData.guestName,
+          property_name: bookingData.property?.name || bookingData.propertyTitle,
+          property_address: bookingData.property?.address
+            ? `${bookingData.property.address}${bookingData.property.city ? `, ${bookingData.property.city}` : ''}`
+            : bookingData.location,
+          room_name: bookingData.room?.name || bookingData.roomType,
+          check_in_date: bookingData.checkInDate,
+          check_out_date: bookingData.checkOutDate,
+          nights: bookingData.nights,
+          total_amount: typeof bookingData.totalAmount === 'number'
+            ? `₦${bookingData.totalAmount.toLocaleString()}`
+            : bookingData.totalAmount
         })
       }).catch(e => console.warn('Background email dispatch caught:', e));
     }
@@ -537,6 +571,7 @@ export default function App() {
             if (window.location.hash) {
               history.pushState("", document.title, window.location.pathname + window.location.search);
             }
+            setActiveMobileTab('explore');
             setGuestSubView('feed');
           }}
         />
@@ -592,6 +627,16 @@ export default function App() {
             onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
             onOpenInfoModal={(key) => handleOpenInfoTopic(key)}
             onUpdateUser={handleUpdateUser}
+            onOpenVoucher={(booking) => {
+              setActiveBookingData(booking);
+              setIsVoucherModalOpen(true);
+            }}
+            onNavigateExplore={() => {
+              setActiveMobileTab('explore');
+              setGuestSubView('feed');
+            }}
+            newBookingAlert={newBookingAlert}
+            onDismissAlert={() => setNewBookingAlert(null)}
           />
         ) : activeMobileTab === 'explore' || currentRole === 'guest' ? (
           /* GUEST / TRAVELER STAYS FEED */

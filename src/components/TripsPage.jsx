@@ -122,7 +122,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
     if (loadedBookings.length === 0 && currentUser) {
       loadedBookings = [
         {
-          reference: 'TAF-BA-2026-9482',
+          reference: 'FD-BA-2026-9482',
           property: {
             name: 'Yankari Game Reserve Eco-Lodge',
             city: 'Bauchi',
