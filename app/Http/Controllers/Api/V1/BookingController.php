@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\RoomType;
+use App\Mail\BookingConfirmationMail;
 use App\Services\Payments\MonnifyService;
 use App\Services\Payments\PaystackService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class BookingController extends Controller
@@ -207,5 +210,71 @@ class BookingController extends Controller
             'status' => 'success',
             'data' => $bookings
         ]);
+    }
+
+    /**
+     * POST /api/v1/bookings/send-voucher-email
+     * Send or resend digital voucher and booking confirmation email
+     */
+    public function sendVoucherEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'booking_reference' => 'required|string',
+            'recipient_email' => 'nullable|email',
+        ]);
+
+        $reference = trim(strtoupper($validated['booking_reference']));
+        $booking = Booking::with(['property.host', 'roomType', 'user'])
+            ->where('booking_reference', $reference)
+            ->first();
+
+        if (!$booking) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No reservation found matching reference: ' . $reference
+            ], 404);
+        }
+
+        $recipientEmail = $validated['recipient_email'] 
+            ?? ($booking->user ? $booking->user->email : null);
+
+        if (!$recipientEmail) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No valid recipient email address found for this booking.'
+            ], 422);
+        }
+
+        $bookingData = [
+            'reference' => $booking->booking_reference,
+            'guestName' => $booking->user ? $booking->user->name : 'Valued Traveler',
+            'propertyName' => $booking->property->title,
+            'propertyAddress' => $booking->property->address . ', ' . $booking->property->city . ', ' . $booking->property->state,
+            'roomName' => $booking->roomType->name,
+            'checkInDate' => $booking->check_in_date->format('M d, Y'),
+            'checkOutDate' => $booking->check_out_date->format('M d, Y'),
+            'nights' => $booking->total_nights,
+            'totalAmount' => '₦' . number_format($booking->total_amount_kobo / 100, 2),
+        ];
+
+        try {
+            Mail::to($recipientEmail)->send(new BookingConfirmationMail($bookingData));
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Trip voucher and booking confirmation sent to ' . $recipientEmail,
+                'data' => [
+                    'recipient' => $recipientEmail,
+                    'booking_reference' => $booking->booking_reference,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('SMTP Booking Voucher Email Failed: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to dispatch email: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

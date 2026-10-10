@@ -26,12 +26,12 @@ import AuthGuard from './components/AuthGuard';
 import OnboardingModal from './components/OnboardingModal';
 import LegalPolicyPage from './components/LegalPolicyPage';
 import { MOCK_PROPERTIES } from './data/mockProperties';
-import { 
-  Building2, 
-  ShieldCheck, 
-  Sparkles, 
-  MapPin, 
-  CheckCircle2, 
+import {
+  Building2,
+  ShieldCheck,
+  Sparkles,
+  MapPin,
+  CheckCircle2,
   Search,
   User,
   Navigation
@@ -57,7 +57,7 @@ export default function App() {
     };
     fetchDbProperties();
   }, []);
-  
+
   // Authenticated User State & Token
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -83,10 +83,10 @@ export default function App() {
         const u = JSON.parse(savedUser);
         if (u && u.role) return u.role;
       }
-    } catch {}
+    } catch { }
     return 'guest';
   });
-  
+
   // Guest Navigation Sub-view: 'feed' or 'detail'
   const [guestSubView, setGuestSubView] = useState('feed');
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -149,7 +149,7 @@ export default function App() {
           return 'dashboard';
         }
       }
-    } catch {}
+    } catch { }
     return 'explore';
   });
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -174,7 +174,7 @@ export default function App() {
       try {
         localStorage.setItem('finddestination_wishlist', JSON.stringify(updated));
         localStorage.setItem('tafiya_wishlist', JSON.stringify(updated));
-      } catch {}
+      } catch { }
       return updated;
     });
   };
@@ -367,7 +367,7 @@ export default function App() {
       }
 
       if (filters.amenities && filters.amenities.length > 0) {
-        const hasAllAmenities = filters.amenities.every(amenity => 
+        const hasAllAmenities = filters.amenities.every(amenity =>
           property.amenities.includes(amenity)
         );
         if (!hasAllAmenities) return false;
@@ -410,6 +410,19 @@ export default function App() {
     setIsCheckoutModalOpen(false);
     setActiveBookingData(bookingData);
     setIsVoucherModalOpen(true);
+
+    // Automatically trigger booking confirmation & voucher email in background
+    if (bookingData.reference && bookingData.guestEmail) {
+      fetch('/api/v1/bookings/send-voucher-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          booking_reference: bookingData.reference,
+          recipient_email: bookingData.guestEmail
+        })
+      }).catch(e => console.warn('Background email dispatch caught:', e));
+    }
+
     try {
       const savedStr = localStorage.getItem('finddestination_recent_bookings') || localStorage.getItem('tafiya_recent_bookings');
       const saved = savedStr ? JSON.parse(savedStr) : [];
@@ -450,7 +463,7 @@ export default function App() {
     } catch (e) {
       console.error('Failed to toggle publish status in DB', e);
     }
-    setProperties(prev => prev.map(p => 
+    setProperties(prev => prev.map(p =>
       p.id === propId ? { ...p, is_published: !p.is_published } : p
     ));
   };
@@ -499,7 +512,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/30">
-      
+
       <div className="flex-1">
         {/* 1. Global Role Switcher Navigation Header */}
         <RoleSwitcher
@@ -510,7 +523,7 @@ export default function App() {
         />
 
         {/* 2. Main Header */}
-        <Header 
+        <Header
           onOpenSearchModal={() => setIsSearchModalOpen(true)}
           activeTab={activeMobileTab}
           setActiveTab={setActiveMobileTab}
@@ -592,29 +605,8 @@ export default function App() {
               />
 
               <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-                
-                <div className="mb-6 p-4 sm:p-6 bg-gradient-to-r from-tafiya-dark to-slate-900 text-white rounded-3xl shadow-md border border-slate-800 flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tafiya-orange/20 text-tafiya-orange text-[11px] font-bold">
-                      <User className="w-3 h-3" />
-                      <span>Role 1: Guest / Traveler Portal</span>
-                    </div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-white">
-                      Explore Verified Accommodations in Northern Nigeria
-                    </h2>
-                    <p className="text-xs text-slate-400 hidden sm:block">
-                      Bauchi • Kaduna • Kano • Plateau • Adamawa • Gombe
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="hidden md:inline-block text-xs font-bold text-slate-300">
-                      {filteredProperties.length} Stays Available
-                    </span>
-                  </div>
-                </div>
-
-                <ListingGrid 
+                <ListingGrid
                   properties={filteredProperties}
                   onSelectProperty={handleSelectProperty}
                   onOpenFilterModal={() => setIsFilterModalOpen(true)}
@@ -690,7 +682,7 @@ export default function App() {
       </div>
 
       {/* Filter Modal */}
-      <FilterModal 
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         filters={filters}
@@ -699,7 +691,7 @@ export default function App() {
       />
 
       {/* Search Modal */}
-      <SearchModal 
+      <SearchModal
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
         searchParams={searchParams}
@@ -777,7 +769,7 @@ export default function App() {
       />
 
       {/* Airbnb Style Full Footer Component */}
-      <Footer 
+      <Footer
         currentUser={currentUser}
         currentRole={currentRole}
         onOpenAuthModal={handleOpenAuthModal}
@@ -789,7 +781,7 @@ export default function App() {
       />
 
       {/* Mobile Bottom Navigation */}
-      <MobileFooterNav 
+      <MobileFooterNav
         currentRole={currentRole}
         activeTab={activeMobileTab}
         setActiveTab={setActiveMobileTab}

@@ -142,7 +142,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
       const resData = await response.json();
       const bookingReference = (response.ok && resData.data?.booking_reference)
         ? resData.data.booking_reference
-        : (paymentRef || `TAF-${property.city.substring(0, 2).toUpperCase()}-2026-${Math.floor(1000 + Math.random() * 9000)}`);
+        : (paymentRef || `FD-${property.city.substring(0, 2).toUpperCase()}-2026-${Math.floor(1000 + Math.random() * 9000)}`);
 
       const bookingData = {
         reference: bookingReference,
@@ -163,7 +163,7 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
       onPaymentComplete(bookingData);
     } catch (err) {
       const bookingData = {
-        reference: paymentRef || `TAF-${property.city.substring(0, 2).toUpperCase()}-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        reference: paymentRef || `FD-${property.city.substring(0, 2).toUpperCase()}-2026-${Math.floor(1000 + Math.random() * 9000)}`,
         property: property,
         room: selectedRoom || property.rooms[0],
         guestName,

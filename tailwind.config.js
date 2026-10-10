@@ -7,6 +7,28 @@ export default {
   theme: {
     extend: {
       colors: {
+        fd: {
+          blue: {
+            DEFAULT: '#0066FF',
+            50: '#F0F7FF',
+            100: '#E0EFFE',
+            500: '#0066FF',
+            600: '#0052CC',
+            700: '#003D99',
+          },
+          orange: {
+            DEFAULT: '#FF9900',
+            50: '#FFF8ED',
+            100: '#FFEED4',
+            500: '#FF9900',
+            600: '#EA580C',
+            700: '#C2410C',
+          },
+          gold: '#FBBF24',
+          dark: '#0F172A',
+          slate: '#475569',
+          light: '#F8FAFC'
+        },
         tafiya: {
           blue: {
             DEFAULT: '#0066FF',

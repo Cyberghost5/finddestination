@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\PaymentTransaction;
+use App\Mail\BookingConfirmationMail;
 use App\Services\Payments\MonnifyService;
 use App\Services\Payments\PaystackService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class WebhookController extends Controller
 {
@@ -47,6 +49,8 @@ class WebhookController extends Controller
                         'raw_webhook_payload' => $data,
                         'paid_at' => now(),
                     ]);
+
+                    $this->dispatchBookingConfirmationEmail($booking);
                 }
             }
         }
@@ -88,10 +92,38 @@ class WebhookController extends Controller
                         'raw_webhook_payload' => $eventData,
                         'paid_at' => now(),
                     ]);
+
+                    $this->dispatchBookingConfirmationEmail($booking);
                 }
             }
         }
 
         return response()->json(['status' => 'success'], 200);
+    }
+
+    /**
+     * Safe asynchronous email dispatch for booking confirmation & escrow certificate
+     */
+    private function dispatchBookingConfirmationEmail(Booking $booking)
+    {
+        try {
+            $booking->load(['property', 'roomType', 'user']);
+            $userEmail = $booking->user ? $booking->user->email : null;
+            if ($userEmail) {
+                Mail::to($userEmail)->send(new BookingConfirmationMail([
+                    'reference' => $booking->booking_reference,
+                    'guestName' => $booking->user->name ?? 'Valued Guest',
+                    'propertyName' => $booking->property->title ?? 'FindDestination Verified Stay',
+                    'propertyAddress' => ($booking->property->address ?? '') . ', ' . ($booking->property->city ?? '') . ', ' . ($booking->property->state ?? ''),
+                    'roomName' => $booking->roomType->name ?? 'Executive Suite',
+                    'checkInDate' => $booking->check_in_date->format('M d, Y'),
+                    'checkOutDate' => $booking->check_out_date->format('M d, Y'),
+                    'nights' => $booking->total_nights,
+                    'totalAmount' => '₦' . number_format($booking->total_amount_kobo / 100, 2),
+                ]));
+            }
+        } catch (\Throwable $e) {
+            Log::error('SMTP Webhook Booking Confirmation Email Failed: ' . $e->getMessage());
+        }
     }
 }

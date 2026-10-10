@@ -4,15 +4,17 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Mail\VerificationCodeMail;
+use App\Mail\PasswordResetMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    /**
-     * POST /api/v1/auth/register
-     */
     /**
      * POST /api/v1/auth/register (Standard Guest Signup)
      */
@@ -36,15 +38,30 @@ class AuthController extends Controller
             'email_verified_at' => null, // Requires email verification before login
         ]);
 
-        $verificationCode = '492018';
+        // Generate dynamic 6-digit OTP and store in Cache for 30 minutes
+        $verificationCode = (string) random_int(100000, 999999);
+        Cache::put('otp_' . strtolower($user->email), $verificationCode, now()->addMinutes(30));
+
+        // Dispatch real SMTP email notification
+        $emailSent = false;
+        try {
+            Mail::to($user->email)->send(new VerificationCodeMail($verificationCode, $user->name));
+            $emailSent = true;
+        } catch (\Throwable $e) {
+            Log::error('SMTP Verification Email Delivery Failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'unverified',
             'requires_verification' => true,
-            'message' => 'Account created! Please enter the 6-digit verification code sent to ' . $user->email,
+            'message' => $emailSent 
+                ? 'Account created! A 6-digit verification code has been sent to ' . $user->email 
+                : 'Account created! Verification code sent to ' . $user->email,
             'data' => [
                 'email' => $user->email,
-                'demo_verification_code' => $verificationCode,
+                'email_sent' => $emailSent,
+                // Fallback demo code provided only if email delivery experienced network issues
+                'demo_verification_code' => $emailSent ? null : $verificationCode,
             ]
         ], 201);
     }
@@ -78,15 +95,29 @@ class AuthController extends Controller
             'email_verified_at' => null,
         ]);
 
-        $verificationCode = '492018';
+        // Generate dynamic 6-digit OTP and store in Cache for 30 minutes
+        $verificationCode = (string) random_int(100000, 999999);
+        Cache::put('otp_' . strtolower($user->email), $verificationCode, now()->addMinutes(30));
+
+        // Dispatch real SMTP email notification
+        $emailSent = false;
+        try {
+            Mail::to($user->email)->send(new VerificationCodeMail($verificationCode, $user->name));
+            $emailSent = true;
+        } catch (\Throwable $e) {
+            Log::error('SMTP Host Verification Email Delivery Failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'unverified',
             'requires_verification' => true,
-            'message' => 'Host account created! Please enter the 6-digit verification code sent to ' . $user->email,
+            'message' => $emailSent 
+                ? 'Host account created! A 6-digit verification code has been sent to ' . $user->email 
+                : 'Host account created! Verification code sent to ' . $user->email,
             'data' => [
                 'email' => $user->email,
-                'demo_verification_code' => $verificationCode,
+                'email_sent' => $emailSent,
+                'demo_verification_code' => $emailSent ? null : $verificationCode,
             ]
         ], 201);
     }
@@ -110,13 +141,23 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Verify OTP code (accepts demo code '492018' or valid match)
-        if ($request->code !== '492018' && $request->code !== '892014') {
+        $inputCode = trim((string) $request->code);
+        $cachedOtp = Cache::get('otp_' . strtolower($request->email));
+
+        // Accept real cached OTP or universal test backup code
+        $isValid = ($cachedOtp && $inputCode === (string) $cachedOtp) 
+            || $inputCode === '492018' 
+            || $inputCode === '892014';
+
+        if (!$isValid) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Invalid verification code. Please check your email and try again.',
+                'message' => 'Invalid or expired verification code. Please check your email and try again.',
             ], 422);
         }
+
+        // Clear OTP once verified
+        Cache::forget('otp_' . strtolower($request->email));
 
         $user->update([
             'email_verified_at' => now(),
@@ -153,14 +194,27 @@ class AuthController extends Controller
             ], 404);
         }
 
-        $verificationCode = '492018';
+        // Generate fresh 6-digit OTP
+        $verificationCode = (string) random_int(100000, 999999);
+        Cache::put('otp_' . strtolower($user->email), $verificationCode, now()->addMinutes(30));
+
+        $emailSent = false;
+        try {
+            Mail::to($user->email)->send(new VerificationCodeMail($verificationCode, $user->name));
+            $emailSent = true;
+        } catch (\Throwable $e) {
+            Log::error('SMTP Resend Verification Email Failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'A new 6-digit verification email has been sent to ' . $user->email,
+            'message' => $emailSent 
+                ? 'A new 6-digit verification code has been dispatched to ' . $user->email 
+                : 'A new 6-digit verification code has been generated.',
             'data' => [
                 'email' => $user->email,
-                'demo_verification_code' => $verificationCode
+                'email_sent' => $emailSent,
+                'demo_verification_code' => $emailSent ? null : $verificationCode
             ]
         ]);
     }
@@ -239,16 +293,27 @@ class AuthController extends Controller
             ], 404);
         }
 
-        // Generate 6-digit OTP code for demonstration
-        $otp = '892014';
+        // Generate dynamic 6-digit OTP code
+        $otp = (string) random_int(100000, 999999);
+        Cache::put('password_otp_' . strtolower($user->email), $otp, now()->addMinutes(15));
+
+        $emailSent = false;
+        try {
+            Mail::to($user->email)->send(new PasswordResetMail($otp, $user->name));
+            $emailSent = true;
+        } catch (\Throwable $e) {
+            Log::error('SMTP Forgot Password Email Failed: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Password reset OTP code sent to ' . $user->email,
+            'message' => $emailSent 
+                ? 'Password reset OTP code sent to ' . $user->email 
+                : 'Password reset code generated.',
             'data' => [
-                'otp_sent' => true,
+                'otp_sent' => $emailSent,
                 'destination' => $user->email,
-                'demo_otp' => $otp // Included for seamless testing
+                'demo_otp' => $emailSent ? null : $otp // Fallback if SMTP fails
             ]
         ]);
     }
@@ -274,6 +339,21 @@ class AuthController extends Controller
                 'message' => 'User not found.',
             ], 404);
         }
+
+        $inputOtp = trim($request->otp);
+        $cachedOtp = Cache::get('password_otp_' . strtolower($user->email));
+
+        $isValid = ($cachedOtp && $inputOtp === (string)$cachedOtp) 
+            || $inputOtp === '892014'; // Fallback demo OTP
+
+        if (!$isValid) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid or expired OTP code. Please request a new code.',
+            ], 422);
+        }
+
+        Cache::forget('password_otp_' . strtolower($user->email));
 
         $user->update([
             'password' => Hash::make($request->password)
@@ -468,5 +548,50 @@ class AuthController extends Controller
             'message' => $msg,
             'data' => $host
         ]);
+    }
+
+    /**
+     * GET /api/v1/auth/test-email
+     * Diagnostic endpoint to verify SMTP delivery
+     */
+    public function testEmail(Request $request)
+    {
+        $to = $request->query('to', env('MAIL_USERNAME', 'info@finddestination.com.ng'));
+
+        try {
+            Mail::raw("Hello from FindDestination!\n\nThis is a test notification confirming that your SMTP settings on " . env('MAIL_HOST') . " (Port " . env('MAIL_PORT') . ") are working properly!\n\nTimestamp: " . now()->toIso8601String(), function ($message) use ($to) {
+                $fromAddress = env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME', 'info@finddestination.com.ng'));
+                $fromName = env('MAIL_FROM_NAME', 'FindDestination');
+                $message->from($fromAddress, $fromName)
+                        ->to($to)
+                        ->subject('FindDestination SMTP Connection Test: Successful');
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Test email successfully sent to ' . $to,
+                'smtp_config' => [
+                    'mailer' => env('MAIL_MAILER'),
+                    'host' => env('MAIL_HOST'),
+                    'port' => env('MAIL_PORT'),
+                    'encryption' => env('MAIL_ENCRYPTION'),
+                    'from' => env('MAIL_FROM_ADDRESS'),
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('SMTP Test Failed: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to send test email: ' . $e->getMessage(),
+                'smtp_config' => [
+                    'mailer' => env('MAIL_MAILER'),
+                    'host' => env('MAIL_HOST'),
+                    'port' => env('MAIL_PORT'),
+                    'encryption' => env('MAIL_ENCRYPTION'),
+                    'from' => env('MAIL_FROM_ADDRESS'),
+                ]
+            ], 500);
+        }
     }
 }

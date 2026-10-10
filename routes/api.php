@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/settings/payment-gateway', [SettingController::class, 'updatePaymentGatewaySetting']);
 
     // Authentication Flow
+    Route::get('/auth/test-email', [AuthController::class, 'testEmail']);
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/register-host', [AuthController::class, 'registerHost']);
     Route::post('/auth/login', [AuthController::class, 'login']);
@@ -60,6 +61,7 @@ Route::prefix('v1')->group(function () {
     // Booking Initiation, Tracking & Concurrency
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::post('/bookings/track', [BookingController::class, 'track']);
+    Route::post('/bookings/send-voucher-email', [BookingController::class, 'sendVoucherEmail']);
     Route::get('/bookings/my-trips-public', [BookingController::class, 'myTrips']);
 
     // Webhook Ingestion Engine
