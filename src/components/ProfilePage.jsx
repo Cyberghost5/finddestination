@@ -22,7 +22,8 @@ import {
   Building2,
   ArrowRight,
   X,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from 'lucide-react';
 
 export default function ProfilePage({
@@ -34,6 +35,7 @@ export default function ProfilePage({
   onOpenInfoModal,
   onUpdateUser,
   onOpenVoucher,
+  onOpenChat,
   onNavigateExplore,
   newBookingAlert,
   onDismissAlert
@@ -243,7 +245,7 @@ export default function ProfilePage({
               <p className="text-xs text-emerald-100 leading-relaxed">
                 Funds are held in secure escrow until check-in. Your digital voucher & check-in QR code are ready below, and a confirmation email has been dispatched.
               </p>
-              <div className="pt-2 flex items-center gap-2">
+              <div className="pt-2 flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => onOpenVoucher && onOpenVoucher(newBookingAlert)}
@@ -251,6 +253,14 @@ export default function ProfilePage({
                 >
                   <QrCode className="w-3.5 h-3.5 text-emerald-600" />
                   <span>View Digital Voucher</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenChat && onOpenChat(newBookingAlert.reference || newBookingAlert.booking_reference, newBookingAlert)}
+                  className="px-4 py-1.5 bg-emerald-900/60 hover:bg-emerald-900 text-white border border-white/20 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Chat with Host</span>
                 </button>
               </div>
             </div>
@@ -510,11 +520,21 @@ export default function ProfilePage({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => onOpenChat && onOpenChat(ref, item)}
+                          className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                          title="Message property host"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Chat Host</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => onOpenVoucher && onOpenVoucher(item)}
-                          className="px-4 py-2 bg-tafiya-blue hover:bg-tafiya-blue-600 text-white text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                          className="px-3.5 py-2 bg-tafiya-blue hover:bg-tafiya-blue-600 text-white text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
                         >
                           <QrCode className="w-3.5 h-3.5" />
                           <span>View Voucher</span>

@@ -53,4 +53,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Booking::class);
     }
+
+    public function guestChatThreads()
+    {
+        return $this->hasMany(ChatThread::class, 'guest_id');
+    }
+
+    public function hostChatThreads()
+    {
+        return $this->hasMany(ChatThread::class, 'host_id');
+    }
 }

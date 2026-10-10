@@ -17,10 +17,11 @@ import {
   AlertTriangle,
   FileText,
   ShieldAlert,
-  HelpCircle
+  HelpCircle,
+  MessageSquare
 } from 'lucide-react';
 
-export default function HostDashboard({ currentUser, properties, onOpenWizard, onTogglePublish }) {
+export default function HostDashboard({ currentUser, properties, onOpenWizard, onTogglePublish, onOpenChat, onNavigateInbox }) {
   const [activeTab, setActiveTab] = useState('listings'); // 'listings' or 'reservations'
   const [payoutRequested, setPayoutRequested] = useState(false);
 
@@ -93,6 +94,15 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => onNavigateInbox && onNavigateInbox()}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-full text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
+            title="Open messages and communications with booked guests and support"
+          >
+            <MessageSquare className="w-4 h-4 text-emerald-400" />
+            <span>Guest Messages</span>
+          </button>
+
           <button
             onClick={() => setPayoutRequested(true)}
             disabled={!isApproved}
@@ -370,9 +380,19 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
 
                     <div className="text-right space-y-2">
                       <span className="text-sm font-black text-slate-900 block">{res.amount}</span>
-                      <button className="px-3 py-1 bg-tafiya-blue text-white font-bold text-[10px] rounded-full shadow-sm hover:bg-tafiya-blue-600">
-                        Validate Check-in
-                      </button>
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          onClick={() => onOpenChat && onOpenChat(res.id)}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-full shadow-sm flex items-center gap-1 cursor-pointer transition-colors"
+                          title="Message this booked guest"
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          <span>Chat Guest</span>
+                        </button>
+                        <button className="px-3 py-1 bg-tafiya-blue text-white font-bold text-[10px] rounded-full shadow-sm hover:bg-tafiya-blue-600">
+                          Validate Check-in
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

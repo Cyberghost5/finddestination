@@ -64,4 +64,9 @@ class Property extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+    public function chatThreads()
+    {
+        return $this->hasMany(ChatThread::class, 'property_id');
+    }
 }

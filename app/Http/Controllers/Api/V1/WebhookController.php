@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\ChatThread;
 use App\Models\PaymentTransaction;
 use App\Mail\BookingConfirmationMail;
 use App\Services\Payments\MonnifyService;
@@ -51,6 +52,12 @@ class WebhookController extends Controller
                     ]);
 
                     $this->dispatchBookingConfirmationEmail($booking);
+
+                    try {
+                        ChatThread::findOrCreateBookingThread($booking);
+                    } catch (\Throwable $e) {
+                        Log::error('Auto ChatThread creation failed on Paystack: ' . $e->getMessage());
+                    }
                 }
             }
         }
@@ -94,6 +101,12 @@ class WebhookController extends Controller
                     ]);
 
                     $this->dispatchBookingConfirmationEmail($booking);
+
+                    try {
+                        ChatThread::findOrCreateBookingThread($booking);
+                    } catch (\Throwable $e) {
+                        Log::error('Auto ChatThread creation failed on Monnify: ' . $e->getMessage());
+                    }
                 }
             }
         }

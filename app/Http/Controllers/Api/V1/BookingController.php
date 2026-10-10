@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\ChatThread;
 use App\Models\RoomType;
 use App\Mail\BookingConfirmationMail;
 use App\Services\Payments\MonnifyService;
@@ -252,6 +253,12 @@ class BookingController extends Controller
                     'booking_status' => 'confirmed',
                     'hold_expires_at' => null,
                 ]);
+            }
+
+            try {
+                ChatThread::findOrCreateBookingThread($booking);
+            } catch (\Throwable $e) {
+                Log::error('Auto ChatThread creation failed on sendVoucherEmail: ' . $e->getMessage());
             }
 
             $bookingData = [

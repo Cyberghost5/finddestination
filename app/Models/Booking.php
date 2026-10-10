@@ -57,4 +57,9 @@ class Booking extends Model
     {
         return $this->hasOne(Review::class);
     }
+
+    public function chatThread()
+    {
+        return $this->hasOne(ChatThread::class, 'booking_id');
+    }
 }

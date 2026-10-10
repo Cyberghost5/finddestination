@@ -21,10 +21,18 @@ import {
   UserCheck,
   AlertTriangle,
   RefreshCw,
-  Eye
+  Eye,
+  MessageSquare,
+  Bot,
+  Send,
+  CheckCheck,
+  Search,
+  User,
+  Phone,
+  Mail
 } from 'lucide-react';
 
-export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish }) {
+export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish, currentUser }) {
   const [activeTab, setActiveTab] = useState('host_approvals'); // 'host_approvals', 'verification', 'escrow', or 'payment_settings'
   const [payoutLogs, setPayoutLogs] = useState([]);
 
@@ -45,6 +53,137 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
   const [isSavingGateway, setIsSavingGateway] = useState(false);
   const [gatewaySaveMsg, setGatewaySaveMsg] = useState('');
   const [gatewaySaveError, setGatewaySaveError] = useState('');
+
+  // Universal Support Desk State
+  const [supportThreads, setSupportThreads] = useState([]);
+  const [isLoadingSupport, setIsLoadingSupport] = useState(false);
+  const [selectedSupportThreadId, setSelectedSupportThreadId] = useState(null);
+  const [supportMessages, setSupportMessages] = useState([]);
+  const [isLoadingSupportMessages, setIsLoadingSupportMessages] = useState(false);
+  const [adminReplyInput, setAdminReplyInput] = useState('');
+  const [isSendingAdminReply, setIsSendingAdminReply] = useState(false);
+  const [supportSearchQuery, setSupportSearchQuery] = useState('');
+
+  const getAdminAuthHeaders = () => {
+    const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (currentUser?.id) headers['X-User-Id'] = currentUser.id;
+    return headers;
+  };
+
+  const fetchSupportThreads = async () => {
+    setIsLoadingSupport(true);
+    try {
+      const res = await fetch('/api/v1/chats', { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        // In support desk, focus on support threads or inbound user threads
+        const supportOnly = data.data.filter(t => t.type === 'support');
+        setSupportThreads(supportOnly);
+        if (!selectedSupportThreadId && supportOnly.length > 0) {
+          setSelectedSupportThreadId(supportOnly[0].id);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load support threads', e);
+    } finally {
+      setIsLoadingSupport(false);
+    }
+  };
+
+  const fetchSupportMessages = async (threadId, silent = false) => {
+    if (!threadId) return;
+    if (!silent) setIsLoadingSupportMessages(true);
+    try {
+      const res = await fetch(`/api/v1/chats/${threadId}/messages`, { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && data.data) {
+        setSupportMessages(data.data.messages || []);
+        // Reset unread locally
+        setSupportThreads(prev => prev.map(t => t.id === threadId ? { ...t, unread_count: 0 } : t));
+      }
+    } catch (e) {
+      console.error('Failed to load messages', e);
+    } finally {
+      if (!silent) setIsLoadingSupportMessages(false);
+    }
+  };
+
+  const handleSendAdminReply = async (e) => {
+    if (e) e.preventDefault();
+    const text = adminReplyInput.trim();
+    if (!text || !selectedSupportThreadId || isSendingAdminReply) return;
+
+    const tempId = `admin-temp-${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      sender_id: currentUser?.id,
+      sender_name: currentUser?.name || 'Super Admin',
+      sender_role: 'admin',
+      is_me: true,
+      text: text,
+      is_read: false,
+      time: 'Just now',
+      created_at: new Date().toISOString()
+    };
+
+    setSupportMessages(prev => [...prev, optimistic]);
+    setAdminReplyInput('');
+    setIsSendingAdminReply(true);
+
+    try {
+      const res = await fetch(`/api/v1/chats/${selectedSupportThreadId}/messages`, {
+        method: 'POST',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify({ message: text })
+      });
+      const data = await res.json();
+      if (data.status === 'success' && data.data) {
+        setSupportMessages(prev => prev.map(m => m.id === tempId ? data.data : m));
+        setSupportThreads(prev => prev.map(t => {
+          if (t.id === selectedSupportThreadId) {
+            return {
+              ...t,
+              latest_message: {
+                id: data.data.id,
+                text: data.data.text,
+                sender_role: 'admin',
+                is_me: true,
+                time: 'Just now'
+              },
+              last_message_at: new Date().toISOString()
+            };
+          }
+          return t;
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to send admin reply', err);
+    } finally {
+      setIsSendingAdminReply(false);
+    }
+  };
+
+  // Poll for support messages
+  useEffect(() => {
+    fetchSupportThreads();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (selectedSupportThreadId) {
+      fetchSupportMessages(selectedSupportThreadId);
+      const poll = setInterval(() => {
+        fetchSupportMessages(selectedSupportThreadId, true);
+      }, 4000);
+      return () => clearInterval(poll);
+    }
+  }, [selectedSupportThreadId]);
+
+  const supportUnreadTotal = supportThreads.reduce((sum, t) => sum + (t.unread_count || 0), 0);
 
   // Fetch Host Applications
   const fetchHosts = async () => {
@@ -308,6 +447,24 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
           >
             <Settings className="w-3.5 h-3.5" />
             <span>Payment Gateway Settings ({activeGateway.toUpperCase()})</span>
+          </button>
+
+          {/* TAB 5: Super Admin Support Desk */}
+          <button
+            onClick={() => setActiveTab('support_desk')}
+            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'support_desk'
+                ? 'border-tafiya-blue text-tafiya-blue'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Bot className="w-3.5 h-3.5 text-tafiya-blue" />
+            <span>Escrow Support Desk</span>
+            {supportUnreadTotal > 0 && (
+              <span className="bg-tafiya-orange text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
+                {supportUnreadTotal}
+              </span>
+            )}
           </button>
         </div>
 
@@ -819,6 +976,245 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
               </div>
 
             </form>
+          </div>
+        )}
+
+        {/* VIEW 5: ESCROW SUPPORT DESK CONSOLE */}
+        {activeTab === 'support_desk' && (
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[550px]">
+
+            {/* Left Column: Support Tickets & Inbound Threads */}
+            <div className="md:col-span-5 border-r border-slate-200/80 flex flex-col bg-slate-50/40">
+              <div className="p-4 border-b border-slate-200 bg-white space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-extrabold text-slate-900 flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-tafiya-blue" />
+                    <span>Inbound Support Inquiries</span>
+                  </h3>
+                  <button
+                    onClick={fetchSupportThreads}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+                    title="Refresh inquiries"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSupport ? 'animate-spin text-tafiya-blue' : ''}`} />
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={supportSearchQuery}
+                    onChange={(e) => setSupportSearchQuery(e.target.value)}
+                    placeholder="Search user, role, email..."
+                    className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-tafiya-blue bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Inbound Threads List */}
+              <div className="divide-y divide-slate-100 overflow-y-auto flex-1 max-h-[480px]">
+                {isLoadingSupport && supportThreads.length === 0 ? (
+                  <div className="p-8 text-center space-y-2">
+                    <RefreshCw className="w-5 h-5 text-tafiya-blue animate-spin mx-auto" />
+                    <p className="text-xs text-slate-500 font-semibold">Loading support inquiries...</p>
+                  </div>
+                ) : supportThreads.length === 0 ? (
+                  <div className="p-8 text-center space-y-3">
+                    <Bot className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700">No support tickets</p>
+                    <p className="text-[11px] text-slate-400">All user inquiries will appear here in real time.</p>
+                  </div>
+                ) : (
+                  supportThreads
+                    .filter(t => {
+                      if (!supportSearchQuery.trim()) return true;
+                      const q = supportSearchQuery.toLowerCase();
+                      const name = (t.other_party?.name || '').toLowerCase();
+                      const role = (t.other_party?.role || '').toLowerCase();
+                      const email = (t.other_party?.email || '').toLowerCase();
+                      return name.includes(q) || role.includes(q) || email.includes(q);
+                    })
+                    .map(t => {
+                      const isSelected = t.id === selectedSupportThreadId;
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => setSelectedSupportThreadId(t.id)}
+                          className={`p-4 flex items-start gap-3 transition-colors cursor-pointer ${
+                            isSelected ? 'bg-tafiya-blue-50/70 border-l-4 border-tafiya-blue' : 'hover:bg-white'
+                          }`}
+                        >
+                          <div className="relative shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-slate-900 text-tafiya-gold flex items-center justify-center font-bold text-xs shadow-xs border border-slate-800">
+                              {t.other_party?.name?.charAt(0).toUpperCase() || 'U'}
+                            </div>
+                            {t.unread_count > 0 && (
+                              <span className="absolute -top-1 -right-1 w-4 h-4 bg-tafiya-orange text-white text-[10px] font-extrabold rounded-full flex items-center justify-center">
+                                {t.unread_count}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <h4 className="text-xs font-bold text-slate-900 truncate">
+                                {t.other_party?.name || 'Platform User'}
+                              </h4>
+                              <span className="text-[10px] text-slate-400 shrink-0">
+                                {t.latest_message ? t.latest_message.time : ''}
+                              </span>
+                            </div>
+
+                            <p className="text-[10px] text-tafiya-blue font-bold truncate">
+                              {t.other_party?.role || 'Guest'} • {t.other_party?.email || 'Registered User'}
+                            </p>
+
+                            <p className="text-[11px] text-slate-500 truncate mt-1">
+                              {t.latest_message ? t.latest_message.text : 'Opened inquiry'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Active Conversation Pane */}
+            <div className="md:col-span-7 flex flex-col bg-white">
+              {selectedSupportThreadId ? (
+                <>
+                  {/* Active Header */}
+                  {(() => {
+                    const activeT = supportThreads.find(t => t.id === selectedSupportThreadId);
+                    return (
+                      <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-900 text-tafiya-gold flex items-center justify-center font-bold text-sm">
+                            {activeT?.other_party?.name?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                              <span>{activeT?.other_party?.name || 'Inbound User'}</span>
+                              <span className="text-[9px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">
+                                {activeT?.other_party?.role || 'Guest'}
+                              </span>
+                            </h4>
+                            <p className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                              <span>{activeT?.other_party?.email || 'support@finddestination.com.ng'}</span>
+                              {activeT?.other_party?.phone && <span>• {activeT.other_party.phone}</span>}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                          Active Ticket
+                        </span>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Message History */}
+                  <div className="p-4 space-y-3 overflow-y-auto flex-1 max-h-[360px] bg-slate-50/20">
+                    {isLoadingSupportMessages ? (
+                      <div className="p-8 text-center space-y-2">
+                        <RefreshCw className="w-5 h-5 text-tafiya-blue animate-spin mx-auto" />
+                        <p className="text-xs text-slate-400">Loading conversation history...</p>
+                      </div>
+                    ) : supportMessages.length === 0 ? (
+                      <div className="py-12 text-center text-xs text-slate-400">
+                        No messages yet in this ticket.
+                      </div>
+                    ) : (
+                      supportMessages.map(m => {
+                        const isAdminSender = m.sender_role === 'admin' || m.is_me;
+                        return (
+                          <div key={m.id} className={`flex ${isAdminSender ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] p-3.5 rounded-2xl text-xs space-y-1 shadow-xs ${
+                              isAdminSender
+                                ? 'bg-slate-900 text-white rounded-br-none border border-slate-800'
+                                : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+                            }`}>
+                              <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/20 text-[9px] font-bold">
+                                <span className={isAdminSender ? 'text-tafiya-gold' : 'text-tafiya-blue'}>
+                                  {isAdminSender ? 'Super Admin Support' : m.sender_name}
+                                </span>
+                                <span className={`text-[8px] uppercase px-1.5 py-0.2 rounded ${
+                                  isAdminSender ? 'bg-amber-400/20 text-tafiya-gold' : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {m.sender_role}
+                                </span>
+                              </div>
+                              <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                              <div className={`flex items-center gap-1 text-[9px] pt-0.5 ${
+                                isAdminSender ? 'text-slate-400 justify-end' : 'text-slate-400 justify-start'
+                              }`}>
+                                <span>{m.time}</span>
+                                {isAdminSender && <CheckCheck className="w-3 h-3 text-tafiya-gold" />}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Super Admin Quick Response Chips */}
+                  <div className="px-4 py-2 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none bg-white">
+                    {[
+                      'Your escrow payment has been verified and secured.',
+                      'A verification field agent has inspected the property.',
+                      'Your check-in voucher has been re-dispatched to your email.',
+                      'Please provide your booking reference number.'
+                    ].map((chip, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setAdminReplyInput(chip)}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-tafiya-blue-50 hover:text-tafiya-blue text-slate-600 rounded-full text-[10px] font-semibold whitespace-nowrap cursor-pointer transition-colors shrink-0"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Super Admin Reply Form */}
+                  <form onSubmit={handleSendAdminReply} className="p-3 border-t border-slate-200 flex items-center gap-2 bg-white">
+                    <input
+                      type="text"
+                      value={adminReplyInput}
+                      onChange={(e) => setAdminReplyInput(e.target.value)}
+                      placeholder="Type official reply as Super Admin..."
+                      className="flex-1 px-4 py-2.5 text-xs border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                      disabled={isSendingAdminReply}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!adminReplyInput.trim() || isSendingAdminReply}
+                      className="px-4 py-2.5 bg-slate-900 text-white rounded-2xl flex items-center gap-1.5 text-xs font-bold hover:bg-slate-800 transition-colors disabled:opacity-40 cursor-pointer shadow-sm shrink-0"
+                    >
+                      {isSendingAdminReply ? (
+                        <RefreshCw className="w-4 h-4 animate-spin text-tafiya-gold" />
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5 text-tafiya-gold" />
+                          <span>Reply</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
+                  <Bot className="w-12 h-12 text-slate-300" />
+                  <p className="text-xs font-bold text-slate-700">Select a support ticket</p>
+                  <p className="text-[11px] text-slate-400 max-w-xs">
+                    Choose a conversation on the left to review user inquiries and respond as Super Admin.
+                  </p>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 

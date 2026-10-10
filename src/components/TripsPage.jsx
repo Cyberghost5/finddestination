@@ -13,10 +13,11 @@ import {
   Sparkles,
   ChevronRight,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  MessageSquare
 } from 'lucide-react';
 
-export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher, onOpenTracker, onNavigateExplore }) {
+export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher, onOpenTracker, onOpenChat, onNavigateExplore }) {
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'upcoming', 'completed', 'cancelled'
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -298,6 +299,15 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
 
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => onOpenChat && onOpenChat(b.reference, b)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                    title="Chat with property owner"
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    <span>Chat Host</span>
+                  </button>
+
+                  <button
                     onClick={() => onOpenTracker && onOpenTracker(b.reference)}
                     className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
                   >
@@ -309,7 +319,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
                     onClick={() => onOpenVoucher && onOpenVoucher(b)}
                     className="px-3.5 py-1.5 bg-tafiya-blue text-white rounded-lg text-xs font-bold hover:bg-tafiya-blue-600 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
                   >
-                    <QrCode className="w-3 h-3" />
+                    <QrCode className="w-3.5 h-3.5" />
                     <span>Voucher</span>
                   </button>
                 </div>

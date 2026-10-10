@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
+use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\PropertyController;
 use App\Http\Controllers\Api\V1\SettingController;
 use App\Http\Controllers\Api\V1\WebhookController;
@@ -20,6 +21,15 @@ Route::prefix('v1')->group(function () {
         return response()->json([
             'status' => 'success',
             'message' => 'Database migrated and seeded with real property products successfully!'
+        ]);
+    });
+
+    Route::get('/migrate', function() {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Database migrations executed successfully!',
+            'output' => trim(\Illuminate\Support\Facades\Artisan::output())
         ]);
     });
 
@@ -67,5 +77,12 @@ Route::prefix('v1')->group(function () {
     // Webhook Ingestion Engine
     Route::post('/payments/webhooks/paystack', [WebhookController::class, 'handlePaystack']);
     Route::post('/payments/webhooks/monnify', [WebhookController::class, 'handleMonnify']);
+
+    // Messaging & Real-Time Chat Engine
+    Route::get('/chats', [ChatController::class, 'index']);
+    Route::get('/chats/{threadId}/messages', [ChatController::class, 'getMessages']);
+    Route::post('/chats/{threadId}/messages', [ChatController::class, 'sendMessage']);
+    Route::post('/chats/start-booking-chat', [ChatController::class, 'startBookingChat']);
+    Route::post('/chats/support', [ChatController::class, 'supportChat']);
 
 });

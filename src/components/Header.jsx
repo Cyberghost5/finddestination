@@ -14,7 +14,8 @@ import {
   MapPin,
   Calendar,
   Users,
-  Package
+  Package,
+  MessageSquare
 } from 'lucide-react';
 
 export default function Header({ onOpenSearchModal, activeTab, setActiveTab, currentUser, onOpenAuthModal, onLogout, searchParams, onOpenTracker, onLogoClick }) {
@@ -149,6 +150,18 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                       >
                         <User className="w-4 h-4 text-tafiya-blue" />
                         <span>My Profile & Reservations</span>
+                      </button>
+
+                      {/* Messages & Support */}
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setActiveTab && setActiveTab('inbox');
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        <MessageSquare className="w-4 h-4 text-tafiya-blue" />
+                        <span>Messages & Support</span>
                       </button>
 
                       {/* Track Booking Button for all users */}

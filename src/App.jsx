@@ -136,6 +136,17 @@ export default function App() {
   const [isTrackerModalOpen, setIsTrackerModalOpen] = useState(false);
   const [trackerInitialRef, setTrackerInitialRef] = useState('');
 
+  // Active Chat Navigation State
+  const [activeChatBookingRef, setActiveChatBookingRef] = useState(null);
+  const [activeChatThreadId, setActiveChatThreadId] = useState(null);
+
+  const handleOpenChat = (bookingRef, bookingDataOrThread) => {
+    if (bookingRef) {
+      setActiveChatBookingRef(bookingRef);
+    }
+    setActiveMobileTab('inbox');
+  };
+
   // Modals & Triggers
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -609,6 +620,7 @@ export default function App() {
               setIsVoucherModalOpen(true);
             }}
             onOpenTracker={(ref) => handleOpenTrackerModal(ref)}
+            onOpenChat={handleOpenChat}
             onNavigateExplore={() => setActiveMobileTab('explore')}
           />
         ) : activeMobileTab === 'inbox' ? (
@@ -616,6 +628,12 @@ export default function App() {
             currentUser={currentUser}
             onOpenAuthModal={handleOpenAuthModal}
             onNavigateExplore={() => setActiveMobileTab('explore')}
+            targetBookingRef={activeChatBookingRef}
+            targetThreadId={activeChatThreadId}
+            onClearTargetChat={() => {
+              setActiveChatBookingRef(null);
+              setActiveChatThreadId(null);
+            }}
           />
         ) : activeMobileTab === 'profile' ? (
           <ProfilePage
@@ -631,6 +649,7 @@ export default function App() {
               setActiveBookingData(booking);
               setIsVoucherModalOpen(true);
             }}
+            onOpenChat={handleOpenChat}
             onNavigateExplore={() => {
               setActiveMobileTab('explore');
               setGuestSubView('feed');
@@ -690,6 +709,8 @@ export default function App() {
               properties={properties}
               onOpenWizard={() => setIsWizardOpen(true)}
               onTogglePublish={handleTogglePublish}
+              onOpenChat={handleOpenChat}
+              onNavigateInbox={() => setActiveMobileTab('inbox')}
             />
           </AuthGuard>
         ) : currentRole === 'agent' ? (
@@ -721,6 +742,7 @@ export default function App() {
               properties={properties}
               onUpdateVerificationStatus={handleUpdateVerificationStatus}
               onTogglePublish={handleTogglePublish}
+              currentUser={currentUser}
             />
           </AuthGuard>
         )}
