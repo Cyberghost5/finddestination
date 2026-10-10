@@ -18,6 +18,8 @@ class SettingController extends Controller
         $monnifyApiKey = Setting::getByKey('monnify_api_key', env('MONNIFY_API_KEY', 'MK_TEST_FINDDESTINATION_MONNIFY_API_KEY'));
         $monnifyContractCode = Setting::getByKey('monnify_contract_code', env('MONNIFY_CONTRACT_CODE', '8920184920'));
         $googleClientId = Setting::getByKey('google_client_id', env('GOOGLE_CLIENT_ID', ''));
+        $qoreidClientId = Setting::getByKey('qoreid_client_id', env('QOREID_CLIENT_ID', ''));
+        $qoreidSecretKey = Setting::getByKey('qoreid_secret_key', env('QOREID_SECRET_KEY', ''));
 
         return response()->json([
             'status' => 'success',
@@ -27,6 +29,8 @@ class SettingController extends Controller
                 'monnify_api_key' => $monnifyApiKey,
                 'monnify_contract_code' => $monnifyContractCode,
                 'google_client_id' => $googleClientId,
+                'qoreid_client_id' => $qoreidClientId,
+                'qoreid_secret_key' => $qoreidSecretKey,
             ]
         ]);
     }
@@ -42,6 +46,8 @@ class SettingController extends Controller
             'monnify_api_key' => 'nullable|string',
             'monnify_contract_code' => 'nullable|string',
             'google_client_id' => 'nullable|string',
+            'qoreid_client_id' => 'nullable|string',
+            'qoreid_secret_key' => 'nullable|string',
         ]);
 
         Setting::setByKey('active_payment_gateway', $validated['active_gateway']);
@@ -62,6 +68,14 @@ class SettingController extends Controller
             Setting::setByKey('google_client_id', $validated['google_client_id']);
         }
 
+        if (array_key_exists('qoreid_client_id', $validated)) {
+            Setting::setByKey('qoreid_client_id', $validated['qoreid_client_id'] ?? '');
+        }
+
+        if (array_key_exists('qoreid_secret_key', $validated)) {
+            Setting::setByKey('qoreid_secret_key', $validated['qoreid_secret_key'] ?? '');
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Settings updated successfully',
@@ -71,6 +85,8 @@ class SettingController extends Controller
                 'monnify_api_key' => Setting::getByKey('monnify_api_key', env('MONNIFY_API_KEY', 'MK_TEST_FINDDESTINATION_MONNIFY_API_KEY')),
                 'monnify_contract_code' => Setting::getByKey('monnify_contract_code', env('MONNIFY_CONTRACT_CODE', '8920184920')),
                 'google_client_id' => Setting::getByKey('google_client_id', env('GOOGLE_CLIENT_ID', '')),
+                'qoreid_client_id' => Setting::getByKey('qoreid_client_id', env('QOREID_CLIENT_ID', '')),
+                'qoreid_secret_key' => Setting::getByKey('qoreid_secret_key', env('QOREID_SECRET_KEY', '')),
             ]
         ]);
     }

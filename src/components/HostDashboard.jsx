@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Building2, 
   ShieldCheck, 
@@ -30,6 +30,45 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
   const isRejected = hostStatus === 'rejected';
   const isApproved = hostStatus === 'approved';
 
+  // Strict Host Isolation: The host should ONLY and ONLY see properties managed by him
+  const managedProperties = useMemo(() => {
+    if (!currentUser || !Array.isArray(properties)) return [];
+
+    const currentUserId = currentUser.id ? Number(currentUser.id) : null;
+    const currentEmail = currentUser.email ? currentUser.email.toLowerCase().trim() : '';
+    const currentName = currentUser.name ? currentUser.name.toLowerCase().trim() : '';
+    const currentBusiness = currentUser.business_name ? currentUser.business_name.toLowerCase().trim() : '';
+
+    return properties.filter((prop) => {
+      // 1. Direct host_id numeric match
+      if (currentUserId && prop.host_id && Number(prop.host_id) === currentUserId) {
+        return true;
+      }
+      // 2. Nested prop.host?.id numeric match
+      if (currentUserId && prop.host?.id && Number(prop.host.id) === currentUserId) {
+        return true;
+      }
+      // 3. Host email match
+      if (currentEmail && prop.host?.email && prop.host.email.toLowerCase().trim() === currentEmail) {
+        return true;
+      }
+      // 4. Host corporate business name match
+      if (currentBusiness) {
+        const propHostBiz = (prop.host?.business_name || '').toLowerCase().trim();
+        const propBiz = (prop.business_name || '').toLowerCase().trim();
+        if (propHostBiz && propHostBiz === currentBusiness) return true;
+        if (propBiz && propBiz === currentBusiness) return true;
+      }
+      // 5. Host applicant name match
+      if (currentName && prop.host?.name) {
+        const propHostName = prop.host.name.toLowerCase().trim();
+        if (propHostName && propHostName === currentName) return true;
+      }
+
+      return false;
+    });
+  }, [properties, currentUser]);
+
   const mockReservations = [
     {
       id: 'RES-8910',
@@ -52,6 +91,15 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
       rail: 'Paystack Card'
     }
   ];
+
+  // Scoped Reservations: Only reservations for this host's managed listings
+  const hostReservations = useMemo(() => {
+    if (!managedProperties || managedProperties.length === 0) return [];
+    const managedPropertyNames = managedProperties.map(p => (p.name || '').toLowerCase());
+    return mockReservations.filter(res => 
+      managedPropertyNames.includes((res.property || '').toLowerCase())
+    );
+  }, [managedProperties]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 animate-in fade-in duration-300">
@@ -202,7 +250,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
         {/* Available Escrow Earnings */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Available Balance</span>
-          <div className="text-2xl font-black text-slate-900">{isApproved ? '₦1,420,000' : '₦0'}</div>
+          <div className="text-2xl font-black text-slate-900">{isApproved && managedProperties.length > 0 ? `₦${(managedProperties.length * 75000 + 150000).toLocaleString()}` : '₦0'}</div>
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
             <Lock className="w-3 h-3" /> Escrow Protected
           </span>
@@ -211,14 +259,14 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
         {/* Occupancy Rate */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Average Occupancy</span>
-          <div className="text-2xl font-black text-tafiya-blue">{isApproved ? '84%' : '0%'}</div>
-          <span className="text-[11px] font-medium text-slate-500">Across managed units</span>
+          <div className="text-2xl font-black text-tafiya-blue">{isApproved && managedProperties.length > 0 ? '84%' : '0%'}</div>
+          <span className="text-[11px] font-medium text-slate-500">{managedProperties.length > 0 ? `Across ${managedProperties.length} managed unit${managedProperties.length === 1 ? '' : 's'}` : 'No active units'}</span>
         </div>
 
         {/* Active Reservations */}
         <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Monthly Bookings</span>
-          <div className="text-2xl font-black text-tafiya-orange">{isApproved ? '18 Stays' : '0 Stays'}</div>
+          <div className="text-2xl font-black text-tafiya-orange">{isApproved && managedProperties.length > 0 ? `${managedProperties.length * 3} Stays` : '0 Stays'}</div>
           <span className="text-[11px] font-medium text-slate-500">Northern Nigeria Region</span>
         </div>
 
@@ -256,7 +304,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            My Managed Listings ({isApproved ? properties.length : 0})
+            My Managed Listings ({isApproved ? managedProperties.length : 0})
           </button>
 
           <button
@@ -267,7 +315,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            Incoming Guest Reservations ({isApproved ? mockReservations.length : 0})
+            Incoming Guest Reservations ({isApproved ? hostReservations.length : 0})
           </button>
         </div>
 
@@ -286,6 +334,28 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                   </p>
                 </div>
               </div>
+            ) : managedProperties.length === 0 ? (
+              <div className="p-12 text-center space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center mx-auto">
+                  <Building2 className="w-8 h-8 text-tafiya-orange/70" />
+                </div>
+                <div className="max-w-md mx-auto space-y-2">
+                  <h3 className="text-base font-extrabold text-slate-900">No Managed Properties Listed Yet</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    You do not have any accommodation listings registered under <strong className="text-slate-800">{currentUser?.business_name || currentUser?.name || 'your host account'}</strong>. As a verified host partner, you can now publish your apartments, guest lodges, and hotel suites.
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenWizard && onOpenWizard()}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-tafiya-blue hover:bg-tafiya-blue-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-tafiya-blue/20 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>List Your First Property Now</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -299,7 +369,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {properties.map((prop) => (
+                    {managedProperties.map((prop) => (
                       <tr key={prop.id} className="hover:bg-slate-50/60 transition-colors">
                         <td className="p-4 flex items-center gap-3">
                           <img 
@@ -340,10 +410,10 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                         <td className="p-4">
                           <button
                             onClick={() => onTogglePublish(prop.id)}
-                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors ${
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors cursor-pointer ${
                               prop.is_published 
-                                ? 'bg-emerald-100 text-emerald-800' 
-                                : 'bg-slate-100 text-slate-600'
+                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                           >
                             {prop.is_published ? 'Published' : 'Draft'}
@@ -365,9 +435,14 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
               <div className="p-8 text-center text-slate-500 text-xs">
                 No active reservations. Account Level 1 approval is pending.
               </div>
+            ) : hostReservations.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 text-xs space-y-1">
+                <p className="font-bold text-slate-700">No incoming reservations yet</p>
+                <p className="text-slate-400">Reservations made by travelers for your managed properties will appear here with live escrow status.</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                {mockReservations.map((res) => (
+                {hostReservations.map((res) => (
                   <div key={res.id} className="p-4 rounded-2xl border border-slate-200 flex items-center justify-between gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">

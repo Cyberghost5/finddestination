@@ -485,20 +485,52 @@ export default function App() {
     try {
       const response = await fetch('/api/v1/properties', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(newProp)
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        },
+        body: JSON.stringify({
+          ...newProp,
+          host_id: newProp.host_id || currentUser?.id,
+          host_email: currentUser?.email,
+          host_name: currentUser?.name,
+          business_name: currentUser?.business_name,
+          cac_number: currentUser?.cac_number,
+          tin_number: currentUser?.tin_number,
+        })
       });
       if (response.ok) {
         const resData = await response.json();
         if (resData.status === 'success' && resData.data) {
+          if (resData.data.host?.id && (!currentUser?.id || currentUser.id !== resData.data.host.id)) {
+            const updatedUser = {
+              ...currentUser,
+              id: resData.data.host.id,
+              name: currentUser?.name || resData.data.host.name,
+              business_name: currentUser?.business_name || resData.data.host.business_name,
+              email: currentUser?.email || resData.data.host.email,
+              role: 'host',
+              host_status: 'approved'
+            };
+            setCurrentUser(updatedUser);
+            try {
+              localStorage.setItem('finddestination_user', JSON.stringify(updatedUser));
+              localStorage.setItem('tafiya_user', JSON.stringify(updatedUser));
+            } catch (err) {}
+          }
           setProperties(prev => [resData.data, ...prev]);
-          return;
+          return resData.data;
         }
+      } else {
+        const errData = await response.json();
+        throw new Error(errData.message || 'Failed to create property');
       }
     } catch (e) {
       console.error('Failed to create property in DB', e);
+      setProperties(prev => [newProp, ...prev]);
+      return newProp;
     }
-    setProperties(prev => [newProp, ...prev]);
   };
 
   const handleTogglePublish = async (propId) => {
@@ -727,7 +759,9 @@ export default function App() {
           >
             <FieldAgentPortal
               properties={properties}
-              onCompleteLocationAudit={handleLocationAudit}
+              currentUser={currentUser}
+              authToken={authToken}
+              onCompleteLocationAudit={() => {}}
             />
           </AuthGuard>
         ) : (
@@ -804,6 +838,7 @@ export default function App() {
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
         onPropertyCreated={handlePropertyCreated}
+        currentUser={currentUser}
       />
 
       {/* Authentication & Account Modal */}

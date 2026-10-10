@@ -30,10 +30,15 @@ class Property extends Model
         'amenities',
         'verification_status',
         'is_published',
+        'is_open_for_inspection',
+        'inspection_fee',
+        'inspection_status',
     ];
 
     protected $casts = [
         'is_published' => 'boolean',
+        'is_open_for_inspection' => 'boolean',
+        'inspection_fee' => 'decimal:2',
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
         'images' => 'array',
@@ -68,5 +73,20 @@ class Property extends Model
     public function chatThreads()
     {
         return $this->hasMany(ChatThread::class, 'property_id');
+    }
+
+    public function agentInspections()
+    {
+        return $this->hasMany(AgentInspection::class);
+    }
+
+    public function inspections()
+    {
+        return $this->hasMany(AgentInspection::class);
+    }
+
+    public function activeInspection()
+    {
+        return $this->hasOne(AgentInspection::class)->latestOfMany();
     }
 }

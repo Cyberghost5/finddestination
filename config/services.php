@@ -27,4 +27,10 @@ return [
         'base_url' => env('MONNIFY_BASE_URL', 'https://sandbox.monnify.com'),
     ],
 
+    'qoreid' => [
+        'client_id' => env('QOREID_CLIENT_ID'),
+        'secret_key' => env('QOREID_SECRET_KEY'),
+        'base_url' => env('QOREID_BASE_URL', 'https://api.qoreid.com'),
+    ],
+
 ];

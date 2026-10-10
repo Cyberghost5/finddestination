@@ -1,4 +1,4 @@
-export const MOCK_PROPERTIES = [
+const RAW_MOCK_PROPERTIES = [
   {
     id: 101,
     name: "Yankari Safari & Luxury Suites",
@@ -711,6 +711,16 @@ export const MOCK_PROPERTIES = [
     ]
   }
 ];
+
+export const MOCK_PROPERTIES = RAW_MOCK_PROPERTIES.map(p => ({
+  ...p,
+  host_id: p.host_id || 3,
+  host: {
+    ...p.host,
+    id: p.host?.id || 3,
+    business_name: p.host?.business_name || 'Arewa Luxury Suites & Apartments Ltd'
+  }
+}));
 
 export const MOCK_CATEGORIES = [
   { id: 'all', name: 'All Stays', icon: 'Building2' },

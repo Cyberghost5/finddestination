@@ -35,6 +35,7 @@ class PropertyController extends Controller
 
         return [
             'id' => $prop->id,
+            'host_id' => (int) $prop->host_id,
             'name' => $prop->name,
             'slug' => $prop->slug,
             'property_type' => $prop->property_type,
@@ -56,9 +57,12 @@ class PropertyController extends Controller
             'latitude' => (float) ($prop->latitude ?? 10.3158),
             'longitude' => (float) ($prop->longitude ?? 9.8442),
             'host' => [
-                'name' => $prop->host ? $prop->host->name : 'Alhaji Ibrahim Bello',
+                'id' => (int) ($prop->host_id ?? ($prop->host ? $prop->host->id : null)),
+                'name' => $prop->host ? $prop->host->name : ($prop->host_id == 3 ? 'Alhaji Ibrahim Bello' : 'Verified Host'),
+                'business_name' => $prop->host ? $prop->host->business_name : null,
+                'email' => $prop->host ? $prop->host->email : null,
                 'role' => 'Verified Host',
-                'joined' => '2024',
+                'joined' => $prop->host && $prop->host->created_at ? $prop->host->created_at->format('Y') : '2024',
                 'response_rate' => '99%'
             ],
             'rooms' => $rooms->isNotEmpty() ? $rooms->toArray() : [
@@ -80,7 +84,13 @@ class PropertyController extends Controller
      */
     public function index(Request $request)
     {
-        $properties = Property::with(['roomTypes', 'reviews', 'host'])->get();
+        $query = Property::with(['roomTypes', 'reviews', 'host']);
+
+        if ($request->filled('host_id')) {
+            $query->where('host_id', $request->input('host_id'));
+        }
+
+        $properties = $query->get();
         $formatted = $properties->map(fn($p) => $this->formatPropertyForFrontend($p));
 
         return response()->json([
@@ -152,8 +162,47 @@ class PropertyController extends Controller
             'starting_price_kobo' => 'nullable|numeric',
         ]);
 
+        $hostId = auth()->id() ?? $request->input('host_id');
+        if (!$hostId && $request->has('host.id')) {
+            $hostId = $request->input('host.id');
+        }
+
+        $hostEmail = $request->input('host.email') ?? $request->input('host_email');
+        $hostName = $request->input('host.name') ?? $request->input('host_name');
+        $businessName = $request->input('host.business_name') ?? $request->input('business_name');
+        $cacNumber = $request->input('host.cac_number') ?? $request->input('cac_number');
+        $tinNumber = $request->input('host.tin_number') ?? $request->input('tin_number');
+
+        if ($hostEmail) {
+            $existingHost = User::where('email', $hostEmail)->first();
+            if ($existingHost) {
+                $hostId = $existingHost->id;
+                if ($businessName && !$existingHost->business_name) {
+                    $existingHost->update(['business_name' => $businessName]);
+                }
+            } else {
+                $newHost = User::create([
+                    'name' => $hostName ?: 'Host Partner',
+                    'email' => $hostEmail,
+                    'phone' => $validated['contact_phone'] ?? '+2348000000000',
+                    'role' => 'host',
+                    'business_name' => $businessName,
+                    'cac_number' => $cacNumber,
+                    'tin_number' => $tinNumber,
+                    'host_status' => 'approved',
+                    'password' => bcrypt('password123'),
+                    'email_verified_at' => now(),
+                ]);
+                $hostId = $newHost->id;
+            }
+        }
+
+        if (!$hostId) {
+            $hostId = 3;
+        }
+
         $property = Property::create([
-            'host_id' => auth()->id() ?? 3,
+            'host_id' => $hostId,
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']) . '-' . rand(100, 999),
             'property_type' => strtolower($validated['property_type']),
@@ -161,15 +210,17 @@ class PropertyController extends Controller
             'address' => $validated['address'],
             'city' => $validated['city'],
             'state' => $validated['state'],
+            'latitude' => $request->input('latitude') ? (float)$request->input('latitude') : 10.3158,
+            'longitude' => $request->input('longitude') ? (float)$request->input('longitude') : 9.8442,
             'contact_phone' => $validated['contact_phone'] ?? '+2348021112233',
             'verification_status' => 'unverified',
-            'verification_tier' => 'unverified',
+            'verification_tier' => 'tier_1_docs',
             'is_published' => true,
             'images' => [
                 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80',
                 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80'
             ],
-            'amenities' => ['24/7 Power', 'Constant Water', 'Air Conditioning', 'WiFi']
+            'amenities' => $request->input('amenities') ?: ['24/7 Power', 'Constant Water', 'Air Conditioning', 'WiFi']
         ]);
 
         $priceKobo = (int) ($request->starting_price_kobo ?? 3500000);

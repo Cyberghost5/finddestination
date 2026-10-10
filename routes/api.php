@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AdminInspectionController;
+use App\Http\Controllers\Api\V1\AgentInspectionController;
+use App\Http\Controllers\Api\V1\AgentWalletController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\ChatController;
@@ -50,9 +53,11 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('/auth/onboarding', [AuthController::class, 'completeOnboarding']);
 
-    // Admin Level 1 Host Approval Queue
+    // Admin Level 1 Host Approval Queue & QoreID CAC Verification
     Route::get('/admin/hosts', [AuthController::class, 'getAdminHosts']);
     Route::patch('/admin/hosts/{id}/approval', [AuthController::class, 'updateHostApproval']);
+    Route::post('/admin/hosts/{id}/verify-cac', [AuthController::class, 'verifyHostCac']);
+    Route::post('/admin/verify-cac', [AuthController::class, 'verifyCacDirect']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
@@ -85,4 +90,29 @@ Route::prefix('v1')->group(function () {
     Route::post('/chats/start-booking-chat', [ChatController::class, 'startBookingChat']);
     Route::post('/chats/support', [ChatController::class, 'supportChat']);
 
+    // Field Agent Inspection Workflow & Bounties
+    Route::get('/agent/explore-properties', [AgentInspectionController::class, 'exploreProperties']);
+    Route::post('/agent/inspections/apply', [AgentInspectionController::class, 'apply']);
+    Route::get('/agent/inspections/my-assignments', [AgentInspectionController::class, 'myAssignments']);
+    Route::post('/agent/inspections/{id}/submit-report', [AgentInspectionController::class, 'submitReport']);
+
+    // Field Agent Wallet & Payout System
+    Route::get('/agent/wallet', [AgentWalletController::class, 'getWallet']);
+    Route::post('/agent/wallet/bank-details', [AgentWalletController::class, 'updateBankDetails']);
+    Route::post('/agent/wallet/withdraw', [AgentWalletController::class, 'withdraw']);
+
+    // Super Admin Field Inspection Control & Audit Review
+    Route::get('/admin/inspections/properties', [AdminInspectionController::class, 'getInspectionProperties']);
+    Route::post('/admin/inspections/properties/{id}/open', [AdminInspectionController::class, 'openInspection']);
+    Route::get('/admin/inspections/applications', [AdminInspectionController::class, 'getApplications']);
+    Route::post('/admin/inspections/applications/{id}/respond', [AdminInspectionController::class, 'respondToApplication']);
+    Route::get('/admin/inspections/reports', [AdminInspectionController::class, 'getReports']);
+    Route::post('/admin/inspections/{id}/verify', [AdminInspectionController::class, 'verifyReport']);
+
+    // Super Admin Agent Withdrawal Processing
+    Route::get('/admin/withdrawals', [AdminInspectionController::class, 'getWithdrawals']);
+    Route::post('/admin/withdrawals/{id}/process', [AdminInspectionController::class, 'processWithdrawal']);
+
 });
+
+

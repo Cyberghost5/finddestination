@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Mail\VerificationCodeMail;
 use App\Mail\PasswordResetMail;
+use App\Mail\HostRegistrationStatusMail;
+use App\Services\Identity\QoreIdService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -515,6 +517,18 @@ class AuthController extends Controller
      */
     public function updateHostApproval(Request $request, $id)
     {
+        // Flexibly normalize action from either 'action', 'host_status', or 'status'
+        $rawAction = $request->input('action') ?? $request->input('host_status') ?? $request->input('status');
+        if ($rawAction) {
+            $rawAction = strtolower(trim((string)$rawAction));
+            if (in_array($rawAction, ['approve', 'approved'])) {
+                $rawAction = 'approve';
+            } elseif (in_array($rawAction, ['reject', 'rejected', 'disapprove', 'disapproved'])) {
+                $rawAction = 'reject';
+            }
+            $request->merge(['action' => $rawAction]);
+        }
+
         $validated = $request->validate([
             'action' => 'required|in:approve,reject',
             'rejection_reason' => 'nullable|string',
@@ -534,19 +548,113 @@ class AuthController extends Controller
                 'host_status' => 'approved',
                 'rejection_reason' => null
             ]);
-            $msg = 'Host account (' . ($host->business_name ?? $host->name) . ') approved successfully. Level 1 CAC check cleared!';
+            $msg = 'Host account (' . ($host->business_name ?? $host->name) . ') approved successfully. Level 1 CAC check cleared! Confirmation email dispatched to host.';
+
+            // Send Official Approval Email to Host
+            try {
+                if (!empty($host->email)) {
+                    Mail::to($host->email)->send(new HostRegistrationStatusMail($host, 'approved'));
+                    Log::info("Host registration approval email successfully sent to {$host->email}");
+                }
+            } catch (\Throwable $e) {
+                Log::error("Failed to send host approval email to {$host->email}: " . $e->getMessage());
+            }
         } else {
+            $reason = $validated['rejection_reason'] ?? 'CAC business credentials could not be verified.';
             $host->update([
                 'host_status' => 'rejected',
-                'rejection_reason' => $validated['rejection_reason'] ?? 'CAC business credentials could not be verified.'
+                'rejection_reason' => $reason
             ]);
-            $msg = 'Host account application rejected.';
+            $msg = 'Host account application rejected. Notification email with compliance remarks dispatched to host.';
+
+            // Send Official Rejection Email to Host
+            try {
+                if (!empty($host->email)) {
+                    Mail::to($host->email)->send(new HostRegistrationStatusMail($host, 'rejected', $reason));
+                    Log::info("Host registration rejection email successfully sent to {$host->email}");
+                }
+            } catch (\Throwable $e) {
+                Log::error("Failed to send host rejection email to {$host->email}: " . $e->getMessage());
+            }
         }
 
         return response()->json([
             'status' => 'success',
             'message' => $msg,
-            'data' => $host
+            'data' => $host->fresh()
+        ]);
+    }
+
+    /**
+     * POST /api/v1/admin/hosts/{id}/verify-cac
+     * Query QoreID CAC API and audit host corporate credentials
+     */
+    public function verifyHostCac(Request $request, $id)
+    {
+        $host = User::where('id', $id)->where('role', 'host')->first();
+
+        if (!$host) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Host account not found.'
+            ], 404);
+        }
+
+        $cacNumber = $request->input('cac_number', $host->cac_number);
+
+        if (empty($cacNumber)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This host has not provided a CAC registration number.'
+            ], 422);
+        }
+
+        // Query QoreID Service
+        $verificationResult = QoreIdService::verifyCac($cacNumber, $host);
+
+        // Save verification result and timestamp on host record
+        $host->update([
+            'cac_verification_data' => $verificationResult,
+            'cac_verified_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'CAC verified successfully via ' . ($verificationResult['source'] ?? 'QoreID API'),
+            'data' => $verificationResult,
+            'host' => $host->fresh(),
+        ]);
+    }
+
+    /**
+     * POST /api/v1/admin/verify-cac
+     * Direct CAC lookup tool via QoreID API
+     */
+    public function verifyCacDirect(Request $request)
+    {
+        $validated = $request->validate([
+            'cac_number' => 'required|string',
+            'host_id' => 'nullable|integer',
+        ]);
+
+        $host = null;
+        if (!empty($validated['host_id'])) {
+            $host = User::find($validated['host_id']);
+        }
+
+        $verificationResult = QoreIdService::verifyCac($validated['cac_number'], $host);
+
+        if ($host) {
+            $host->update([
+                'cac_verification_data' => $verificationResult,
+                'cac_verified_at' => now(),
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'CAC registration audited via ' . ($verificationResult['source'] ?? 'QoreID API'),
+            'data' => $verificationResult,
         ]);
     }
 
