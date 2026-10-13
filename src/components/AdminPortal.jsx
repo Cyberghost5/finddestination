@@ -49,13 +49,73 @@ import {
   Layers,
   Filter,
   CheckSquare,
-  Square
+  Square,
+  LayoutDashboard,
+  UserPlus,
+  Trash2,
+  Shield,
+  Ban,
+  KeyRound,
+  Receipt,
+  ArrowLeftRight
 } from 'lucide-react';
 
 export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish, onUpdateProperty, currentUser, onSwitchToGuest, onLogout, onSelectRole }) {
-  const [activeTab, setActiveTab] = useState('host_approvals'); // 'host_approvals', 'verification', 'escrow', or 'payment_settings'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'users', 'transactions', 'host_approvals', 'agent_inspections', 'agent_withdrawals', 'verification', 'escrow', 'support_desk', or 'payment_settings'
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [payoutLogs, setPayoutLogs] = useState([]);
+
+  // Platform Users Directory & Identity Management State
+  const [users, setUsers] = useState([]);
+  const [usersSummary, setUsersSummary] = useState({ total: 0, guests: 0, hosts: 0, agents: 0, admins: 0 });
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all'); // 'all', 'guest', 'host', 'agent', 'admin'
+  const [userStatusFilter, setUserStatusFilter] = useState('all'); // 'all', 'active', 'suspended'
+  const [userActionMsg, setUserActionMsg] = useState('');
+  const [userActionError, setUserActionError] = useState('');
+  const [createUserModal, setCreateUserModal] = useState(false);
+  const [userEditModal, setUserEditModal] = useState(null); // { id, name, email, phone, role, is_active, business_name, cac_number, password }
+  const [userDeleteModal, setUserDeleteModal] = useState(null); // { id, name, email, role }
+  const [isSavingUser, setIsSavingUser] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'guest',
+    password: '',
+    business_name: '',
+    cac_number: '',
+    is_active: true
+  });
+
+  // Platform Transactions Ledger State (Every Transaction Linked to Booking/Reservation)
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsSummary, setTransactionsSummary] = useState({
+    total_transactions: 0,
+    total_volume_kobo: 0,
+    total_volume_formatted: '₦0.00',
+    successful_count: 0,
+    successful_volume_kobo: 0,
+    successful_volume_formatted: '₦0.00',
+    platform_revenue_kobo: 0,
+    platform_revenue_formatted: '₦0.00',
+    host_escrow_kobo: 0,
+    host_escrow_formatted: '₦0.00',
+    initiated_count: 0,
+    failed_count: 0,
+    refunded_count: 0,
+    paystack_count: 0,
+    monnify_count: 0,
+  });
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
+  const [txSearchQuery, setTxSearchQuery] = useState('');
+  const [txGatewayFilter, setTxGatewayFilter] = useState('all'); // 'all', 'paystack', 'monnify'
+  const [txStatusFilter, setTxStatusFilter] = useState('all'); // 'all', 'successful', 'initiated', 'refunded', 'failed'
+  const [txActionMsg, setTxActionMsg] = useState('');
+  const [txActionError, setTxActionError] = useState('');
+  const [selectedTxModal, setSelectedTxModal] = useState(null); // Full transaction and linked booking receipt modal
+  const [isUpdatingTxStatus, setIsUpdatingTxStatus] = useState(false);
 
   // Host Level 1 Approval Queue State
   const [hosts, setHosts] = useState([]);
@@ -250,6 +310,210 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     return headers;
   };
 
+  // Platform Users Directory Handlers
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const res = await fetch('/api/v1/admin/users', { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setUsers(data.data);
+        if (data.summary) {
+          setUsersSummary(data.summary);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setUserActionError('Failed to load users list from server.');
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const handleOpenEditUser = (u) => {
+    setUserEditModal({
+      id: u.id,
+      name: u.name || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      role: u.role || 'guest',
+      is_active: u.is_active !== false,
+      business_name: u.business_name || '',
+      cac_number: u.cac_number || '',
+      password: '',
+    });
+    setUserActionError('');
+    setUserActionMsg('');
+  };
+
+  const handleCreateUser = async (e) => {
+    if (e) e.preventDefault();
+    setIsSavingUser(true);
+    setUserActionError('');
+    try {
+      const res = await fetch('/api/v1/admin/users', {
+        method: 'POST',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify(newUserForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setUserActionMsg(data.message || 'User created successfully!');
+        setCreateUserModal(false);
+        setNewUserForm({
+          name: '',
+          email: '',
+          phone: '',
+          role: 'guest',
+          password: '',
+          business_name: '',
+          cac_number: '',
+          is_active: true
+        });
+        fetchUsers();
+      } else {
+        setUserActionError(data.message || 'Failed to create user. Please check form values.');
+      }
+    } catch (err) {
+      console.error('Create user error:', err);
+      setUserActionError('Network error when attempting to create user.');
+    } finally {
+      setIsSavingUser(false);
+    }
+  };
+
+  const handleUpdateUser = async (e) => {
+    if (e) e.preventDefault();
+    if (!userEditModal) return;
+    setIsSavingUser(true);
+    setUserActionError('');
+    try {
+      const payload = {
+        name: userEditModal.name,
+        email: userEditModal.email,
+        phone: userEditModal.phone,
+        role: userEditModal.role,
+        is_active: userEditModal.is_active,
+        business_name: userEditModal.business_name,
+        cac_number: userEditModal.cac_number,
+      };
+      if (userEditModal.password && userEditModal.password.trim().length >= 6) {
+        payload.password = userEditModal.password.trim();
+      }
+      const res = await fetch(`/api/v1/admin/users/${userEditModal.id}`, {
+        method: 'PATCH',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setUserActionMsg(data.message || 'User details updated successfully!');
+        setUserEditModal(null);
+        fetchUsers();
+      } else {
+        setUserActionError(data.message || 'Failed to update user profile.');
+      }
+    } catch (err) {
+      console.error('Update user error:', err);
+      setUserActionError('Network error when updating user.');
+    } finally {
+      setIsSavingUser(false);
+    }
+  };
+
+  const handleToggleUserStatus = async (user) => {
+    const nextStatus = !user.is_active;
+    try {
+      const res = await fetch(`/api/v1/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify({ is_active: nextStatus })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setUserActionMsg(`User "${user.name}" has been ${nextStatus ? 'activated' : 'suspended'}.`);
+        setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_active: nextStatus } : u));
+      } else {
+        setUserActionError(data.message || 'Failed to change user status.');
+      }
+    } catch (err) {
+      console.error('Toggle user status error:', err);
+      setUserActionError('Error changing user active state.');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userDeleteModal) return;
+    setIsSavingUser(true);
+    setUserActionError('');
+    try {
+      const res = await fetch(`/api/v1/admin/users/${userDeleteModal.id}`, {
+        method: 'DELETE',
+        headers: getAdminAuthHeaders()
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setUserActionMsg(data.message || 'User account successfully deleted.');
+        setUserDeleteModal(null);
+        fetchUsers();
+      } else {
+        setUserActionError(data.message || 'Could not delete user account.');
+      }
+    } catch (err) {
+      console.error('Delete user error:', err);
+      setUserActionError('Error deleting user account.');
+    } finally {
+      setIsSavingUser(false);
+    }
+  };
+
+  // Platform Transactions Ledger Handlers
+  const fetchTransactions = async () => {
+    setIsLoadingTransactions(true);
+    try {
+      const res = await fetch('/api/v1/admin/transactions', { headers: getAdminAuthHeaders() });
+      const data = await res.json();
+      if (data.status === 'success' && Array.isArray(data.data)) {
+        setTransactions(data.data);
+        if (data.summary) {
+          setTransactionsSummary(data.summary);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching admin transactions:', err);
+      setTxActionError('Failed to load transaction ledger from server.');
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  };
+
+  const handleUpdateTxStatus = async (txId, newStatus) => {
+    setIsUpdatingTxStatus(true);
+    setTxActionError('');
+    try {
+      const res = await fetch(`/api/v1/admin/transactions/${txId}/status`, {
+        method: 'PATCH',
+        headers: getAdminAuthHeaders(),
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setTxActionMsg(data.message || `Transaction status changed to ${newStatus}.`);
+        if (selectedTxModal && selectedTxModal.id === txId) {
+          setSelectedTxModal(prev => prev ? { ...prev, status: newStatus } : null);
+        }
+        fetchTransactions();
+      } else {
+        setTxActionError(data.message || 'Failed to update transaction status.');
+      }
+    } catch (err) {
+      console.error('Update transaction error:', err);
+      setTxActionError('Network error when updating transaction.');
+    } finally {
+      setIsUpdatingTxStatus(false);
+    }
+  };
+
   const fetchSupportThreads = async () => {
     setIsLoadingSupport(true);
     try {
@@ -403,6 +667,34 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     }
   }, [gatewaySaveError]);
 
+  useEffect(() => {
+    if (userActionMsg) {
+      const timer = setTimeout(() => setUserActionMsg(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [userActionMsg]);
+
+  useEffect(() => {
+    if (userActionError) {
+      const timer = setTimeout(() => setUserActionError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [userActionError]);
+
+  useEffect(() => {
+    if (txActionMsg) {
+      const timer = setTimeout(() => setTxActionMsg(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [txActionMsg]);
+
+  useEffect(() => {
+    if (txActionError) {
+      const timer = setTimeout(() => setTxActionError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [txActionError]);
+
   // Clear all pending messages when switching between admin tabs or subtabs
   useEffect(() => {
     setInspectActionMsg('');
@@ -412,6 +704,10 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     setGatewaySaveMsg('');
     setGatewaySaveError('');
     setCacCheckError('');
+    setUserActionMsg('');
+    setUserActionError('');
+    setTxActionMsg('');
+    setTxActionError('');
   }, [activeTab, adminInspectionsSubTab]);
 
   // Fetch Host Applications
@@ -621,6 +917,8 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
   useEffect(() => {
     fetchHosts();
+    fetchUsers();
+    fetchTransactions();
     fetchAllAgentAdminData();
 
     const fetchSettings = async () => {
@@ -787,6 +1085,29 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
   };
 
   const adminNavItems = [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      badge: null,
+      desc: 'Platform Overview & KPIs'
+    },
+    {
+      id: 'users',
+      label: 'Users Directory',
+      icon: Users,
+      badge: users.length > 0 ? users.length : null,
+      badgeColor: 'bg-indigo-600 text-white',
+      desc: 'Manage Platform Accounts'
+    },
+    {
+      id: 'transactions',
+      label: 'Transactions',
+      icon: CreditCard,
+      badge: transactions.length > 0 ? transactions.length : null,
+      badgeColor: 'bg-emerald-600 text-white',
+      desc: 'Booking Payments & Rails'
+    },
     {
       id: 'host_approvals',
       label: 'Host CAC Approvals',
@@ -1114,92 +1435,1343 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
       {/* ========================================================= */}
       {/* 3. MAIN DASHBOARD CONTENT AREA                            */}
       {/* ========================================================= */}
-      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-8">
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6">
         
-        {/* Super Admin & Field Agent Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md shrink-0">
-              <ShieldCheck className="w-8 h-8" />
+        {/* Subtle Breadcrumb Header for all sub-pages (omitted on Dashboard) */}
+        {activeTab !== 'dashboard' && (
+          <div className="flex items-center justify-between gap-4 pb-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className="hover:text-tafiya-blue transition-colors flex items-center gap-1.5 cursor-pointer text-slate-600 hover:underline"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-tafiya-blue" />
+                <span>Dashboard</span>
+              </button>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-slate-900 font-extrabold">
+                {adminNavItems.find(i => i.id === activeTab)?.label || 'Console'}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black">Super Admin & Verification Console</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white">
-                  Multi-Level Governance
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchAllAgentAdminData}
+                title="Refresh Admin Queues"
+                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-2xs"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : 'text-slate-500'}`} />
+                <span className="hidden sm:inline">Sync Queues</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* DASHBOARD-ONLY EXECUTIVE METRICS & OVERVIEW SECTION       */}
+        {/* ========================================================= */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Super Admin & Field Agent Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md shrink-0">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-black">Super Admin & Verification Console</h1>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white">
+                      Multi-Level Governance
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">Host CAC Audits • Field Agent Bounties • Tier 3 Certified Verification • Escrow Payouts</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchAllAgentAdminData}
+                  title="Refresh All Admin Queues"
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-2xl transition-all cursor-pointer flex items-center gap-2 text-xs font-bold"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
+                  <span>Sync Queues</span>
+                </button>
+
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
+                  <Sparkles className="w-4 h-4 text-tafiya-gold" />
+                  <span>Super Admin Authority</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics Row (Displayed ONLY on Dashboard) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+              
+              {/* Pending Level 1 Host Approvals */}
+              <div 
+                onClick={() => setActiveTab('host_approvals')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2 cursor-pointer hover:border-amber-300 hover:shadow-md transition-all group"
+                title="Click to manage Host CAC Approvals"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block group-hover:text-amber-600 transition-colors">Host CAC Queue</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-amber-600 transition-colors" />
+                </div>
+                <div className="text-2xl font-black text-amber-600">{pendingHostsCount} Hosts</div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                  <Clock className="w-3 h-3 text-amber-600" /> CAC Check Needed
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">Host CAC Audits • Field Agent Bounties • Tier 3 Certified Verification • Escrow Payouts</p>
+
+              {/* Inspector Applications & Audits */}
+              <div 
+                onClick={() => setActiveTab('agent_inspections')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all group"
+                title="Click to manage Agent Inspections"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block group-hover:text-tafiya-blue transition-colors">Agent Inspection Queue</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-tafiya-blue transition-colors" />
+                </div>
+                <div className="text-2xl font-black text-tafiya-blue">{pendingApplicationsCount + submittedReportsCount} Active</div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                  <Navigation className="w-3 h-3 text-tafiya-blue" /> {submittedReportsCount} Audits for Review
+                </span>
+              </div>
+
+              {/* Pending Agent Withdrawals */}
+              <div 
+                onClick={() => setActiveTab('agent_withdrawals')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2 cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all group"
+                title="Click to manage Agent Withdrawals"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block group-hover:text-emerald-600 transition-colors">Agent Payout Requests</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-emerald-600 transition-colors" />
+                </div>
+                <div className="text-2xl font-black text-emerald-600">{pendingWithdrawalsCount} Payouts</div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  <DollarSign className="w-3 h-3 text-emerald-600" /> Bank Transfer Ready
+                </span>
+              </div>
+
+              {/* Total Escrow */}
+              <div 
+                onClick={() => setActiveTab('escrow')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2 cursor-pointer hover:border-slate-400 hover:shadow-md transition-all group"
+                title="Click to view Escrow Settlements"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block group-hover:text-slate-900 transition-colors">Total Escrow Funds</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-900 transition-colors" />
+                </div>
+                <div className="text-2xl font-black text-slate-900">₦{escrowTotal.toLocaleString()}</div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  <Lock className="w-3 h-3" /> Monnify/Paystack Escrow
+                </span>
+              </div>
+
+              {/* Total Listings */}
+              <div 
+                onClick={() => setActiveTab('verification')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2 cursor-pointer hover:border-tafiya-blue hover:shadow-md transition-all group"
+                title="Click to manage Property Listings"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block group-hover:text-tafiya-blue transition-colors">Active Listings</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-tafiya-blue transition-colors" />
+                </div>
+                <div className="text-2xl font-black text-slate-900">{properties.length} Properties</div>
+                <span className="text-[11px] font-medium text-slate-500">Tier 1-3 Verified</span>
+              </div>
+
+            </div>
+
+            {/* Quick Navigation Modules Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              
+              {/* Module 0: Users Directory */}
+              <div 
+                onClick={() => setActiveTab('users')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Users & Accounts</h3>
+                  <p className="text-xs text-slate-500 mt-1">Manage platform members, assign roles, activate/suspend accounts and govern identities.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-indigo-600">
+                  <span>{usersSummary.total || users.length} Accounts</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 0.5: Transactions Ledger */}
+              <div 
+                onClick={() => setActiveTab('transactions')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Transactions Ledger</h3>
+                  <p className="text-xs text-slate-500 mt-1">Audit guest payments across Paystack & Monnify, all strictly linked to stay reservations.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-emerald-600">
+                  <span>{transactionsSummary.total_transactions || transactions.length} Transactions</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 1: Host CAC */}
+              <div 
+                onClick={() => setActiveTab('host_approvals')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Host CAC Approvals</h3>
+                  <p className="text-xs text-slate-500 mt-1">Review CAC registration certificates and QoreID automated registry audits.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-tafiya-blue">
+                  <span>{pendingHostsCount} Pending</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 2: Agent Inspections */}
+              <div 
+                onClick={() => setActiveTab('agent_inspections')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-tafiya-blue flex items-center justify-center mb-3">
+                    <Navigation className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Field Inspections</h3>
+                  <p className="text-xs text-slate-500 mt-1">Assign property bounties, review GPS proof photos, and approve Tier 3 verification.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-tafiya-blue">
+                  <span>{submittedReportsCount} Audits Ready</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 3: Agent Withdrawals */}
+              <div 
+                onClick={() => setActiveTab('agent_withdrawals')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Agent Withdrawals</h3>
+                  <p className="text-xs text-slate-500 mt-1">Disburse inspection earnings to agent bank accounts via Monnify/Paystack rails.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-emerald-600">
+                  <span>{pendingWithdrawalsCount} Payout Requests</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 4: Property Publishing */}
+              <div 
+                onClick={() => setActiveTab('verification')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center mb-3">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Property Publishing</h3>
+                  <p className="text-xs text-slate-500 mt-1">Manage public visibility, edit property details, and update certification tiers.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-slate-700">
+                  <span>{properties.length} Stays Managed</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 5: Escrow Settlements */}
+              <div 
+                onClick={() => setActiveTab('escrow')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
+                    <Landmark className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Escrow Settlements</h3>
+                  <p className="text-xs text-slate-500 mt-1">Audit guest reservation balances and initiate release to verified host accounts.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-indigo-600">
+                  <span>₦{escrowTotal.toLocaleString()} Held</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 6: Support Desk */}
+              <div 
+                onClick={() => setActiveTab('support_desk')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-orange-50 text-tafiya-orange flex items-center justify-center mb-3">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Universal Support Desk</h3>
+                  <p className="text-xs text-slate-500 mt-1">Live inquiries and issue tickets from travelers, hosts, and field agents.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-tafiya-orange">
+                  <span>{supportUnreadTotal > 0 ? `${supportUnreadTotal} Unread` : 'All Caught Up'}</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Module 7: Payment Gateway Settings */}
+              <div 
+                onClick={() => setActiveTab('payment_settings')}
+                className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm hover:shadow-md hover:border-tafiya-blue transition-all cursor-pointer group flex flex-col justify-between col-span-1 sm:col-span-2"
+              >
+                <div>
+                  <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
+                    <Settings className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors">Gateway & Authentication Settings</h3>
+                  <p className="text-xs text-slate-500 mt-1">Configure Paystack, Monnify contract codes, QoreID CAC API keys, and Google OAuth credentials.</p>
+                </div>
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs font-bold text-purple-600">
+                  <span>Active Rail: {activeGateway.toUpperCase()}</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Snapshot Row: Pending Host Audits & Governance Status */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Pending Level 1 Host Audits Snapshot */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">Recent Host CAC Submissions</h3>
+                    <p className="text-xs text-slate-500">Corporate verification pending Super Admin review</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('host_approvals')}
+                    className="text-xs font-bold text-tafiya-blue hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View All ({hosts.length})</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {hosts.slice(0, 3).length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    No pending host applications in queue.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {hosts.slice(0, 3).map((h) => (
+                      <div key={h.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 truncate">{h.name}</div>
+                          <div className="text-[11px] text-slate-500 truncate">{h.business_name || 'Individual Host'} • CAC: {h.cac_number || 'N/A'}</div>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab('host_approvals')}
+                          className="px-3 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shrink-0 cursor-pointer transition-colors"
+                        >
+                          Review
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Platform Protection & Gateway Health */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">Escrow Security & Financial Overview</h3>
+                    <p className="text-xs text-slate-500">Dual-custody payment safeguarding</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('escrow')}
+                    className="text-xs font-bold text-tafiya-blue hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Settlements Desk</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800">Gross Escrow Capital</div>
+                      <div className="text-lg font-black text-emerald-900">₦{escrowTotal.toLocaleString()}</div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">100% Protected</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Platform Commission (12.5%)</span>
+                      <span className="text-sm font-black text-slate-900">₦{platformFee.toLocaleString()}</span>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 block">Net Host Payable</span>
+                      <span className="text-sm font-black text-slate-900">₦{netHostPayout.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={fetchAllAgentAdminData}
-              title="Refresh All Admin Queues"
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-2xl transition-all cursor-pointer flex items-center gap-2 text-xs font-bold"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
-              <span>Sync Queues</span>
-            </button>
-
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
-              <Sparkles className="w-4 h-4 text-tafiya-gold" />
-              <span>Super Admin Authority</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Metrics Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
-          
-          {/* Pending Level 1 Host Approvals */}
-          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Host CAC Queue</span>
-            <div className="text-2xl font-black text-amber-600">{pendingHostsCount} Hosts</div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-              <Clock className="w-3 h-3 text-amber-600" /> CAC Check Needed
-            </span>
-          </div>
-
-          {/* Inspector Applications & Audits */}
-          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Inspection Queue</span>
-            <div className="text-2xl font-black text-tafiya-blue">{pendingApplicationsCount + submittedReportsCount} Active</div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
-              <Navigation className="w-3 h-3 text-tafiya-blue" /> {submittedReportsCount} Audits for Review
-            </span>
-          </div>
-
-          {/* Pending Agent Withdrawals */}
-          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Payout Requests</span>
-            <div className="text-2xl font-black text-emerald-600">{pendingWithdrawalsCount} Payouts</div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-              <DollarSign className="w-3 h-3 text-emerald-600" /> Bank Transfer Ready
-            </span>
-          </div>
-
-          {/* Total Escrow */}
-          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Escrow Funds</span>
-            <div className="text-2xl font-black text-slate-900">₦{escrowTotal.toLocaleString()}</div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-              <Lock className="w-3 h-3" /> Monnify/Paystack Escrow
-            </span>
-          </div>
-
-          {/* Total Listings */}
-          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Active Listings</span>
-            <div className="text-2xl font-black text-slate-900">{properties.length} Properties</div>
-            <span className="text-[11px] font-medium text-slate-500">Tier 1-3 Verified</span>
-          </div>
-
-        </div>
+        )}
 
         {/* Tab Views Content Area */}
         <div className="space-y-6">
+
+        {/* VIEW 0: PLATFORM USERS & IDENTITY DIRECTORY */}
+        {activeTab === 'users' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header Banner */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 shadow-xs border border-indigo-100">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base font-black text-slate-900">Platform Users & Account Directory</h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      Super Admin Identity Governance
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Manage travelers, property hosts, field verification agents, and administrative platform credentials.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  onClick={fetchUsers}
+                  disabled={isLoadingUsers}
+                  className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  title="Reload users list"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingUsers ? 'animate-spin text-tafiya-blue' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setNewUserForm({
+                      name: '',
+                      email: '',
+                      phone: '',
+                      role: 'guest',
+                      password: '',
+                      business_name: '',
+                      cac_number: '',
+                      is_active: true
+                    });
+                    setUserActionError('');
+                    setCreateUserModal(true);
+                  }}
+                  className="px-4 py-2.5 bg-tafiya-blue hover:bg-tafiya-blue/90 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Add New User</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Notification Alerts */}
+            {userActionMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{userActionMsg}</span>
+                </div>
+                <button
+                  onClick={() => setUserActionMsg('')}
+                  className="p-1 text-emerald-600 hover:text-emerald-900 rounded-lg hover:bg-emerald-100 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {userActionError && (
+              <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{userActionError}</span>
+                </div>
+                <button
+                  onClick={() => setUserActionError('')}
+                  className="p-1 text-rose-600 hover:text-rose-900 rounded-lg hover:bg-rose-100 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* KPI Metric Overview Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              <div 
+                onClick={() => setUserRoleFilter('all')}
+                className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer group ${
+                  userRoleFilter === 'all' ? 'border-tafiya-blue ring-2 ring-tafiya-blue/10 shadow-xs' : 'border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <span>Total Users</span>
+                  <Users className="w-4 h-4 text-slate-400 group-hover:text-tafiya-blue transition-colors" />
+                </div>
+                <div className="text-2xl font-black text-slate-900">{usersSummary.total || users.length}</div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Platform Registered</div>
+              </div>
+
+              <div 
+                onClick={() => setUserRoleFilter('guest')}
+                className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer group ${
+                  userRoleFilter === 'guest' ? 'border-emerald-500 ring-2 ring-emerald-500/10 shadow-xs' : 'border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <span>Guests</span>
+                  <User className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="text-2xl font-black text-emerald-600">
+                  {usersSummary.guests ?? users.filter(u => u.role === 'guest').length}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Travelers & Bookers</div>
+              </div>
+
+              <div 
+                onClick={() => setUserRoleFilter('host')}
+                className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer group ${
+                  userRoleFilter === 'host' ? 'border-amber-500 ring-2 ring-amber-500/10 shadow-xs' : 'border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <span>Hosts</span>
+                  <Building2 className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="text-2xl font-black text-amber-600">
+                  {usersSummary.hosts ?? users.filter(u => u.role === 'host').length}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Property Managers</div>
+              </div>
+
+              <div 
+                onClick={() => setUserRoleFilter('agent')}
+                className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer group ${
+                  userRoleFilter === 'agent' ? 'border-tafiya-blue ring-2 ring-tafiya-blue/10 shadow-xs' : 'border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <span>Field Agents</span>
+                  <Navigation className="w-4 h-4 text-tafiya-blue group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="text-2xl font-black text-tafiya-blue">
+                  {usersSummary.agents ?? users.filter(u => u.role === 'agent').length}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Inspection Auditors</div>
+              </div>
+
+              <div 
+                onClick={() => setUserRoleFilter('admin')}
+                className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer group col-span-2 sm:col-span-1 ${
+                  userRoleFilter === 'admin' ? 'border-purple-500 ring-2 ring-purple-500/10 shadow-xs' : 'border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <span>Admins</span>
+                  <ShieldCheck className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                </div>
+                <div className="text-2xl font-black text-purple-600">
+                  {usersSummary.admins ?? users.filter(u => u.role === 'admin').length}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Platform Operators</div>
+              </div>
+            </div>
+
+            {/* Filters & Search Toolbar */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  placeholder="Search by name, email, phone, business, CAC..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                />
+                {userSearchQuery && (
+                  <button
+                    onClick={() => setUserSearchQuery('')}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Role Filter Pills */}
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'guest', label: 'Guests' },
+                    { id: 'host', label: 'Hosts' },
+                    { id: 'agent', label: 'Agents' },
+                    { id: 'admin', label: 'Admins' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setUserRoleFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg transition-all text-xs cursor-pointer font-bold ${
+                        userRoleFilter === tab.id
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Status Dropdown Filter */}
+                <select
+                  value={userStatusFilter}
+                  onChange={(e) => setUserStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-100 border-none rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active Only</option>
+                  <option value="suspended">Suspended Only</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Users Table */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+              {isLoadingUsers && users.length === 0 ? (
+                <div className="p-12 text-center space-y-3">
+                  <RefreshCw className="w-8 h-8 text-tafiya-blue animate-spin mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">Loading platform users...</p>
+                  <p className="text-[11px] text-slate-400">Fetching user accounts from identity database</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        <th className="py-3 px-4">User Identity</th>
+                        <th className="py-3 px-4">Role</th>
+                        <th className="py-3 px-4">Phone / Contact</th>
+                        <th className="py-3 px-4">Business & CAC Details</th>
+                        <th className="py-3 px-4 text-center">Activity</th>
+                        <th className="py-3 px-4 text-center">Account Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                      {users
+                        .filter((u) => {
+                          if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
+                          if (userStatusFilter === 'active' && !u.is_active) return false;
+                          if (userStatusFilter === 'suspended' && u.is_active) return false;
+                          if (userSearchQuery.trim()) {
+                            const q = userSearchQuery.toLowerCase();
+                            const name = (u.name || '').toLowerCase();
+                            const email = (u.email || '').toLowerCase();
+                            const phone = (u.phone || '').toLowerCase();
+                            const role = (u.role || '').toLowerCase();
+                            const biz = (u.business_name || '').toLowerCase();
+                            const cac = (u.cac_number || '').toLowerCase();
+                            return name.includes(q) || email.includes(q) || phone.includes(q) || role.includes(q) || biz.includes(q) || cac.includes(q);
+                          }
+                          return true;
+                        })
+                        .map((u) => {
+                          const isPrimaryAdmin = u.email === 'admin@finddestination.com.ng';
+                          
+                          // Role Badge styling
+                          let roleBadgeClasses = 'bg-slate-100 text-slate-700 border-slate-200';
+                          let RoleIcon = User;
+                          let roleLabel = 'Guest';
+                          if (u.role === 'admin') {
+                            roleBadgeClasses = 'bg-purple-50 text-purple-700 border-purple-200';
+                            RoleIcon = ShieldCheck;
+                            roleLabel = 'Admin';
+                          } else if (u.role === 'host') {
+                            roleBadgeClasses = 'bg-amber-50 text-amber-800 border-amber-200';
+                            RoleIcon = Building2;
+                            roleLabel = 'Host';
+                          } else if (u.role === 'agent') {
+                            roleBadgeClasses = 'bg-blue-50 text-tafiya-blue border-blue-200';
+                            RoleIcon = Navigation;
+                            roleLabel = 'Agent';
+                          }
+
+                          // Avatar background
+                          let avatarBg = 'bg-slate-900 text-white';
+                          if (u.role === 'host') avatarBg = 'bg-amber-600 text-white';
+                          if (u.role === 'agent') avatarBg = 'bg-tafiya-blue text-white';
+                          if (u.role === 'admin') avatarBg = 'bg-purple-700 text-white';
+
+                          return (
+                            <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                              {/* Identity */}
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs ${avatarBg}`}>
+                                    {u.name?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-extrabold text-slate-900 text-xs">{u.name}</span>
+                                      {u.email_verified && (
+                                        <span title="Email Verified" className="text-emerald-500">
+                                          <CheckCircle2 className="w-3.5 h-3.5 inline" />
+                                        </span>
+                                      )}
+                                      {isPrimaryAdmin && (
+                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-purple-100 text-purple-800">
+                                          Root Admin
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 font-normal truncate max-w-[200px]">
+                                      {u.email}
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5">
+                                      Joined: {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'N/A'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Role */}
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${roleBadgeClasses}`}>
+                                  <RoleIcon className="w-3 h-3" />
+                                  <span>{roleLabel}</span>
+                                </span>
+                              </td>
+
+                              {/* Phone / Contact */}
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 text-slate-700 text-xs font-semibold">
+                                  <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span>{u.phone || 'N/A'}</span>
+                                </div>
+                              </td>
+
+                              {/* Business & CAC details */}
+                              <td className="py-3.5 px-4">
+                                {u.role === 'host' ? (
+                                  <div className="space-y-0.5">
+                                    <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                                      <span>{u.business_name || 'Individual Host'}</span>
+                                    </div>
+                                    {u.cac_number ? (
+                                      <div className="text-[10px] font-bold text-tafiya-blue flex items-center gap-1">
+                                        <span>CAC: {u.cac_number}</span>
+                                        {u.host_status === 'approved' && (
+                                          <span className="text-[9px] px-1 bg-emerald-100 text-emerald-700 rounded font-black">
+                                            Verified
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400">No CAC on file</span>
+                                    )}
+                                  </div>
+                                ) : u.role === 'agent' ? (
+                                  <span className="text-[11px] text-tafiya-blue font-bold">Field Inspection Auditor</span>
+                                ) : u.role === 'admin' ? (
+                                  <span className="text-[11px] text-purple-700 font-bold">Console Administrator</span>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 font-normal">Traveler / Guest</span>
+                                )}
+                              </td>
+
+                              {/* Activity Stats */}
+                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                <div className="inline-flex items-center gap-2 text-[11px] font-bold">
+                                  {u.role === 'host' ? (
+                                    <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-800">
+                                      {u.properties_count || 0} listings
+                                    </span>
+                                  ) : u.role === 'agent' ? (
+                                    <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-800">
+                                      {u.inspections_count || 0} audits
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700">
+                                      {u.bookings_count || 0} bookings
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Account Status */}
+                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                                  u.is_active 
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+                                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${u.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                  <span>{u.is_active ? 'Active' : 'Suspended'}</span>
+                                </span>
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {/* Edit Details & Privileges */}
+                                  <button
+                                    onClick={() => handleOpenEditUser(u)}
+                                    className="p-1.5 text-slate-600 hover:text-tafiya-blue hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                    title="Edit user details, role & password"
+                                  >
+                                    <Edit className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Suspend / Activate Toggle */}
+                                  {!isPrimaryAdmin && (
+                                    <button
+                                      onClick={() => handleToggleUserStatus(u)}
+                                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                        u.is_active 
+                                          ? 'text-slate-400 hover:text-amber-600 hover:bg-amber-50' 
+                                          : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                      }`}
+                                      title={u.is_active ? 'Suspend Account' : 'Activate Account'}
+                                    >
+                                      {u.is_active ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                                    </button>
+                                  )}
+
+                                  {/* Delete User */}
+                                  {!isPrimaryAdmin && (
+                                    <button
+                                      onClick={() => {
+                                        setUserDeleteModal(u);
+                                        setUserActionError('');
+                                      }}
+                                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                      title="Delete user account"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Empty Search / Filter Feedback */}
+              {!isLoadingUsers && users.length > 0 && users.filter((u) => {
+                if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
+                if (userStatusFilter === 'active' && !u.is_active) return false;
+                if (userStatusFilter === 'suspended' && u.is_active) return false;
+                if (userSearchQuery.trim()) {
+                  const q = userSearchQuery.toLowerCase();
+                  const name = (u.name || '').toLowerCase();
+                  const email = (u.email || '').toLowerCase();
+                  const phone = (u.phone || '').toLowerCase();
+                  const role = (u.role || '').toLowerCase();
+                  const biz = (u.business_name || '').toLowerCase();
+                  const cac = (u.cac_number || '').toLowerCase();
+                  return name.includes(q) || email.includes(q) || phone.includes(q) || role.includes(q) || biz.includes(q) || cac.includes(q);
+                }
+                return true;
+              }).length === 0 && (
+                <div className="p-12 text-center space-y-3">
+                  <Users className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No users found matching your criteria</p>
+                  <p className="text-[11px] text-slate-400">
+                    Try clearing your search query or selecting "All" from the role filters.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setUserSearchQuery('');
+                      setUserRoleFilter('all');
+                      setUserStatusFilter('all');
+                    }}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 0.5: PLATFORM TRANSACTIONS LEDGER (LINKED TO RESERVATIONS) */}
+        {activeTab === 'transactions' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header Banner */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 shadow-xs border border-emerald-100">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base font-black text-slate-900">Platform Transactions Ledger</h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Linked Reservations & Escrow
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Universal financial ledger of all customer payments made on FindDestination, each strictly reconciled with a stay reservation.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  onClick={fetchTransactions}
+                  disabled={isLoadingTransactions}
+                  className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  title="Reload transaction ledger"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingTransactions ? 'animate-spin text-tafiya-blue' : ''}`} />
+                  <span>Refresh Ledger</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Notification Alerts */}
+            {txActionMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{txActionMsg}</span>
+                </div>
+                <button
+                  onClick={() => setTxActionMsg('')}
+                  className="p-1 text-emerald-600 hover:text-emerald-900 rounded-lg hover:bg-emerald-100 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {txActionError && (
+              <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{txActionError}</span>
+                </div>
+                <button
+                  onClick={() => setTxActionError('')}
+                  className="p-1 text-rose-600 hover:text-rose-900 rounded-lg hover:bg-rose-100 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* KPI Metric Overview Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+              {/* Card 1: Gross Volume */}
+              <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <span>Gross Processed</span>
+                  <DollarSign className="w-4 h-4 text-slate-400" />
+                </div>
+                <div className="text-xl font-black text-slate-900">
+                  {transactionsSummary.total_volume_formatted || `₦${(transactions.reduce((sum, t) => sum + (t.amount_paid_kobo || 0), 0) / 100).toLocaleString()}`}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                  {transactionsSummary.total_transactions || transactions.length} Total Records
+                </div>
+              </div>
+
+              {/* Card 2: Successful Paid Volume */}
+              <div className="p-4 bg-white rounded-2xl border border-emerald-200 shadow-xs bg-emerald-50/20">
+                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                  <span>Secured & Paid</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-xl font-black text-emerald-700">
+                  {transactionsSummary.successful_volume_formatted || `₦${(transactions.filter(t => t.status === 'successful').reduce((sum, t) => sum + (t.amount_paid_kobo || 0), 0) / 100).toLocaleString()}`}
+                </div>
+                <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                  {transactionsSummary.successful_count || transactions.filter(t => t.status === 'successful').length} Cleared Transactions
+                </div>
+              </div>
+
+              {/* Card 3: Platform Revenue (12.5%) */}
+              <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-[11px] font-bold text-tafiya-blue uppercase tracking-wider mb-1">
+                  <span>Platform Fee (12.5%)</span>
+                  <Sparkles className="w-4 h-4 text-tafiya-blue" />
+                </div>
+                <div className="text-xl font-black text-tafiya-blue">
+                  {transactionsSummary.platform_revenue_formatted || `₦${(transactions.filter(t => t.status === 'successful').reduce((sum, t) => sum + (t.platform_commission_kobo || 0), 0) / 100).toLocaleString()}`}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Net Service Revenue</div>
+              </div>
+
+              {/* Card 4: Host Escrow (87.5%) */}
+              <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between text-[11px] font-bold text-amber-700 uppercase tracking-wider mb-1">
+                  <span>Host Escrow (87.5%)</span>
+                  <Landmark className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="text-xl font-black text-amber-700">
+                  {transactionsSummary.host_escrow_formatted || `₦${(transactions.filter(t => t.status === 'successful').reduce((sum, t) => sum + (t.host_payout_kobo || 0), 0) / 100).toLocaleString()}`}
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Host Payout Reserves</div>
+              </div>
+
+              {/* Card 5: Gateway Rails */}
+              <div className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs col-span-2 sm:col-span-1">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  <span>Rails Split</span>
+                  <ArrowLeftRight className="w-4 h-4 text-slate-400" />
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-xs font-extrabold text-slate-800">
+                      {transactions.filter(t => t.gateway === 'paystack').length} Paystack
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-500" />
+                    <span className="text-xs font-extrabold text-slate-800">
+                      {transactions.filter(t => t.gateway === 'monnify').length} Monnify
+                    </span>
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-500 font-semibold mt-1">Direct API Dispatches</div>
+              </div>
+            </div>
+
+            {/* Filters & Search Toolbar */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  value={txSearchQuery}
+                  onChange={(e) => setTxSearchQuery(e.target.value)}
+                  placeholder="Search by Transaction Ref, Booking Ref (FND-...), Guest name, Email, Property..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                />
+                {txSearchQuery && (
+                  <button
+                    onClick={() => setTxSearchQuery('')}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Gateway Rail Filter Pills */}
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                  {[
+                    { id: 'all', label: 'All Rails' },
+                    { id: 'paystack', label: 'Paystack' },
+                    { id: 'monnify', label: 'Monnify' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setTxGatewayFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg transition-all text-xs cursor-pointer font-bold ${
+                        txGatewayFilter === tab.id
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Status Dropdown Selector */}
+                <select
+                  value={txStatusFilter}
+                  onChange={(e) => setTxStatusFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-100 border-none rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="successful">Successful / Paid</option>
+                  <option value="initiated">Initiated / Pending</option>
+                  <option value="refunded">Refunded</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Transactions Ledger Table */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+              {isLoadingTransactions && transactions.length === 0 ? (
+                <div className="p-12 text-center space-y-3">
+                  <RefreshCw className="w-8 h-8 text-tafiya-blue animate-spin mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">Loading transactions ledger...</p>
+                  <p className="text-[11px] text-slate-400">Reconciling payment rail records with stay reservations</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        <th className="py-3 px-4">Transaction Ref & Rail</th>
+                        <th className="py-3 px-4">Linked Reservation</th>
+                        <th className="py-3 px-4">Guest / Booker</th>
+                        <th className="py-3 px-4">Property & Host</th>
+                        <th className="py-3 px-4 text-right">Amount & Escrow Split</th>
+                        <th className="py-3 px-4 text-center">Status</th>
+                        <th className="py-3 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                      {transactions
+                        .filter((tx) => {
+                          if (txGatewayFilter !== 'all' && tx.gateway !== txGatewayFilter) return false;
+                          if (txStatusFilter !== 'all' && tx.status !== txStatusFilter) return false;
+                          if (txSearchQuery.trim()) {
+                            const q = txSearchQuery.toLowerCase();
+                            const ref = (tx.transaction_reference || '').toLowerCase();
+                            const gwRef = (tx.gateway_reference || '').toLowerCase();
+                            const acc = (tx.virtual_account_number || '').toLowerCase();
+                            const bRef = (tx.booking?.booking_reference || '').toLowerCase();
+                            const gName = (tx.booking?.guest?.name || '').toLowerCase();
+                            const gEmail = (tx.booking?.guest?.email || '').toLowerCase();
+                            const pName = (tx.booking?.property?.name || '').toLowerCase();
+                            return ref.includes(q) || gwRef.includes(q) || acc.includes(q) || bRef.includes(q) || gName.includes(q) || gEmail.includes(q) || pName.includes(q);
+                          }
+                          return true;
+                        })
+                        .map((tx) => {
+                          const b = tx.booking;
+                          const isSuccessful = tx.status === 'successful';
+                          const isInitiated = tx.status === 'initiated';
+                          const isRefunded = tx.status === 'refunded';
+
+                          return (
+                            <tr key={tx.id} className="hover:bg-slate-50/60 transition-colors">
+                              {/* Transaction Ref & Rail */}
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                                      {tx.transaction_reference}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
+                                      tx.gateway === 'monnify'
+                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                        : 'bg-blue-50 text-tafiya-blue border-blue-200'
+                                    }`}>
+                                      {tx.gateway === 'monnify' ? 'Monnify Transfer' : 'Paystack Card'}
+                                    </span>
+                                    {tx.virtual_account_number && (
+                                      <span className="text-[10px] font-mono text-slate-500">
+                                        Wema: {tx.virtual_account_number}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="text-[10px] text-slate-400">
+                                    {tx.created_at ? new Date(tx.created_at).toLocaleString() : 'N/A'}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Linked Reservation / Booking (Prominent!) */}
+                              <td className="py-3.5 px-4">
+                                {b ? (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                        {b.booking_reference}
+                                      </span>
+                                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase ${
+                                        b.booking_status === 'confirmed' 
+                                          ? 'bg-emerald-100 text-emerald-800' 
+                                          : 'bg-slate-200 text-slate-700'
+                                      }`}>
+                                        {b.booking_status}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs font-bold text-slate-900 truncate max-w-[200px]">
+                                      {b.property?.name || 'Verified Stay'}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500 font-medium">
+                                      {b.check_in_date && b.check_out_date ? `${b.check_in_date} → ${b.check_out_date} (${b.total_nights}n)` : `${b.total_nights || 1} nights`} • {b.room_name}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-rose-500 font-bold">Unlinked Reservation</span>
+                                )}
+                              </td>
+
+                              {/* Guest / Booker */}
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <div className="space-y-0.5">
+                                  <div className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>{b?.guest?.name || 'Guest Traveler'}</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 font-normal">
+                                    {b?.guest?.email || 'N/A'}
+                                  </div>
+                                  {b?.guest?.phone && (
+                                    <div className="text-[10px] text-slate-400 font-semibold">
+                                      {b.guest.phone}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Property & Host */}
+                              <td className="py-3.5 px-4">
+                                <div className="space-y-0.5">
+                                  <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                    <Building2 className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                    <span className="truncate max-w-[160px]">{b?.property?.name || 'Stay Property'}</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-500">
+                                    Host: {b?.host?.name || b?.host?.business_name || 'Verified Host'}
+                                  </div>
+                                  {b?.host?.cac_number && (
+                                    <div className="text-[9px] font-bold text-tafiya-blue">
+                                      CAC: {b.host.cac_number}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Amount & Escrow Split */}
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                <div className="space-y-0.5">
+                                  <div className="text-sm font-black text-slate-900">
+                                    {tx.amount_formatted}
+                                  </div>
+                                  <div className="text-[10px] font-bold text-emerald-700">
+                                    Host: {tx.host_payout_formatted}
+                                  </div>
+                                  <div className="text-[9px] text-tafiya-blue font-semibold">
+                                    Fee (12.5%): {tx.platform_commission_formatted}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Status */}
+                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
+                                  isSuccessful
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                    : isInitiated
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : isRefunded
+                                    ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    isSuccessful ? 'bg-emerald-500' : isInitiated ? 'bg-amber-500' : isRefunded ? 'bg-purple-500' : 'bg-rose-500'
+                                  }`} />
+                                  <span>
+                                    {isSuccessful ? 'Paid' : isInitiated ? 'Initiated' : isRefunded ? 'Refunded' : 'Failed'}
+                                  </span>
+                                </span>
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => setSelectedTxModal(tx)}
+                                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-tafiya-blue hover:text-white text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                                    title="View full linked reservation audit slip"
+                                  >
+                                    <Receipt className="w-3.5 h-3.5" />
+                                    <span>Slip</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Empty Feedback */}
+              {!isLoadingTransactions && transactions.length > 0 && transactions.filter((tx) => {
+                if (txGatewayFilter !== 'all' && tx.gateway !== txGatewayFilter) return false;
+                if (txStatusFilter !== 'all' && tx.status !== txStatusFilter) return false;
+                if (txSearchQuery.trim()) {
+                  const q = txSearchQuery.toLowerCase();
+                  const ref = (tx.transaction_reference || '').toLowerCase();
+                  const gwRef = (tx.gateway_reference || '').toLowerCase();
+                  const acc = (tx.virtual_account_number || '').toLowerCase();
+                  const bRef = (tx.booking?.booking_reference || '').toLowerCase();
+                  const gName = (tx.booking?.guest?.name || '').toLowerCase();
+                  const gEmail = (tx.booking?.guest?.email || '').toLowerCase();
+                  const pName = (tx.booking?.property?.name || '').toLowerCase();
+                  return ref.includes(q) || gwRef.includes(q) || acc.includes(q) || bRef.includes(q) || gName.includes(q) || gEmail.includes(q) || pName.includes(q);
+                }
+                return true;
+              }).length === 0 && (
+                <div className="p-12 text-center space-y-3">
+                  <Receipt className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No transactions match your search filter</p>
+                  <p className="text-[11px] text-slate-400">
+                    Try adjusting your keyword or reset filters to display all platform transactions.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setTxSearchQuery('');
+                      setTxGatewayFilter('all');
+                      setTxStatusFilter('all');
+                    }}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* VIEW 1: HOST CAC LEVEL 1 APPROVAL QUEUE */}
         {activeTab === 'host_approvals' && (
@@ -2988,6 +4560,717 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
         </div>
       </main>
+
+        {/* MODAL: TRANSACTION & LINKED RESERVATION AUDIT SLIP */}
+        {selectedTxModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100 shadow-xs">
+                    <Receipt className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black text-sm text-slate-900">Transaction & Reservation Audit Slip</h3>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                        selectedTxModal.status === 'successful'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : selectedTxModal.status === 'initiated'
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : selectedTxModal.status === 'refunded'
+                          ? 'bg-purple-50 text-purple-800 border-purple-200'
+                          : 'bg-rose-50 text-rose-800 border-rose-200'
+                      }`}>
+                        {selectedTxModal.status === 'successful' ? 'Paid & Reconciled' : selectedTxModal.status === 'initiated' ? 'Pending Payment' : selectedTxModal.status === 'refunded' ? 'Refunded' : 'Failed'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Ref: <span className="font-mono font-bold text-slate-600">{selectedTxModal.transaction_reference}</span> • Channel: <span className="uppercase font-bold text-slate-600">{selectedTxModal.payment_channel || 'CARD'}</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedTxModal(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* CARD 1: LINKED RESERVATION / BOOKING DETAILS */}
+              <div className="bg-emerald-50/50 rounded-2xl border border-emerald-200/80 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    Linked Stay Reservation
+                  </span>
+                  {selectedTxModal.booking && (
+                    <span className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                      {selectedTxModal.booking.booking_reference}
+                    </span>
+                  )}
+                </div>
+
+                {selectedTxModal.booking ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-black text-slate-900">
+                          {selectedTxModal.booking.property?.name || 'Verified Stay Property'}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>
+                            {selectedTxModal.booking.property?.address ? `${selectedTxModal.booking.property.address}, ` : ''}
+                            {selectedTxModal.booking.property?.city || 'Bauchi'}, {selectedTxModal.booking.property?.state || 'Bauchi'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase shrink-0 ${
+                        selectedTxModal.booking.booking_status === 'confirmed'
+                          ? 'bg-emerald-200 text-emerald-900'
+                          : 'bg-amber-100 text-amber-900'
+                      }`}>
+                        Stay: {selectedTxModal.booking.booking_status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-emerald-200/60 text-xs">
+                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                        <span className="text-[10px] text-slate-400 font-bold block uppercase">Room & Tier</span>
+                        <span className="font-extrabold text-slate-800 block truncate">
+                          {selectedTxModal.booking.room_name || 'Executive Suite'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          {selectedTxModal.booking.bed_type || 'King Bed'}
+                        </span>
+                      </div>
+
+                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100">
+                        <span className="text-[10px] text-slate-400 font-bold block uppercase">Check-In / Out</span>
+                        <span className="font-extrabold text-slate-800 block">
+                          {selectedTxModal.booking.check_in_date || 'N/A'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          → {selectedTxModal.booking.check_out_date || 'N/A'}
+                        </span>
+                      </div>
+
+                      <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100 col-span-2 sm:col-span-1">
+                        <span className="text-[10px] text-slate-400 font-bold block uppercase">Duration</span>
+                        <span className="font-extrabold text-slate-800 block">
+                          {selectedTxModal.booking.total_nights || 1} Night(s)
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          {selectedTxModal.booking.rooms_count || 1} Room Unit(s)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-rose-50 text-rose-700 text-xs font-bold rounded-xl border border-rose-200">
+                    No linked booking found for this transaction ID.
+                  </div>
+                )}
+              </div>
+
+              {/* CARD 2: PARTIES INVOLVED (TRAVELER VS HOST) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Booker / Guest */}
+                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-3.5 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400">
+                    <User className="w-3.5 h-3.5" />
+                    <span>Traveler / Booker</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs font-black text-slate-900">
+                      {selectedTxModal.booking?.guest?.name || 'Guest Traveler'}
+                    </div>
+                    <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                      <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                      <span className="truncate">{selectedTxModal.booking?.guest?.email || 'N/A'}</span>
+                    </div>
+                    {selectedTxModal.booking?.guest?.phone && (
+                      <div className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{selectedTxModal.booking.guest.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Property Host */}
+                <div className="bg-slate-50 rounded-2xl border border-slate-200 p-3.5 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400">
+                    <Building2 className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Property Host / Manager</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs font-black text-slate-900">
+                      {selectedTxModal.booking?.host?.name || selectedTxModal.booking?.host?.business_name || 'Verified Host'}
+                    </div>
+                    <div className="text-[11px] text-slate-600">
+                      {selectedTxModal.booking?.host?.business_name ? `${selectedTxModal.booking.host.business_name} • ` : ''}
+                      {selectedTxModal.booking?.host?.phone || selectedTxModal.booking?.host?.email || 'Contact on file'}
+                    </div>
+                    <div className="text-[10px] font-bold text-tafiya-blue flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      <span>CAC: {selectedTxModal.booking?.host?.cac_number || 'RC/BN Pending'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 3: ESCROW SPLIT & FINANCIAL RECONCILIATION */}
+              <div className="bg-slate-900 text-white rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider text-slate-400">
+                  <span className="flex items-center gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                    Financial Breakdown & Escrow Distribution
+                  </span>
+                  <span className="text-emerald-400 font-mono">100% SECURE</span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <span className="text-[10px] text-slate-400 font-bold block">Gross Paid</span>
+                    <span className="text-sm font-black text-white block mt-0.5">
+                      {selectedTxModal.amount_formatted}
+                    </span>
+                    <span className="text-[9px] text-slate-400">Customer Charge</span>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <span className="text-[10px] text-tafiya-blue-200 font-bold block">Platform Fee</span>
+                    <span className="text-sm font-black text-sky-400 block mt-0.5">
+                      {selectedTxModal.platform_commission_formatted}
+                    </span>
+                    <span className="text-[9px] text-slate-400">12.5% Commission</span>
+                  </div>
+
+                  <div className="bg-slate-800/80 p-3 rounded-xl border border-emerald-900/60 bg-emerald-950/30">
+                    <span className="text-[10px] text-emerald-300 font-bold block">Host Escrow</span>
+                    <span className="text-sm font-black text-emerald-400 block mt-0.5">
+                      {selectedTxModal.host_payout_formatted}
+                    </span>
+                    <span className="text-[9px] text-emerald-300/80">87.5% Payout</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* CARD 4: TECHNICAL GATEWAY METADATA */}
+              <div className="bg-slate-50 rounded-2xl border border-slate-200 p-3.5 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-400">
+                  <span className="flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    Gateway Technical Rail
+                  </span>
+                  <span className="font-mono font-bold text-slate-600">
+                    Gateway: {selectedTxModal.gateway ? selectedTxModal.gateway.toUpperCase() : 'PAYSTACK'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Gateway Ref</span>
+                    <span className="font-mono font-bold text-slate-700 text-[11px] block truncate">
+                      {selectedTxModal.gateway_reference || 'N/A'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Payment Date</span>
+                    <span className="font-bold text-slate-700 text-[11px] block truncate">
+                      {selectedTxModal.paid_at ? new Date(selectedTxModal.paid_at).toLocaleString() : 'Pending'}
+                    </span>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Virtual NUBAN</span>
+                    <span className="font-mono font-bold text-slate-700 text-[11px] block truncate">
+                      {selectedTxModal.virtual_account_number ? `${selectedTxModal.virtual_account_number} (${selectedTxModal.virtual_bank_name || 'Wema'})` : 'Online Rail'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin Reconciliation Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-bold">Reconcile Status:</span>
+                  {selectedTxModal.status !== 'successful' && (
+                    <button
+                      onClick={() => handleUpdateTxStatus(selectedTxModal.id, 'successful')}
+                      disabled={isUpdatingTxStatus}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Mark Paid & Reconcile
+                    </button>
+                  )}
+                  {selectedTxModal.status !== 'refunded' && (
+                    <button
+                      onClick={() => handleUpdateTxStatus(selectedTxModal.id, 'refunded')}
+                      disabled={isUpdatingTxStatus}
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Process Refund
+                    </button>
+                  )}
+                  {selectedTxModal.status !== 'failed' && (
+                    <button
+                      onClick={() => handleUpdateTxStatus(selectedTxModal.id, 'failed')}
+                      disabled={isUpdatingTxStatus}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Mark Failed
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTxModal(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Close Audit Slip
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: CREATE NEW USER */}
+        {createUserModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-tafiya-blue-50 text-tafiya-blue flex items-center justify-center font-bold">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Add New Platform User</h3>
+                    <p className="text-[11px] text-slate-400">Directly provision user account with assigned role</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCreateUserModal(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {userActionError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{userActionError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Full Name */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newUserForm.name}
+                      onChange={(e) => setNewUserForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g. Amina Bello"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Phone Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={newUserForm.phone}
+                      onChange={(e) => setNewUserForm(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="e.g. 08012345678"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={newUserForm.email}
+                    onChange={(e) => setNewUserForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="e.g. amina@example.com"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                  />
+                </div>
+
+                {/* Role and Password */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">User Role *</label>
+                    <select
+                      value={newUserForm.role}
+                      onChange={(e) => setNewUserForm(prev => ({ ...prev, role: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer"
+                    >
+                      <option value="guest">Guest / Traveler</option>
+                      <option value="host">Property Host</option>
+                      <option value="agent">Field Inspection Agent</option>
+                      <option value="admin">System Administrator</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Password * (min 6)</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={6}
+                      value={newUserForm.password}
+                      onChange={(e) => setNewUserForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="••••••••"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                    />
+                  </div>
+                </div>
+
+                {/* Conditional Host Fields */}
+                {newUserForm.role === 'host' && (
+                  <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-3">
+                    <div className="text-xs font-extrabold text-amber-900 flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-amber-600" />
+                      <span>Host Business Credentials</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-amber-900 block">Business / Trade Name</label>
+                        <input
+                          type="text"
+                          value={newUserForm.business_name}
+                          onChange={(e) => setNewUserForm(prev => ({ ...prev, business_name: e.target.value }))}
+                          placeholder="e.g. Yankari Suites Ltd"
+                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-amber-900 block">CAC Registration Number</label>
+                        <input
+                          type="text"
+                          value={newUserForm.cac_number}
+                          onChange={(e) => setNewUserForm(prev => ({ ...prev, cac_number: e.target.value }))}
+                          placeholder="e.g. RC-1928374"
+                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Status */}
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Account Active</span>
+                    <span className="text-[11px] text-slate-400">Allow user to log in immediately upon creation</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={newUserForm.is_active}
+                    onChange={(e) => setNewUserForm(prev => ({ ...prev, is_active: e.target.checked }))}
+                    className="w-4 h-4 text-tafiya-blue rounded cursor-pointer"
+                  />
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setCreateUserModal(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingUser}
+                    className="px-5 py-2.5 bg-tafiya-blue hover:bg-tafiya-blue/90 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingUser ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Creating User...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span>Create Account</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: EDIT USER & ASSIGN ROLE */}
+        {userEditModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
+                    <Edit className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Manage User Account #{userEditModal.id}</h3>
+                    <p className="text-[11px] text-slate-400 truncate max-w-[240px]">{userEditModal.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setUserEditModal(null)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {userActionError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{userActionError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateUser} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Full Name */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={userEditModal.name}
+                      onChange={(e) => setUserEditModal(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Phone Number</label>
+                    <input
+                      type="tel"
+                      required
+                      value={userEditModal.phone}
+                      onChange={(e) => setUserEditModal(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                    />
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={userEditModal.email}
+                    onChange={(e) => setUserEditModal(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                  />
+                </div>
+
+                {/* Role Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Assigned Role</label>
+                    <select
+                      value={userEditModal.role}
+                      onChange={(e) => setUserEditModal(prev => ({ ...prev, role: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer"
+                    >
+                      <option value="guest">Guest / Traveler</option>
+                      <option value="host">Property Host</option>
+                      <option value="agent">Field Inspection Agent</option>
+                      <option value="admin">System Administrator</option>
+                    </select>
+                  </div>
+
+                  {/* Reset Password */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Reset Password (Optional)</label>
+                    <input
+                      type="password"
+                      value={userEditModal.password}
+                      onChange={(e) => setUserEditModal(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Leave blank to keep current"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                    />
+                  </div>
+                </div>
+
+                {/* Host Details */}
+                {(userEditModal.role === 'host' || userEditModal.business_name || userEditModal.cac_number) && (
+                  <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-3">
+                    <div className="text-xs font-extrabold text-amber-900 flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-amber-600" />
+                      <span>Host Business Information</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-amber-900 block">Business / Property Name</label>
+                        <input
+                          type="text"
+                          value={userEditModal.business_name}
+                          onChange={(e) => setUserEditModal(prev => ({ ...prev, business_name: e.target.value }))}
+                          placeholder="e.g. Yankari Suites Ltd"
+                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-amber-900 block">CAC Registration Number</label>
+                        <input
+                          type="text"
+                          value={userEditModal.cac_number}
+                          onChange={(e) => setUserEditModal(prev => ({ ...prev, cac_number: e.target.value }))}
+                          placeholder="e.g. RC-1928374"
+                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Account Status Switch */}
+                <div 
+                  onClick={() => setUserEditModal(prev => ({ ...prev, is_active: !prev.is_active }))}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-3 ${
+                    userEditModal.is_active 
+                      ? 'bg-emerald-50/70 border-emerald-300' 
+                      : 'bg-rose-50/70 border-rose-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white ${
+                      userEditModal.is_active ? 'bg-emerald-600' : 'bg-rose-600'
+                    }`}>
+                      {userEditModal.is_active ? <Check className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <span className="text-xs font-extrabold text-slate-900 block">
+                        {userEditModal.is_active ? 'Account is Active' : 'Account is Suspended'}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block">
+                        {userEditModal.is_active ? 'User has full login and booking permissions' : 'User is blocked from signing in or transacting'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                    userEditModal.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                  }`}>
+                    {userEditModal.is_active ? 'Active' : 'Suspended'}
+                  </span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setUserEditModal(null)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingUser}
+                    className="px-5 py-2.5 bg-tafiya-blue hover:bg-tafiya-blue/90 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingUser ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: DELETE USER CONFIRMATION */}
+        {userDeleteModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 space-y-4">
+              <div className="flex items-center gap-3 text-rose-600">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-900">Confirm Account Deletion</h3>
+                  <p className="text-[11px] text-slate-400">Irreversible super administrative action</p>
+                </div>
+              </div>
+
+              {userActionError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{userActionError}</span>
+                </div>
+              )}
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5">
+                <div className="font-black text-slate-900">{userDeleteModal.name}</div>
+                <div className="text-slate-500 font-mono text-[11px]">{userDeleteModal.email}</div>
+                <div className="text-[10px] font-bold uppercase text-slate-400">Role: {userDeleteModal.role}</div>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Are you sure you want to permanently delete this user account? All access will be revoked immediately.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setUserDeleteModal(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingUser}
+                  onClick={handleDeleteUser}
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingUser ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete Account</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* MODAL 1: CONFIGURE INSPECTION BOUNTY */}
         {bountyConfigModal && (

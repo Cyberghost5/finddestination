@@ -684,6 +684,7 @@ export default function App() {
               setActiveMobileTab('explore');
               setGuestSubView('feed');
             }}
+            onSelectRole={handleRoleSelect}
           />
         )}
 

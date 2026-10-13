@@ -38,7 +38,8 @@ export default function ProfilePage({
   onOpenChat,
   onNavigateExplore,
   newBookingAlert,
-  onDismissAlert
+  onDismissAlert,
+  onSelectRole
 }) {
   const [formData, setFormData] = useState({
     name: currentUser?.name || currentUser?.full_name || '',
@@ -108,8 +109,8 @@ export default function ProfilePage({
     // 3. Load from API
     const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
     const url = currentUser?.email
-      ? `/api/v1/bookings/my-trips?email=${encodeURIComponent(currentUser.email)}`
-      : '/api/v1/bookings/my-trips';
+      ? `/api/v1/bookings?email=${encodeURIComponent(currentUser.email)}`
+      : '/api/v1/bookings';
 
     try {
       const response = await fetch(url, {
@@ -118,35 +119,35 @@ export default function ProfilePage({
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-        if (response.ok) {
-          const resData = await response.json();
-          if (resData.status === 'success' && Array.isArray(resData.data)) {
-            const apiMapped = resData.data.map(b => ({
-              reference: b.booking_reference,
-              booking_reference: b.booking_reference,
-              property: {
-                name: b.property_title || 'FindDestination Verified Stay',
-                city: b.city || 'Bauchi',
-                state: b.state || 'Bauchi',
-                images: b.cover_image ? [b.cover_image] : ['/logo.jpeg']
-              },
-              propertyTitle: b.property_title,
-              location: `${b.city}, ${b.state}`,
-              room: { name: b.room_name || 'Standard Suite' },
-              checkInDate: b.check_in_date,
-              checkOutDate: b.check_out_date,
-              nights: b.total_nights,
-              totalAmount: b.total_amount_formatted,
-              status: b.booking_status || 'confirmed',
-              escrowStatus: 'held',
-              created_at: b.created_at
-            }));
-            allReservations = [...allReservations, ...apiMapped];
-          }
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.status === 'success' && Array.isArray(resData.data)) {
+          const apiMapped = resData.data.map(b => ({
+            reference: b.booking_reference,
+            booking_reference: b.booking_reference,
+            property: {
+              name: b.property_title || 'FindDestination Verified Stay',
+              city: b.city || 'Bauchi',
+              state: b.state || 'Bauchi',
+              images: b.cover_image ? [b.cover_image] : ['/logo.jpeg']
+            },
+            propertyTitle: b.property_title,
+            location: `${b.city}, ${b.state}`,
+            room: { name: b.room_name || 'Standard Suite' },
+            checkInDate: b.check_in_date,
+            checkOutDate: b.check_out_date,
+            nights: b.total_nights,
+            totalAmount: b.total_amount_formatted,
+            status: b.booking_status || 'confirmed',
+            escrowStatus: 'held',
+            created_at: b.created_at
+          }));
+          allReservations = [...allReservations, ...apiMapped];
         }
-      } catch (err) {
-        console.error('Failed to fetch user trips from API', err);
       }
+    } catch (err) {
+      console.error('Failed to fetch user trips from API', err);
+    }
 
     // Deduplicate reservations by reference
     const seen = new Set();
@@ -197,7 +198,7 @@ export default function ProfilePage({
         try {
           localStorage.setItem('finddestination_user', JSON.stringify(updatedUser));
           localStorage.setItem('tafiya_user', JSON.stringify(updatedUser));
-        } catch {}
+        } catch { }
       }
 
       setIsSaving(false);
@@ -362,6 +363,49 @@ export default function ProfilePage({
               </p>
             )}
           </div>
+
+          {/* Quick Role Portal Launcher Button if User is Admin, Host, or Agent */}
+          {currentUser.role === 'admin' && (
+            <button
+              type="button"
+              onClick={() => onSelectRole && onSelectRole('admin')}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-2 shrink-0"
+              title="Open Super Admin Console"
+            >
+              <Sparkles className="w-4 h-4 text-slate-950" />
+              <span className="hidden sm:inline">Open Super Admin</span>
+              <span className="sm:hidden">Admin</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {currentUser.role === 'host' && (
+            <button
+              type="button"
+              onClick={() => onSelectRole && onSelectRole('host')}
+              className="px-4 py-2 bg-tafiya-blue hover:bg-blue-600 text-white font-black text-xs rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-2 shrink-0"
+              title="Open Host Dashboard"
+            >
+              <Building2 className="w-4 h-4 text-white" />
+              <span className="hidden sm:inline">Host Dashboard</span>
+              <span className="sm:hidden">Host</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {currentUser.role === 'agent' && (
+            <button
+              type="button"
+              onClick={() => onSelectRole && onSelectRole('agent')}
+              className="px-4 py-2 bg-tafiya-orange hover:bg-orange-600 text-white font-black text-xs rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-2 shrink-0"
+              title="Open Field Agent Desk"
+            >
+              <ShieldCheck className="w-4 h-4 text-white" />
+              <span className="hidden sm:inline">Field Agent Desk</span>
+              <span className="sm:hidden">Agent</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Quick Account Badges */}
@@ -369,7 +413,7 @@ export default function ProfilePage({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
               <ShieldCheck className="w-4 h-4" />
-              <span>Escrow Protected Traveler</span>
+              <span>Guest</span>
             </div>
             <span className="text-slate-600 hidden sm:inline">•</span>
             <span className="text-slate-400 text-[11px] hidden sm:inline">{bookings.length} Reservation{bookings.length !== 1 ? 's' : ''} on record</span>
@@ -400,7 +444,7 @@ export default function ProfilePage({
                   {bookings.length}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Track active bookings, view digital check-in vouchers, and print certificates</p>
+              <p className="text-xs text-slate-500">Track active bookings, view digital check-in vouchers, and print reservations</p>
             </div>
           </div>
 
@@ -409,22 +453,20 @@ export default function ProfilePage({
             <button
               type="button"
               onClick={() => setActiveReservationFilter('all')}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeReservationFilter === 'all'
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeReservationFilter === 'all'
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               All ({bookings.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveReservationFilter('upcoming')}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeReservationFilter === 'upcoming'
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeReservationFilter === 'upcoming'
                   ? 'bg-white text-emerald-700 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               Confirmed ({upcomingCount})
             </button>
@@ -432,11 +474,10 @@ export default function ProfilePage({
               <button
                 type="button"
                 onClick={() => setActiveReservationFilter('completed')}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeReservationFilter === 'completed'
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeReservationFilter === 'completed'
                     ? 'bg-white text-slate-900 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 Past ({completedCount})
               </button>
@@ -455,7 +496,7 @@ export default function ProfilePage({
             {filteredReservations.map((item, idx) => {
               const ref = item.reference || item.booking_reference || item.bookingRef || `FD-RES-${idx}`;
               const propName = item.property?.name || item.propertyTitle || item.propertyName || 'FindDestination Verified Stay';
-              const propLocation = item.property?.city 
+              const propLocation = item.property?.city
                 ? `${item.property.city}${item.property.state ? `, ${item.property.state}` : ''}`
                 : (item.location || 'Northern Nigeria');
               const propImg = item.property?.images?.[0] || item.property?.cover_image || item.cover_image || '/logo.jpeg';
@@ -471,14 +512,13 @@ export default function ProfilePage({
               return (
                 <div
                   key={ref + idx}
-                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 hover:shadow-md ${
-                    isJustBooked
+                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 hover:shadow-md ${isJustBooked
                       ? 'border-emerald-500 bg-emerald-50/20 shadow-md ring-2 ring-emerald-500/20'
                       : 'border-slate-200/90 bg-white hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    
+
                     {/* Property Thumbnail & Information */}
                     <div className="flex items-start gap-4 min-w-0">
                       <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
@@ -548,7 +588,7 @@ export default function ProfilePage({
                         <span className="text-[10px] font-bold text-slate-400 block uppercase">Total Paid</span>
                         <span className="text-base sm:text-lg font-black text-slate-900 block">{price}</span>
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                          <ShieldCheck className="w-3 h-3" /> Escrow Held
+                          <ShieldCheck className="w-3 h-3" /> Paid
                         </span>
                       </div>
 
@@ -635,7 +675,7 @@ export default function ProfilePage({
 
         <form onSubmit={handleSaveProfile} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
+
             {/* Full Name */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1">

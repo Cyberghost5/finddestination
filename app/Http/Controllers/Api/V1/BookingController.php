@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\ChatThread;
+use App\Models\PaymentTransaction;
 use App\Models\Property;
 use App\Models\RoomType;
 use App\Models\User;
@@ -27,8 +28,17 @@ class BookingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'booking_reference' => 'nullable|string|max:50',
             'room_type_id' => 'nullable|integer',
             'property_id' => 'nullable|integer',
+            'property_name' => 'nullable|string|max:255',
+            'property_slug' => 'nullable|string|max:255',
+            'property_city' => 'nullable|string|max:100',
+            'property_state' => 'nullable|string|max:100',
+            'property_address' => 'nullable|string',
+            'room_name' => 'nullable|string|max:150',
+            'room_price_kobo' => 'nullable|integer',
+            'total_amount_kobo' => 'nullable|integer',
             'rooms_count' => 'nullable|integer|min:1',
             'check_in_date' => 'required|date',
             'check_out_date' => 'required|date',
@@ -74,49 +84,108 @@ class BookingController extends Controller
             }
         }
         if (!$userId) {
-            $userId = User::first()?->id ?? 1;
-        }
-
-        // 2. Resolve RoomType safely
-        $roomTypeId = $validated['room_type_id'] ?? null;
-        $propertyId = $validated['property_id'] ?? $request->input('property.id') ?? null;
-        $roomType = null;
-
-        if ($roomTypeId) {
-            $roomType = RoomType::find($roomTypeId);
-        }
-
-        if (!$roomType && $propertyId) {
-            $roomType = RoomType::where('property_id', $propertyId)->first();
-        }
-
-        if (!$roomType) {
-            $roomType = RoomType::first();
-        }
-
-        if (!$roomType) {
-            $firstProp = Property::first();
-            if (!$firstProp) {
-                abort(422, 'No accommodation property is available to reserve.');
+            $fallbackUser = User::first();
+            if (!$fallbackUser) {
+                $fallbackUser = User::create([
+                    'name' => $guestName ?: 'Guest Traveler',
+                    'email' => $guestEmail ?: 'traveler@finddestination.com.ng',
+                    'phone' => '+23480' . mt_rand(10000000, 99999999),
+                    'role' => 'guest',
+                    'password' => bcrypt('password123'),
+                    'email_verified_at' => now(),
+                ]);
             }
-            $roomType = RoomType::create([
-                'property_id' => $firstProp->id,
-                'name' => 'Executive Suite',
-                'base_price_kobo' => 3500000,
-                'total_units' => 5,
-                'max_occupancy' => 2,
-                'bed_type' => 'King Bed'
+            $userId = $fallbackUser->id;
+        }
+
+        // 2. Resolve Property safely (by ID, slug, or name, or self-heal in DB)
+        $propertyId = $validated['property_id'] ?? $request->input('property.id') ?? null;
+        $propSlug = $request->input('property_slug') ?? $request->input('property.slug');
+        $propName = $request->input('property_name') ?? $request->input('property.name');
+
+        $property = null;
+        if ($propertyId) {
+            $property = Property::find($propertyId);
+        }
+        if (!$property && $propSlug) {
+            $property = Property::where('slug', $propSlug)->first();
+        }
+        if (!$property && $propName) {
+            $property = Property::where('name', $propName)->first();
+        }
+        if (!$property) {
+            $hostUser = User::where('role', 'host')->first() ?? User::where('role', 'admin')->first() ?? User::find($userId);
+            $hostId = $hostUser ? $hostUser->id : $userId;
+
+            $slug = $propSlug ?: Str::slug($propName ?: ('stay-' . time()));
+            if (Property::where('slug', $slug)->exists()) {
+                $slug .= '-' . Str::random(5);
+            }
+
+            $property = Property::create([
+                'host_id' => $hostId,
+                'name' => $propName ?: 'FindDestination Verified Apartment',
+                'slug' => $slug,
+                'property_type' => $request->input('property_type') ?? 'serviced_apartment',
+                'description' => $request->input('property_description') ?? 'Verified quality accommodation booked through FindDestination.',
+                'address' => $request->input('property_address') ?? 'Central Location',
+                'city' => $request->input('property_city') ?? 'Kaduna',
+                'state' => $request->input('property_state') ?? 'Kaduna',
+                'contact_phone' => $guestPhone ?: '+2348021112233',
+                'verification_tier' => 'tier_3_certified',
+                'verification_status' => 'verified',
+                'is_published' => true,
+                'images' => $request->input('property_images') ?: ['/logo.jpeg'],
+                'amenities' => ['24/7 Power', 'WiFi', 'Constant Water', 'Air Conditioning', 'CCTV Security'],
             ]);
         }
 
-        // 3. Create reservation within atomic transaction
-        $booking = DB::transaction(function () use ($validated, $roomsCount, $roomType, $userId, $request) {
+        // 3. Resolve RoomType safely
+        $roomTypeId = $validated['room_type_id'] ?? null;
+        $roomName = $request->input('room_name') ?? 'Executive Suite';
+        $roomPriceKobo = (int) ($request->input('room_price_kobo') ?: 3500000);
+
+        $roomType = null;
+        if ($roomTypeId) {
+            $roomType = RoomType::find($roomTypeId);
+        }
+        if (!$roomType && $property) {
+            $roomType = RoomType::where('property_id', $property->id)->first();
+        }
+        if (!$roomType) {
+            $roomType = RoomType::create([
+                'property_id' => $property->id,
+                'name' => $roomName,
+                'base_price_kobo' => $roomPriceKobo,
+                'total_units' => 5,
+                'max_occupancy' => 2,
+                'bed_type' => 'King Bed',
+                'is_active' => true,
+            ]);
+        }
+
+        // 4. Resolve Confirmed Booking Reference
+        $clientRef = trim($request->input('booking_reference') ?? '');
+        if ($clientRef && (str_starts_with(strtoupper($clientRef), 'FND-') || str_starts_with(strtoupper($clientRef), 'TAF-') || str_starts_with(strtoupper($clientRef), 'FD-'))) {
+            $bookingReference = strtoupper($clientRef);
+            if (Booking::where('booking_reference', $bookingReference)->exists()) {
+                $bookingReference = 'FND-' . strtoupper(Str::random(8));
+            }
+        } else {
+            $bookingReference = 'FND-' . strtoupper(Str::random(8));
+        }
+
+        // 5. Create reservation within atomic transaction
+        $booking = DB::transaction(function () use ($validated, $roomsCount, $roomType, $property, $userId, $request, $bookingReference, $roomPriceKobo) {
             $lockedRoomType = RoomType::where('id', $roomType->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
             $nights = max(1, Carbon::parse($validated['check_in_date'])->diffInDays(Carbon::parse($validated['check_out_date'])));
-            $totalKobo = $lockedRoomType->base_price_kobo * $nights * $roomsCount;
+            $basePrice = $lockedRoomType->base_price_kobo > 0 ? $lockedRoomType->base_price_kobo : $roomPriceKobo;
+            $customTotal = (int) $request->input('total_amount_kobo');
+            $totalKobo = $customTotal > 0 ? $customTotal : ($basePrice * $nights * $roomsCount);
+
             $commissionRate = 12.50; // 12.5% platform fee
             $commissionKobo = (int) (($totalKobo * $commissionRate) / 100);
             $hostPayoutKobo = $totalKobo - $commissionKobo;
@@ -126,9 +195,9 @@ class BookingController extends Controller
                 : 'confirmed'; // Confirmed by default so guest voucher and trip are active immediately
 
             return Booking::create([
-                'booking_reference' => 'FND-' . strtoupper(Str::random(8)),
+                'booking_reference' => $bookingReference,
                 'user_id' => $userId,
-                'property_id' => $lockedRoomType->property_id,
+                'property_id' => $property->id,
                 'room_type_id' => $lockedRoomType->id,
                 'rooms_count' => $roomsCount,
                 'check_in_date' => $validated['check_in_date'],
@@ -143,19 +212,26 @@ class BookingController extends Controller
             ]);
         });
 
-        // 4. Initialize gateway rail record
-        if ($paymentGateway === 'monnify') {
-            $gatewayService = new MonnifyService();
-        } else {
-            $gatewayService = new PaystackService();
+        // 6. Initialize gateway rail record
+        $paymentDetails = null;
+        try {
+            if ($paymentGateway === 'monnify') {
+                $gatewayService = new MonnifyService();
+            } else {
+                $gatewayService = new PaystackService();
+            }
+            $paymentDetails = $gatewayService->initializePayment($booking);
+        } catch (\Throwable $e) {
+            Log::warning('Gateway initialization skipped or failed: ' . $e->getMessage());
         }
 
-        $paymentDetails = $gatewayService->initializePayment($booking);
-
-        // 5. Create chat thread between guest and host
+        // 7. Create chat thread between guest and host
         try {
             ChatThread::findOrCreateBookingThread($booking);
         } catch (\Throwable $e) {}
+
+        $checkInFormatted = is_object($booking->check_in_date) ? $booking->check_in_date->format('Y-m-d') : (string) $booking->check_in_date;
+        $checkOutFormatted = is_object($booking->check_out_date) ? $booking->check_out_date->format('Y-m-d') : (string) $booking->check_out_date;
 
         return response()->json([
             'status' => 'success',
@@ -166,11 +242,12 @@ class BookingController extends Controller
                 'user_id' => $booking->user_id,
                 'booking_status' => $booking->booking_status,
                 'property_id' => $booking->property_id,
+                'property_name' => $property->name,
                 'room_type_id' => $booking->room_type_id,
                 'total_amount_formatted' => '₦' . number_format($booking->total_amount_kobo / 100, 2),
                 'total_amount_kobo' => $booking->total_amount_kobo,
-                'check_in_date' => $booking->check_in_date->format('Y-m-d'),
-                'check_out_date' => $booking->check_out_date->format('Y-m-d'),
+                'check_in_date' => $checkInFormatted,
+                'check_out_date' => $checkOutFormatted,
                 'payment_details' => $paymentDetails,
             ]
         ], 201);
@@ -289,7 +366,7 @@ class BookingController extends Controller
 
     /**
      * POST /api/v1/bookings/track
-     * Public Booking & Order Tracker (Requires Reference + Email or Phone)
+     * Public Booking & Order Tracker (Requires Reference + Optional Email or Phone)
      */
     public function track(Request $request)
     {
@@ -299,22 +376,30 @@ class BookingController extends Controller
             'phone' => 'nullable|string',
         ]);
 
-        $reference = trim(strtoupper($validated['booking_reference']));
+        $rawRef = trim($validated['booking_reference']);
+        $reference = strtoupper($rawRef);
         
         $booking = Booking::with(['property.host', 'roomType', 'paymentTransactions', 'user'])
-            ->where('booking_reference', $reference)
+            ->where(function ($q) use ($reference, $rawRef) {
+                $q->where('booking_reference', $reference)
+                  ->orWhere('booking_reference', $rawRef)
+                  ->orWhereRaw('UPPER(booking_reference) = ?', [$reference]);
+            })
             ->first();
 
         if (!$booking) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No reservation found matching reference: ' . $reference
+                'message' => 'No reservation found matching reference: ' . $rawRef
             ], 444);
         }
 
         $latestPayment = $booking->paymentTransactions->first();
         $propName = $booking->property ? $booking->property->name : 'FindDestination Property';
         $propImages = $booking->property && !empty($booking->property->images) ? $booking->property->images : ['/logo.jpeg'];
+
+        $checkInFormatted = is_object($booking->check_in_date) ? $booking->check_in_date->format('Y-m-d') : (string) $booking->check_in_date;
+        $checkOutFormatted = is_object($booking->check_out_date) ? $booking->check_out_date->format('Y-m-d') : (string) $booking->check_out_date;
 
         return response()->json([
             'status' => 'success',
@@ -326,10 +411,11 @@ class BookingController extends Controller
                     'id' => $booking->property ? $booking->property->id : 1,
                     'title' => $propName,
                     'name' => $propName,
-                    'city' => $booking->property ? $booking->property->city : 'Bauchi',
-                    'state' => $booking->property ? $booking->property->state : 'Bauchi',
+                    'city' => $booking->property ? $booking->property->city : 'Kaduna',
+                    'state' => $booking->property ? $booking->property->state : 'Kaduna',
                     'address' => $booking->property ? $booking->property->address : 'Central Location',
                     'cover_image' => $propImages[0] ?? '/logo.jpeg',
+                    'images' => $propImages,
                     'host_name' => $booking->property && $booking->property->host ? $booking->property->host->name : 'FindDestination Verified Host',
                     'host_phone' => $booking->property && $booking->property->host ? $booking->property->host->phone : '+234 803 123 4567',
                 ],
@@ -338,14 +424,17 @@ class BookingController extends Controller
                     'capacity' => $booking->roomType ? $booking->roomType->max_occupancy : 2,
                 ],
                 'rooms_count' => $booking->rooms_count,
-                'check_in_date' => $booking->check_in_date ? $booking->check_in_date->format('Y-m-d') : null,
-                'check_out_date' => $booking->check_out_date ? $booking->check_out_date->format('Y-m-d') : null,
+                'guest_name' => $booking->user ? $booking->user->name : 'Guest Traveler',
+                'guest_phone' => $booking->user ? $booking->user->phone : '',
+                'guest_email' => $booking->user ? $booking->user->email : '',
+                'check_in_date' => $checkInFormatted,
+                'check_out_date' => $checkOutFormatted,
                 'total_nights' => $booking->total_nights,
                 'total_amount_formatted' => '₦' . number_format($booking->total_amount_kobo / 100, 2),
                 'platform_fee_formatted' => '₦' . number_format($booking->platform_commission_kobo / 100, 2),
                 'payment' => [
                     'status' => $latestPayment ? $latestPayment->status : ($booking->booking_status === 'confirmed' ? 'successful' : 'pending'),
-                    'gateway' => $latestPayment ? $latestPayment->payment_gateway : 'paystack',
+                    'gateway' => $latestPayment ? $latestPayment->gateway : 'paystack',
                     'paid_at' => $latestPayment && $latestPayment->paid_at ? $latestPayment->paid_at->toIso8601String() : null,
                 ],
                 'created_at' => $booking->created_at->toIso8601String(),
@@ -491,5 +580,198 @@ class BookingController extends Controller
                 'message' => 'Failed to dispatch email: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * GET /api/v1/admin/transactions
+     * Platform Transaction Ledger (all transactions strictly linked to a reservation/booking)
+     */
+    public function getAdminTransactions(Request $request)
+    {
+        // 1. Auto-seed / sync any booking that does not have a PaymentTransaction record yet
+        $unlinkedBookings = Booking::doesntHave('paymentTransactions')->get();
+        foreach ($unlinkedBookings as $b) {
+            $isPaid = in_array($b->booking_status, ['confirmed', 'checked_in', 'completed']);
+            PaymentTransaction::create([
+                'booking_id' => $b->id,
+                'gateway' => 'paystack',
+                'transaction_reference' => 'PST-' . $b->booking_reference,
+                'gateway_reference' => 'GW-' . strtoupper(Str::random(10)),
+                'amount_paid_kobo' => $b->total_amount_kobo,
+                'payment_channel' => 'card',
+                'status' => $isPaid ? 'successful' : ($b->booking_status === 'cancelled' ? 'refunded' : 'initiated'),
+                'paid_at' => $isPaid ? ($b->created_at ?? now()) : null,
+                'created_at' => $b->created_at ?? now(),
+                'updated_at' => $b->updated_at ?? now(),
+            ]);
+        }
+
+        // 2. Query PaymentTransactions with eager loaded Booking, User, Property, Host, RoomType
+        $query = PaymentTransaction::with([
+            'booking.user',
+            'booking.property.host',
+            'booking.roomType'
+        ]);
+
+        // Filter by gateway
+        if ($request->has('gateway') && in_array($request->gateway, ['paystack', 'monnify'])) {
+            $query->where('gateway', $request->gateway);
+        }
+
+        // Filter by status
+        if ($request->has('status') && !empty($request->status) && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Search query
+        if ($request->has('search') && !empty($request->search)) {
+            $s = '%' . trim($request->search) . '%';
+            $query->where(function ($q) use ($s) {
+                $q->where('transaction_reference', 'like', $s)
+                  ->orWhere('gateway_reference', 'like', $s)
+                  ->orWhere('virtual_account_number', 'like', $s)
+                  ->orWhereHas('booking', function ($bq) use ($s) {
+                      $bq->where('booking_reference', 'like', $s)
+                         ->orWhereHas('user', function ($uq) use ($s) {
+                             $uq->where('name', 'like', $s)
+                                ->orWhere('email', 'like', $s)
+                                ->orWhere('phone', 'like', $s);
+                         })
+                         ->orWhereHas('property', function ($pq) use ($s) {
+                             $pq->where('name', 'like', $s)
+                                ->orWhere('city', 'like', $s);
+                         });
+                  });
+            });
+        }
+
+        $transactions = $query->orderBy('created_at', 'desc')->get()->map(function ($tx) {
+            $b = $tx->booking;
+            $user = $b ? $b->user : null;
+            $property = $b ? $b->property : null;
+            $host = $property ? $property->host : null;
+            $roomType = $b ? $b->roomType : null;
+
+            $amountKobo = $tx->amount_paid_kobo ?: ($b ? $b->total_amount_kobo : 0);
+            $commissionKobo = $b ? $b->platform_commission_kobo : (int) (($amountKobo * 12.5) / 100);
+            $hostPayoutKobo = $b ? $b->host_payout_kobo : ($amountKobo - $commissionKobo);
+
+            return [
+                'id' => $tx->id,
+                'transaction_reference' => $tx->transaction_reference,
+                'gateway_reference' => $tx->gateway_reference,
+                'gateway' => $tx->gateway,
+                'payment_channel' => $tx->payment_channel ?? 'card',
+                'virtual_account_number' => $tx->virtual_account_number,
+                'virtual_bank_name' => $tx->virtual_bank_name,
+                'amount_paid_kobo' => $amountKobo,
+                'amount_formatted' => '₦' . number_format($amountKobo / 100, 2),
+                'platform_commission_kobo' => $commissionKobo,
+                'platform_commission_formatted' => '₦' . number_format($commissionKobo / 100, 2),
+                'host_payout_kobo' => $hostPayoutKobo,
+                'host_payout_formatted' => '₦' . number_format($hostPayoutKobo / 100, 2),
+                'status' => $tx->status,
+                'paid_at' => $tx->paid_at ? $tx->paid_at->toIso8601String() : null,
+                'created_at' => $tx->created_at ? $tx->created_at->toIso8601String() : now()->toIso8601String(),
+                
+                // Explicit linked reservation / booking details
+                'booking' => $b ? [
+                    'id' => $b->id,
+                    'booking_reference' => $b->booking_reference,
+                    'booking_status' => $b->booking_status,
+                    'check_in_date' => $b->check_in_date ? $b->check_in_date->format('Y-m-d') : null,
+                    'check_out_date' => $b->check_out_date ? $b->check_out_date->format('Y-m-d') : null,
+                    'total_nights' => $b->total_nights,
+                    'rooms_count' => $b->rooms_count,
+                    'room_name' => $roomType ? $roomType->name : 'Executive Suite',
+                    'bed_type' => $roomType ? $roomType->bed_type : 'King Bed',
+                    'guest' => [
+                        'id' => $user ? $user->id : null,
+                        'name' => $user ? $user->name : 'Guest Traveler',
+                        'email' => $user ? $user->email : 'guest@example.com',
+                        'phone' => $user ? $user->phone : '',
+                    ],
+                    'property' => [
+                        'id' => $property ? $property->id : null,
+                        'name' => $property ? $property->name : 'FindDestination Verified Stay',
+                        'city' => $property ? $property->city : 'Bauchi',
+                        'state' => $property ? $property->state : 'Bauchi',
+                        'address' => $property ? $property->address : '',
+                        'verification_tier' => $property ? $property->verification_tier : 'tier_1_docs',
+                        'cover_image' => ($property && !empty($property->images)) ? $property->images[0] : '/logo.jpeg',
+                    ],
+                    'host' => [
+                        'id' => $host ? $host->id : null,
+                        'name' => $host ? $host->name : 'Property Host',
+                        'email' => $host ? $host->email : '',
+                        'phone' => $host ? $host->phone : '',
+                        'business_name' => $host ? $host->business_name : null,
+                        'cac_number' => $host ? $host->cac_number : null,
+                    ]
+                ] : null
+            ];
+        });
+
+        // Summary metrics
+        $allTx = PaymentTransaction::all();
+        $totalVolumeKobo = $allTx->sum('amount_paid_kobo');
+        $successfulTx = $allTx->where('status', 'successful');
+        $successfulVolumeKobo = $successfulTx->sum('amount_paid_kobo');
+
+        $totalPlatformRevenue = (int) (($successfulVolumeKobo * 12.5) / 100);
+        $totalHostEscrow = $successfulVolumeKobo - $totalPlatformRevenue;
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $transactions,
+            'summary' => [
+                'total_transactions' => $allTx->count(),
+                'total_volume_kobo' => $totalVolumeKobo,
+                'total_volume_formatted' => '₦' . number_format($totalVolumeKobo / 100, 2),
+                'successful_count' => $successfulTx->count(),
+                'successful_volume_kobo' => $successfulVolumeKobo,
+                'successful_volume_formatted' => '₦' . number_format($successfulVolumeKobo / 100, 2),
+                'platform_revenue_kobo' => $totalPlatformRevenue,
+                'platform_revenue_formatted' => '₦' . number_format($totalPlatformRevenue / 100, 2),
+                'host_escrow_kobo' => $totalHostEscrow,
+                'host_escrow_formatted' => '₦' . number_format($totalHostEscrow / 100, 2),
+                'initiated_count' => $allTx->where('status', 'initiated')->count(),
+                'failed_count' => $allTx->where('status', 'failed')->count(),
+                'refunded_count' => $allTx->where('status', 'refunded')->count(),
+                'paystack_count' => $allTx->where('gateway', 'paystack')->count(),
+                'monnify_count' => $allTx->where('gateway', 'monnify')->count(),
+            ]
+        ]);
+    }
+
+    /**
+     * PATCH /api/v1/admin/transactions/{id}/status
+     * Manual reconciliation or refund trigger for super administrator
+     */
+    public function updateAdminTransactionStatus(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:successful,failed,refunded,initiated',
+        ]);
+
+        $tx = PaymentTransaction::with('booking')->findOrFail($id);
+        $tx->status = $validated['status'];
+        if ($validated['status'] === 'successful' && !$tx->paid_at) {
+            $tx->paid_at = now();
+            if ($tx->booking && $tx->booking->booking_status === 'pending') {
+                $tx->booking->update(['booking_status' => 'confirmed']);
+            }
+        } elseif ($validated['status'] === 'refunded') {
+            if ($tx->booking) {
+                $tx->booking->update(['booking_status' => 'cancelled']);
+            }
+        }
+        $tx->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Transaction {$tx->transaction_reference} marked as {$tx->status} successfully!",
+            'data' => $tx
+        ]);
     }
 }

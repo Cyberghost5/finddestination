@@ -13,6 +13,8 @@ import {
   Check, 
   Upload,
   AlertTriangle,
+  AlertCircle,
+  Sparkles,
   ArrowRight,
   Wallet,
   ArrowUpRight,
@@ -64,6 +66,9 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
   // Form states
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawSubmitting, setWithdrawSubmitting] = useState(false);
+  const [withdrawError, setWithdrawError] = useState('');
+  const [withdrawSuccess, setWithdrawSuccess] = useState('');
+  const [isSeedingBounty, setIsSeedingBounty] = useState(false);
   const [bankForm, setBankForm] = useState({
     bank_name: '',
     account_number: '',
@@ -357,16 +362,73 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
     }
   };
 
-  // 4. Submit Withdrawal Request
+  const handleOpenWithdrawModal = () => {
+    setWithdrawError('');
+    setWithdrawSuccess('');
+    setIsWithdrawModalOpen(true);
+  };
+
+  // Helper to top up demo testing bounty
+  const handleSeedDemoBounty = async () => {
+    setIsSeedingBounty(true);
+    setWithdrawError('');
+    try {
+      const res = await fetch('/api/v1/agent/wallet/seed-demo-bounty', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ amount: 50000 })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        showToast('success', data.message || '₦50,000 demo bounty credited!');
+        await fetchWallet();
+      } else {
+        const msg = data.message || 'Failed to credit test funds.';
+        setWithdrawError(msg);
+        showToast('error', msg);
+      }
+    } catch (err) {
+      const msg = 'Error crediting demo bounty: ' + err.message;
+      setWithdrawError(msg);
+      showToast('error', msg);
+    } finally {
+      setIsSeedingBounty(false);
+    }
+  };
+
+  // 4. Submit Withdrawal Request with guaranteed user feedback
   const handleRequestWithdrawal = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    setWithdrawError('');
+    setWithdrawSuccess('');
+
     const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount < 1000) {
-      showToast('error', 'Minimum withdrawal amount is ₦1,000.');
+    if (!withdrawAmount || isNaN(amount) || amount <= 0) {
+      const msg = 'Please enter a valid withdrawal amount.';
+      setWithdrawError(msg);
+      showToast('error', msg);
       return;
     }
-    if (walletData && amount > walletData.balance) {
-      showToast('error', `Insufficient balance. Available: ${walletData.balance_formatted}`);
+
+    if (amount < 1000) {
+      const msg = 'Minimum withdrawal amount is ₦1,000.';
+      setWithdrawError(msg);
+      showToast('error', msg);
+      return;
+    }
+
+    const availableBal = walletData ? Number(walletData.balance || 0) : 0;
+    if (amount > availableBal) {
+      const msg = `Insufficient balance. Available: ${walletData?.balance_formatted || '₦0.00'}. You cannot withdraw more than your available wallet balance.`;
+      setWithdrawError(msg);
+      showToast('error', msg);
+      return;
+    }
+
+    if (!walletData?.bank_details?.is_configured) {
+      const msg = 'Please configure your bank payout account details before requesting a withdrawal.';
+      setWithdrawError(msg);
+      showToast('error', msg);
       return;
     }
 
@@ -379,15 +441,24 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
       });
       const data = await res.json();
       if (res.ok && data.status === 'success') {
-        showToast('success', data.message || 'Withdrawal request submitted successfully!');
-        setIsWithdrawModalOpen(false);
+        const successMsg = data.message || `Withdrawal request of ₦${amount.toLocaleString()} submitted successfully!`;
+        setWithdrawSuccess(successMsg);
+        showToast('success', successMsg);
         setWithdrawAmount('');
         await fetchWallet();
+        setTimeout(() => {
+          setIsWithdrawModalOpen(false);
+          setWithdrawSuccess('');
+        }, 2200);
       } else {
-        showToast('error', data.message || 'Failed to submit withdrawal request.');
+        const errorMsg = data.message || 'Failed to submit withdrawal request.';
+        setWithdrawError(errorMsg);
+        showToast('error', errorMsg);
       }
     } catch (err) {
-      showToast('error', 'Network error processing withdrawal: ' + err.message);
+      const errorMsg = 'Network error processing withdrawal: ' + err.message;
+      setWithdrawError(errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setWithdrawSubmitting(false);
     }
@@ -404,7 +475,7 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
       
       {/* Toast Alert */}
       {toast && (
-        <div className="fixed top-4 right-4 z-50 max-w-md animate-in slide-in-from-top-4 fade-in duration-300">
+        <div className="fixed top-4 right-4 z-[99999] max-w-md animate-in slide-in-from-top-4 fade-in duration-300">
           <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-xs font-bold border ${
             toast.type === 'success' 
               ? 'bg-emerald-950 text-emerald-100 border-emerald-800' 
@@ -530,7 +601,7 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setIsWithdrawModalOpen(true);
+                handleOpenWithdrawModal();
               }}
               className="py-1 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-colors cursor-pointer"
             >
@@ -708,7 +779,7 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsMobileNavOpen(false);
-                    setIsWithdrawModalOpen(true);
+                    handleOpenWithdrawModal();
                   }}
                   className="py-1 px-2.5 rounded-lg bg-emerald-600 text-white font-bold text-[10px]"
                 >
@@ -1228,7 +1299,7 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
                         showToast('error', 'Please configure your bank payout account first.');
                         setIsBankModalOpen(true);
                       } else {
-                        setIsWithdrawModalOpen(true);
+                        handleOpenWithdrawModal();
                       }
                     }}
                     className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-500 text-slate-950 font-black rounded-xl text-xs shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -1311,8 +1382,8 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
             <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Double-Entry Transaction Ledger</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Immutable audit trail of inspection bounty credits and withdrawal debits</p>
+                  <h3 className="text-base font-extrabold text-slate-900">Recent Transactions</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">View your recent transactions and their status.</p>
                 </div>
                 <span className="text-xs font-bold text-slate-400">
                   {walletData?.transactions?.length || 0} Transactions
@@ -1371,8 +1442,8 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
             <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-extrabold text-slate-900">Withdrawal Payout Requests</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Status of bank transfers processed by Super Admin</p>
+                  <h3 className="text-base font-extrabold text-slate-900">Withdrawals</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">View your recent withdrawal requests and their status.</p>
                 </div>
                 <span className="text-xs font-bold text-slate-400">
                   {walletData?.withdrawals?.length || 0} Requests
@@ -1642,7 +1713,7 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
       {/* ======================================================== */}
       {isWithdrawModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-100">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 shadow-2xl border border-slate-100">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
@@ -1650,12 +1721,69 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
                 <p className="text-xs text-slate-500 mt-0.5">Funds are disbursed to your verified bank account</p>
               </div>
               <button
-                onClick={() => setIsWithdrawModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+                type="button"
+                onClick={() => {
+                  setIsWithdrawModalOpen(false);
+                  setWithdrawError('');
+                  setWithdrawSuccess('');
+                }}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* In-Modal Success Banner */}
+            {withdrawSuccess && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200 shadow-xs">
+                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span className="flex-1">{withdrawSuccess}</span>
+              </div>
+            )}
+
+            {/* In-Modal Error Banner */}
+            {withdrawError && (
+              <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold rounded-2xl flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200 shadow-xs">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-extrabold">Withdrawal Blocked</p>
+                  <p className="mt-0.5 text-rose-700 font-semibold">{withdrawError}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWithdrawError('')}
+                  className="p-1 hover:bg-rose-100 rounded-lg text-rose-500 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Low Balance Warning with 1-Click Demo Credit */}
+            {walletData && walletData.balance < 1000 && !withdrawSuccess && !withdrawError && (
+              <div className="p-4 bg-amber-50 border border-amber-200 text-amber-900 text-xs rounded-2xl space-y-2.5 shadow-xs">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-black block">Insufficient Available Balance ({walletData ? walletData.balance_formatted : '₦0.00'})</span>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      Minimum withdrawal threshold is ₦1,000. Complete more field property audits to earn bounties, or top up test funds below.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSeedDemoBounty}
+                    disabled={isSeedingBounty}
+                    className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Sparkles className={`w-3.5 h-3.5 ${isSeedingBounty ? 'animate-spin' : ''}`} />
+                    <span>{isSeedingBounty ? 'Crediting Test Funds...' : 'Credit Test Bounty (₦50,000)'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Destination Bank Account Summary */}
             {walletData?.bank_details && (
@@ -1666,13 +1794,13 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
               </div>
             )}
 
-            <form onSubmit={handleRequestWithdrawal} className="space-y-5">
+            <form onSubmit={handleRequestWithdrawal} noValidate className="space-y-4">
               
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-black text-slate-700">Withdrawal Amount (₦)</label>
                   <span className="text-[11px] font-bold text-emerald-600">
-                    Max: {walletData ? walletData.balance_formatted : '₦0'}
+                    Max: {walletData ? walletData.balance_formatted : '₦0.00'}
                   </span>
                 </div>
                 <div className="relative">
@@ -1680,11 +1808,12 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
                   <input
                     type="number"
                     min="1000"
-                    max={walletData?.balance || 0}
-                    required
-                    placeholder="e.g. 20000"
+                    placeholder="e.g. 5000"
                     value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    onChange={(e) => {
+                      setWithdrawAmount(e.target.value);
+                      if (withdrawError) setWithdrawError('');
+                    }}
                     className="w-full pl-9 pr-4 py-3 text-base font-black border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
@@ -1692,13 +1821,16 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
               </div>
 
               {/* Quick Amount Chips */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {[5000, 10000, 20000, 50000].map((amt) => (
                   <button
                     type="button"
                     key={amt}
-                    onClick={() => setWithdrawAmount(amt.toString())}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-extrabold transition-all"
+                    onClick={() => {
+                      setWithdrawAmount(amt.toString());
+                      if (withdrawError) setWithdrawError('');
+                    }}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-extrabold transition-all cursor-pointer"
                   >
                     ₦{amt.toLocaleString()}
                   </button>
@@ -1706,27 +1838,34 @@ export default function FieldAgentPortal({ currentUser, authToken, onSwitchToGue
                 {walletData?.balance > 0 && (
                   <button
                     type="button"
-                    onClick={() => setWithdrawAmount(walletData.balance.toString())}
-                    className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-black"
+                    onClick={() => {
+                      setWithdrawAmount(walletData.balance.toString());
+                      if (withdrawError) setWithdrawError('');
+                    }}
+                    className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-black cursor-pointer hover:bg-emerald-100"
                   >
-                    All
+                    All (₦{Number(walletData.balance).toLocaleString()})
                   </button>
                 )}
               </div>
 
               {/* Submit */}
-              <div className="flex items-center justify-end gap-3 pt-3">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsWithdrawModalOpen(false)}
-                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+                  onClick={() => {
+                    setIsWithdrawModalOpen(false);
+                    setWithdrawError('');
+                    setWithdrawSuccess('');
+                  }}
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={withdrawSubmitting || !walletData || walletData.balance <= 0}
-                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl text-xs font-black shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2"
+                  disabled={withdrawSubmitting}
+                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl text-xs font-black shadow-lg hover:shadow-xl transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {withdrawSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}
                   <span>{withdrawSubmitting ? 'Submitting...' : 'Confirm Withdrawal Request'}</span>

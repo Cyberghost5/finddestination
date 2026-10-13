@@ -99,7 +99,7 @@ class ChatThread extends Model
             'chat_thread_id' => $thread->id,
             'sender_id' => $hostId,
             'sender_role' => 'host',
-            'message' => 'Sannu da zuwa! Your reservation (' . $booking->booking_reference . ') has been confirmed. Looking forward to hosting you!',
+            'message' => 'Welcome! Your reservation (' . $booking->booking_reference . ') has been confirmed. Looking forward to hosting you!',
             'is_read' => false,
         ]);
 

@@ -63,7 +63,7 @@ class BookingConfirmationMail extends Mailable
                         FindDestination<span style="color: #f97316;">.com.ng</span>
                       </h1>
                       <div style="display: inline-block; background-color: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-top: 8px;">
-                        ✓ Booking Confirmed & Escrow Held
+                        ✓ Booking Confirmed
                       </div>
                     </td>
                   </tr>

@@ -18,7 +18,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 
-export default function Header({ onOpenSearchModal, activeTab, setActiveTab, currentUser, onOpenAuthModal, onLogout, searchParams, onOpenTracker, onLogoClick }) {
+export default function Header({ onOpenSearchModal, activeTab, setActiveTab, currentUser, onOpenAuthModal, onLogout, searchParams, onOpenTracker, onLogoClick, onSelectRole }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -128,7 +128,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                           <p className="text-xs font-bold text-slate-900">{currentUser.name || 'Account User'}</p>
                           <p className="text-[11px] text-slate-500 truncate">{currentUser.email || ''}</p>
                           <span className="mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-tafiya-blue-50 text-tafiya-blue uppercase">
-                            Role: {currentUser.role || 'guest'}
+                            {currentUser.role || 'guest'}
                           </span>
                         </div>
                       ) : (

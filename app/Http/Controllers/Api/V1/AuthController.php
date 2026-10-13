@@ -702,4 +702,184 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * GET /api/v1/admin/users
+     * Retrieve all platform users with counts and role filters
+     */
+    public function getAdminUsers(Request $request)
+    {
+        $query = User::withCount(['bookings', 'properties', 'agentInspections']);
+
+        if ($request->has('role') && $request->role !== 'all' && !empty($request->role)) {
+            $query->where('role', $request->role);
+        }
+
+        if ($request->has('search') && !empty($request->search)) {
+            $s = '%' . trim($request->search) . '%';
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', $s)
+                  ->orWhere('email', 'like', $s)
+                  ->orWhere('phone', 'like', $s)
+                  ->orWhere('business_name', 'like', $s);
+            });
+        }
+
+        $users = $query->orderBy('created_at', 'desc')->get()->map(function ($u) {
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'phone' => $u->phone,
+                'role' => $u->role,
+                'is_active' => (bool) $u->is_active,
+                'business_name' => $u->business_name,
+                'cac_number' => $u->cac_number,
+                'tin_number' => $u->tin_number,
+                'host_status' => $u->host_status,
+                'email_verified' => !empty($u->email_verified_at),
+                'bookings_count' => $u->bookings_count ?? 0,
+                'properties_count' => $u->properties_count ?? 0,
+                'inspections_count' => $u->agent_inspections_count ?? 0,
+                'created_at' => $u->created_at ? $u->created_at->toIso8601String() : now()->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $users,
+            'summary' => [
+                'total' => User::count(),
+                'guests' => User::where('role', 'guest')->count(),
+                'hosts' => User::where('role', 'host')->count(),
+                'agents' => User::where('role', 'agent')->count(),
+                'admins' => User::where('role', 'admin')->count(),
+            ]
+        ]);
+    }
+
+    /**
+     * POST /api/v1/admin/users
+     * Create new user from the Admin Console
+     */
+    public function createAdminUser(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:150',
+            'email' => 'required|string|email|max:150|unique:users',
+            'phone' => 'required|string|max:30|unique:users',
+            'role' => 'required|in:guest,host,agent,admin',
+            'password' => 'required|string|min:6',
+            'business_name' => 'nullable|string|max:200',
+            'cac_number' => 'nullable|string|max:100',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => strtolower($validated['email']),
+            'phone' => $validated['phone'],
+            'role' => $validated['role'],
+            'password' => Hash::make($validated['password']),
+            'business_name' => $validated['business_name'] ?? null,
+            'cac_number' => $validated['cac_number'] ?? null,
+            'host_status' => $validated['role'] === 'host' ? 'approved' : null,
+            'is_active' => $request->boolean('is_active', true),
+            'email_verified_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "User {$user->name} created successfully with role: {$user->role}!",
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'is_active' => (bool) $user->is_active,
+                'business_name' => $user->business_name,
+                'cac_number' => $user->cac_number,
+                'bookings_count' => 0,
+                'properties_count' => 0,
+                'inspections_count' => 0,
+                'created_at' => $user->created_at ? $user->created_at->toIso8601String() : now()->toIso8601String(),
+            ]
+        ], 201);
+    }
+
+    /**
+     * PATCH /api/v1/admin/users/{id}
+     * Update user role, status or details
+     */
+    public function updateAdminUser(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:150',
+            'email' => 'nullable|string|email|max:150|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:30|unique:users,phone,' . $user->id,
+            'role' => 'nullable|in:guest,host,agent,admin',
+            'is_active' => 'nullable|boolean',
+            'password' => 'nullable|string|min:6',
+            'business_name' => 'nullable|string|max:200',
+            'cac_number' => 'nullable|string|max:100',
+        ]);
+
+        if (isset($validated['name'])) $user->name = $validated['name'];
+        if (isset($validated['email'])) $user->email = strtolower($validated['email']);
+        if (isset($validated['phone'])) $user->phone = $validated['phone'];
+        if (isset($validated['role'])) $user->role = $validated['role'];
+        if ($request->has('is_active')) $user->is_active = $request->boolean('is_active');
+        if (!empty($validated['password'])) $user->password = Hash::make($validated['password']);
+        if (isset($validated['business_name'])) $user->business_name = $validated['business_name'];
+        if (isset($validated['cac_number'])) $user->cac_number = $validated['cac_number'];
+
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "User {$user->name} updated successfully!",
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'is_active' => (bool) $user->is_active,
+                'business_name' => $user->business_name,
+                'cac_number' => $user->cac_number,
+                'bookings_count' => $user->bookings()->count(),
+                'properties_count' => $user->properties()->count(),
+                'inspections_count' => $user->agentInspections()->count(),
+                'created_at' => $user->created_at ? $user->created_at->toIso8601String() : now()->toIso8601String(),
+            ]
+        ]);
+    }
+
+    /**
+     * DELETE /api/v1/admin/users/{id}
+     * Delete user account from platform
+     */
+    public function deleteAdminUser(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->email === 'admin@finddestination.com.ng') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Primary system administrator account cannot be deleted.'
+            ], 403);
+        }
+
+        $userName = $user->name;
+        $user->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "User account for '{$userName}' removed successfully."
+        ]);
+    }
 }
+

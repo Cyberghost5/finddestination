@@ -427,7 +427,7 @@ export default function VoucherModal({ isOpen, onClose, booking }) {
             <div className="text-right">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Status</span>
               <span className="inline-flex items-center gap-1 text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                <Lock className="w-3 h-3" /> Escrow Held
+                <Lock className="w-3 h-3" />Paid
               </span>
             </div>
           </div>

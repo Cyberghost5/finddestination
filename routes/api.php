@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AgentWalletController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\ChatController;
+use App\Http\Controllers\Api\V1\HostPayoutController;
 use App\Http\Controllers\Api\V1\PropertyController;
 use App\Http\Controllers\Api\V1\SettingController;
 use App\Http\Controllers\Api\V1\WebhookController;
@@ -59,6 +60,16 @@ Route::prefix('v1')->group(function () {
     Route::post('/admin/hosts/{id}/verify-cac', [AuthController::class, 'verifyHostCac']);
     Route::post('/admin/verify-cac', [AuthController::class, 'verifyCacDirect']);
 
+    // Admin Users Management & Platform Accounts
+    Route::get('/admin/users', [AuthController::class, 'getAdminUsers']);
+    Route::post('/admin/users', [AuthController::class, 'createAdminUser']);
+    Route::patch('/admin/users/{id}', [AuthController::class, 'updateAdminUser']);
+    Route::delete('/admin/users/{id}', [AuthController::class, 'deleteAdminUser']);
+
+    // Super Admin Platform Transactions & Booking Financial Audits
+    Route::get('/admin/transactions', [BookingController::class, 'getAdminTransactions']);
+    Route::patch('/admin/transactions/{id}/status', [BookingController::class, 'updateAdminTransactionStatus']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -78,6 +89,12 @@ Route::prefix('v1')->group(function () {
     // Booking Initiation, Retrieval & Tracking
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/host/bookings', [BookingController::class, 'hostBookings']);
+
+    // Host Escrow Payouts & Settlement
+    Route::get('/host/payouts', [HostPayoutController::class, 'getPayouts']);
+    Route::post('/host/payouts/withdraw', [HostPayoutController::class, 'withdraw']);
+    Route::post('/host/payouts/bank-details', [HostPayoutController::class, 'updateBankDetails']);
+    Route::post('/host/payouts/seed-demo-escrow', [HostPayoutController::class, 'seedDemoEscrow']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::post('/bookings/track', [BookingController::class, 'track']);
     Route::post('/bookings/send-voucher-email', [BookingController::class, 'sendVoucherEmail']);
@@ -104,6 +121,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/agent/wallet', [AgentWalletController::class, 'getWallet']);
     Route::post('/agent/wallet/bank-details', [AgentWalletController::class, 'updateBankDetails']);
     Route::post('/agent/wallet/withdraw', [AgentWalletController::class, 'withdraw']);
+    Route::post('/agent/wallet/seed-demo-bounty', [AgentWalletController::class, 'seedDemoBounty']);
 
     // Super Admin Field Inspection Control & Audit Review
     Route::get('/admin/inspections/properties', [AdminInspectionController::class, 'getInspectionProperties']);

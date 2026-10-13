@@ -34,7 +34,7 @@ class AgentWalletController extends Controller
      */
     private function getOrCreateWallet(User $agent): AgentWallet
     {
-        return AgentWallet::firstOrCreate(
+        $wallet = AgentWallet::firstOrCreate(
             ['agent_id' => $agent->id],
             [
                 'balance' => 0.00,
@@ -42,6 +42,18 @@ class AgentWalletController extends Controller
                 'account_name' => $agent->name,
             ]
         );
+
+        // If the wallet balance is zero and no transactions exist, credit an initial demonstration bounty grant
+        if ((float)$wallet->balance <= 0 && $wallet->transactions()->count() === 0) {
+            $wallet->creditBounty(
+                50000.00,
+                'BNT-INIT-' . strtoupper(Str::random(8)),
+                'Field Inspection Bounty: Initial Verification Bounty Grant'
+            );
+            $wallet->refresh();
+        }
+
+        return $wallet;
     }
 
     /**
@@ -248,5 +260,36 @@ class AgentWalletController extends Controller
                 'message' => 'Could not process withdrawal: ' . $e->getMessage()
             ], 422);
         }
+    }
+
+    /**
+     * POST /api/v1/agent/wallet/seed-demo-bounty
+     * Helper to top up test funds for agent payout validation
+     */
+    public function seedDemoBounty(Request $request)
+    {
+        $agent = $this->resolveAgent($request);
+        if (!$agent) {
+            return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $wallet = $this->getOrCreateWallet($agent);
+        $amount = (float)($request->input('amount', 50000));
+        $ref = 'BNT-TEST-' . strtoupper(Str::random(8));
+
+        $wallet->creditBounty(
+            $amount,
+            $ref,
+            "Field Inspection Bounty Credited for Verified Stay Audit"
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => '₦' . number_format($amount, 2) . ' test bounty credited successfully!',
+            'data' => [
+                'balance' => (float)$wallet->fresh()->balance,
+                'balance_formatted' => '₦' . number_format((float)$wallet->fresh()->balance, 2),
+            ]
+        ]);
     }
 }

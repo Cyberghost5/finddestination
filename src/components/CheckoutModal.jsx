@@ -123,6 +123,13 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
       const resolvedName = guestName || currentUser?.name || currentUser?.full_name || 'Guest Traveler';
       const resolvedEmail = guestEmail || currentUser?.email || 'guest@finddestination.com.ng';
       const resolvedRoomId = selectedRoom?.id || property.rooms?.[0]?.id || null;
+      const resolvedRoomName = selectedRoom?.name || property.rooms?.[0]?.name || 'Standard Suite';
+      const resolvedRoomPriceKobo = selectedRoom?.price_kobo || Math.round(roomPrice * 100);
+
+      // Consistent FND reference format
+      const preferredRef = (paymentRef && (paymentRef.startsWith('FND-') || paymentRef.startsWith('TAF-')))
+        ? paymentRef
+        : `FND-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
       const response = await fetch('/api/v1/bookings', {
         method: 'POST',
@@ -132,8 +139,19 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
+          booking_reference: preferredRef,
           property_id: property.id,
+          property_name: property.name,
+          property_slug: property.slug,
+          property_city: property.city,
+          property_state: property.state,
+          property_address: property.address,
+          property_images: property.images,
+          property_type: property.property_type,
           room_type_id: resolvedRoomId,
+          room_name: resolvedRoomName,
+          room_price_kobo: resolvedRoomPriceKobo,
+          total_amount_kobo: Math.round(totalAmount * 100),
           rooms_count: 1,
           check_in_date: checkIn,
           check_out_date: checkOut,
@@ -149,14 +167,15 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
       const resData = await response.json();
       const bookingReference = (response.ok && resData.data?.booking_reference)
         ? resData.data.booking_reference
-        : (paymentRef || `FND-${Math.random().toString(36).substring(2, 9).toUpperCase()}`);
+        : preferredRef;
 
       const bookingData = {
         reference: bookingReference,
         booking_reference: bookingReference,
         userId: resData.data?.user_id || null,
         property: property,
-        room: selectedRoom || property.rooms?.[0] || { name: 'Standard Suite', price_kobo: totalAmount * 100 },
+        propertyTitle: property.name,
+        room: selectedRoom || property.rooms?.[0] || { name: resolvedRoomName, price_kobo: resolvedRoomPriceKobo },
         guestName: resolvedName,
         guestPhone: resolvedPhone,
         guestEmail: resolvedEmail,
@@ -170,19 +189,32 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
         dbSaved: response.ok
       };
 
+      try {
+        const savedStr = localStorage.getItem('finddestination_recent_bookings') || localStorage.getItem('tafiya_recent_bookings');
+        const saved = savedStr ? JSON.parse(savedStr) : [];
+        const updated = [bookingData, ...saved.filter(b => b.reference !== bookingData.reference)];
+        localStorage.setItem('finddestination_recent_bookings', JSON.stringify(updated));
+        localStorage.setItem('tafiya_recent_bookings', JSON.stringify(updated));
+      } catch (e) {}
+
       onPaymentComplete(bookingData);
     } catch (err) {
       console.error('Booking finalization error:', err);
-      const fallbackRef = paymentRef || `FND-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+      const fallbackRef = (paymentRef && (paymentRef.startsWith('FND-') || paymentRef.startsWith('TAF-')))
+        ? paymentRef
+        : `FND-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
       const bookingData = {
         reference: fallbackRef,
+        booking_reference: fallbackRef,
         property: property,
+        propertyTitle: property.name,
         room: selectedRoom || property.rooms?.[0] || { name: 'Standard Suite', price_kobo: totalAmount * 100 },
         guestName: guestName || currentUser?.name || 'Guest Traveler',
         guestPhone: guestPhone || currentUser?.phone || '+2348030000000',
         guestEmail: guestEmail || currentUser?.email || 'guest@finddestination.com.ng',
-        checkInDate: bookingDates?.checkIn || '2026-11-01',
-        checkOutDate: bookingDates?.checkOut || '2026-11-03',
+        checkInDate: bookingDates?.checkIn || new Date().toISOString().split('T')[0],
+        checkOutDate: bookingDates?.checkOut || new Date(Date.now() + nights * 86400000).toISOString().split('T')[0],
         nights,
         totalAmount,
         paymentRail: activeGateway,
@@ -190,6 +222,15 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
         paidAt: new Date().toISOString(),
         dbSaved: false
       };
+
+      try {
+        const savedStr = localStorage.getItem('finddestination_recent_bookings') || localStorage.getItem('tafiya_recent_bookings');
+        const saved = savedStr ? JSON.parse(savedStr) : [];
+        const updated = [bookingData, ...saved.filter(b => b.reference !== bookingData.reference)];
+        localStorage.setItem('finddestination_recent_bookings', JSON.stringify(updated));
+        localStorage.setItem('tafiya_recent_bookings', JSON.stringify(updated));
+      } catch (e) {}
+
       onPaymentComplete(bookingData);
     } finally {
       setIsProcessing(false);
@@ -201,21 +242,21 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
     setIsProcessing(true);
     setApiError('');
 
-    const generatedRef = `FD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const generatedRef = `FND-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     if (activeGateway === 'paystack') {
       if (window.PaystackPop) {
         try {
           const handler = window.PaystackPop.setup({
             key: paystackPublicKey || 'pk_test_finddestination_paystack_public_key_2026',
-            email: guestEmail,
+            email: guestEmail || currentUser?.email || 'guest@finddestination.com.ng',
             amount: Math.round(totalAmount * 100), // convert NGN to kobo
             currency: 'NGN',
             ref: generatedRef,
             metadata: {
               custom_fields: [
-                { display_name: "Guest Name", variable_name: "guest_name", value: guestName },
-                { display_name: "Guest Phone", variable_name: "guest_phone", value: guestPhone },
+                { display_name: "Guest Name", variable_name: "guest_name", value: guestName || currentUser?.name || 'Guest Traveler' },
+                { display_name: "Guest Phone", variable_name: "guest_phone", value: guestPhone || currentUser?.phone || '' },
                 { display_name: "Property", variable_name: "property_name", value: property.name }
               ]
             },
@@ -240,9 +281,9 @@ export default function CheckoutModal({ isOpen, onClose, property, selectedRoom,
         try {
           window.MonnifySDK.initialize({
             amount: totalAmount,
-            customerName: guestName,
-            customerEmail: guestEmail,
-            customerMobileNumber: guestPhone,
+            customerName: guestName || currentUser?.name || 'Guest Traveler',
+            customerEmail: guestEmail || currentUser?.email || 'guest@finddestination.com.ng',
+            customerMobileNumber: guestPhone || currentUser?.phone || '',
             paymentReference: generatedRef,
             paymentDescription: `FindDestination - ${property.name}`,
             currencyCode: 'NGN',
