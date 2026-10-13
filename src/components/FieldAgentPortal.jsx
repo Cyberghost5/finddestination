@@ -33,12 +33,15 @@ import {
   CheckCircle,
   XCircle,
   Landmark,
-  Share2
+  Share2,
+  Menu,
+  ChevronRight
 } from 'lucide-react';
 
 export default function FieldAgentPortal({ currentUser, authToken }) {
   // Navigation tabs: 'explore', 'assignments', 'wallet'
   const [activeTab, setActiveTab] = useState('explore');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Data states
   const [exploreProperties, setExploreProperties] = useState([]);
@@ -396,7 +399,7 @@ export default function FieldAgentPortal({ currentUser, authToken }) {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+    <div className="min-h-[calc(100vh-80px)] bg-slate-50 text-slate-900 flex flex-col lg:flex-row animate-in fade-in duration-300">
       
       {/* Toast Alert */}
       {toast && (
@@ -412,125 +415,366 @@ export default function FieldAgentPortal({ currentUser, authToken }) {
               <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
             )}
             <span className="flex-1">{toast.message}</span>
-            <button onClick={() => setToast(null)} className="opacity-70 hover:opacity-100">
+            <button onClick={() => setToast(null)} className="opacity-70 hover:opacity-100 cursor-pointer">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Top Banner / Portal Header */}
-      <div className="bg-slate-900 text-white border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            
-            {/* Agent Profile & Identity */}
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-tafiya-blue via-emerald-600 to-amber-500 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg ring-4 ring-slate-800 shrink-0">
-                <Navigation className="w-8 h-8" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl font-black tracking-tight">{currentUser?.name || 'Usman Field Agent'}</h1>
-                  <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-tafiya-blue/20 text-tafiya-blue border border-tafiya-blue/40">
-                    Certified Regional Inspector
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Tier 3 Verifier
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                  <span>Physical On-Site Inspection & Wallet Bounty Desk</span>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-slate-300 font-semibold">{currentUser?.email || 'agent@tafiya.ng'}</span>
-                </p>
+      {/* ========================================================= */}
+      {/* 1. DESKTOP LEFT SIDEBAR NAVIGATION                        */}
+      {/* ========================================================= */}
+      <aside className="hidden lg:flex w-72 shrink-0 bg-slate-900 text-white border-r border-slate-800 flex-col sticky top-20 h-[calc(100vh-80px)] z-20">
+        
+        {/* Agent Profile & Identity */}
+        <div className="p-6 border-b border-slate-800 bg-slate-950/60">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-tafiya-blue via-emerald-600 to-amber-500 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
+              <Navigation className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-black text-white truncate">{currentUser?.name || 'Usman Field Agent'}</h2>
+              <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || 'agent@tafiya.ng'}</p>
+              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-tafiya-blue/20 text-tafiya-blue border border-tafiya-blue/30">
+                  Regional Inspector
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Tier 3 Verifier
+                </span>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Quick Wallet Stats Pill & Refresh */}
-            <div className="flex items-center gap-3">
-              <div 
-                onClick={() => setActiveTab('wallet')}
-                className="cursor-pointer bg-slate-800/90 hover:bg-slate-800 border border-slate-700 p-3.5 rounded-2xl flex items-center gap-4 transition-all shadow-md group"
-              >
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
-                  <Wallet className="w-5 h-5" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase font-extrabold block tracking-wider">Available Balance</span>
-                  <span className="text-base font-black text-emerald-400">
-                    {walletData ? walletData.balance_formatted : '₦0.00'}
-                  </span>
-                </div>
+        {/* Quick Wallet Summary Card */}
+        <div className="p-4 border-b border-slate-800/80 bg-slate-950/30">
+          <div 
+            onClick={() => setActiveTab('wallet')}
+            className="p-3.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-2xl transition-all cursor-pointer group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider">Available Balance</span>
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                <Wallet className="w-3.5 h-3.5" />
               </div>
-
+            </div>
+            <div className="text-xl font-black text-emerald-400 group-hover:scale-102 transition-transform">
+              {walletData ? walletData.balance_formatted : '₦0.00'}
+            </div>
+            {walletData && walletData.pending_withdrawal_amount > 0 && (
+              <span className="mt-1.5 inline-block text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                ₦{walletData.pending_withdrawal_amount.toLocaleString()} Pending Payout
+              </span>
+            )}
+            <div className="mt-3 pt-2.5 border-t border-slate-700/60 flex items-center justify-between gap-2">
               <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                title="Refresh Portal Data"
-                className="p-3.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-2xl transition-all cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsWithdrawModalOpen(true);
+                }}
+                className="flex-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition-colors cursor-pointer"
               >
-                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin text-tafiya-blue' : ''}`} />
+                Withdraw
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsBankModalOpen(true);
+                }}
+                className="flex-1 py-1 px-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[10px] transition-colors cursor-pointer"
+              >
+                Bank Info
               </button>
             </div>
-
           </div>
-
-          {/* Navigation Tabs Bar */}
-          <div className="flex items-center gap-2 mt-8 border-b border-slate-800/80 overflow-x-auto scrollbar-none pb-px">
-            <button
-              onClick={() => setActiveTab('explore')}
-              className={`flex items-center gap-2 px-5 py-3 text-xs font-black rounded-t-xl transition-all border-b-2 cursor-pointer shrink-0 ${
-                activeTab === 'explore'
-                  ? 'border-tafiya-blue text-white bg-slate-800/60'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
-              }`}
-            >
-              <Search className="w-4 h-4 text-tafiya-blue" />
-              <span>Inspection Bounties</span>
-              <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-tafiya-blue text-white">
-                {exploreProperties.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('assignments')}
-              className={`flex items-center gap-2 px-5 py-3 text-xs font-black rounded-t-xl transition-all border-b-2 cursor-pointer shrink-0 ${
-                activeTab === 'assignments'
-                  ? 'border-emerald-500 text-white bg-slate-800/60'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
-              }`}
-            >
-              <Building2 className="w-4 h-4 text-emerald-400" />
-              <span>My Assignments</span>
-              <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                {assignments.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('wallet')}
-              className={`flex items-center gap-2 px-5 py-3 text-xs font-black rounded-t-xl transition-all border-b-2 cursor-pointer shrink-0 ${
-                activeTab === 'wallet'
-                  ? 'border-amber-500 text-white bg-slate-800/60'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
-              }`}
-            >
-              <Wallet className="w-4 h-4 text-amber-400" />
-              <span>Wallet & Payouts</span>
-              {walletData && walletData.pending_withdrawal_amount > 0 && (
-                <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  Payout Pending
-                </span>
-              )}
-            </button>
-          </div>
-
         </div>
+
+        {/* Navigation Items List */}
+        <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
+          <div className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            Field Agent Desk
+          </div>
+
+          {[
+            {
+              id: 'explore',
+              label: 'Inspection Bounties',
+              icon: Search,
+              badge: exploreProperties.length,
+              desc: 'Available field tasks'
+            },
+            {
+              id: 'assignments',
+              label: 'My Assignments',
+              icon: Building2,
+              badge: assignments.length,
+              desc: 'Active & submitted audits'
+            },
+            {
+              id: 'wallet',
+              label: 'Wallet & Payouts',
+              icon: Wallet,
+              badge: (walletData && walletData.pending_withdrawal_amount > 0) ? 'Pending' : null,
+              desc: 'Earnings & transfers'
+            }
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer text-left group ${
+                  isActive
+                    ? 'bg-tafiya-blue text-white shadow-md shadow-tafiya-blue/20 ring-1 ring-tafiya-blue'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="truncate">
+                    <span className="block truncate">{item.label}</span>
+                    <span className={`text-[10px] block font-normal truncate ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
+                      {item.desc}
+                    </span>
+                  </div>
+                </div>
+
+                {item.badge !== null && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                    isActive 
+                      ? 'bg-white text-tafiya-blue' 
+                      : 'bg-slate-800 text-slate-300 group-hover:bg-slate-700'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sidebar Bottom Action */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950/40">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-tafiya-blue' : ''}`} />
+            <span>{refreshing ? 'Syncing...' : 'Sync Portal Data'}</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ========================================================= */}
+      {/* 2. MOBILE TOP BAR & SLIDING SIDEBAR DRAWER                */}
+      {/* ========================================================= */}
+      <div className="lg:hidden sticky top-16 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-sm">
+        
+        {/* Mobile Header Bar */}
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsMobileNavOpen(true)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+              title="Open Navigation Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-white">
+                  {activeTab === 'explore' ? 'Inspection Bounties' : activeTab === 'assignments' ? 'My Assignments' : 'Wallet & Payouts'}
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium">{currentUser?.name || 'Field Agent'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div 
+              onClick={() => setActiveTab('wallet')}
+              className="px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs font-black text-emerald-400 cursor-pointer"
+            >
+              {walletData ? walletData.balance_formatted : '₦0'}
+            </div>
+
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-tafiya-blue' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Horizontal Quick-Tab Bar */}
+        <div className="flex items-center gap-2 px-4 pb-2.5 overflow-x-auto scrollbar-none">
+          {[
+            { id: 'explore', label: 'Bounties', icon: Search, badge: exploreProperties.length },
+            { id: 'assignments', label: 'Assignments', icon: Building2, badge: assignments.length },
+            { id: 'wallet', label: 'Wallet', icon: Wallet, badge: null }
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                  isActive
+                    ? 'bg-tafiya-blue text-white shadow-sm'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{item.label}</span>
+                {item.badge !== null && item.badge > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                    isActive ? 'bg-white text-tafiya-blue' : 'bg-slate-700 text-slate-200'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Mobile Drawer Backdrop & Menu */}
+        {isMobileNavOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsMobileNavOpen(false)}
+            ></div>
+
+            {/* Drawer Content */}
+            <div className="relative w-72 max-w-[85vw] bg-slate-900 text-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+              
+              {/* Drawer Top */}
+              <div className="p-5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 text-white flex items-center justify-center font-black">
+                    <Navigation className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-white">{currentUser?.name || 'Field Agent'}</h3>
+                    <p className="text-[10px] text-slate-400">{currentUser?.email || 'agent@tafiya.ng'}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Drawer Wallet Snapshot */}
+              <div className="p-4 border-b border-slate-800 bg-slate-950/40">
+                <span className="text-[10px] uppercase font-extrabold text-slate-400 block mb-1">Available Balance</span>
+                <span className="text-xl font-black text-emerald-400 block mb-2">
+                  {walletData ? walletData.balance_formatted : '₦0.00'}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setIsMobileNavOpen(false);
+                      setIsWithdrawModalOpen(true);
+                    }}
+                    className="flex-1 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs"
+                  >
+                    Withdraw
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMobileNavOpen(false);
+                      setIsBankModalOpen(true);
+                    }}
+                    className="flex-1 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-bold text-xs"
+                  >
+                    Bank Info
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawer Nav Links */}
+              <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
+                <div className="px-2 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Navigation
+                </div>
+
+                {[
+                  { id: 'explore', label: 'Inspection Bounties', icon: Search, badge: exploreProperties.length },
+                  { id: 'assignments', label: 'My Assignments', icon: Building2, badge: assignments.length },
+                  { id: 'wallet', label: 'Wallet & Payouts', icon: Wallet, badge: null }
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsMobileNavOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left ${
+                        isActive
+                          ? 'bg-tafiya-blue text-white shadow-sm'
+                          : 'text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge !== null && item.badge > 0 && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                          isActive ? 'bg-white text-tafiya-blue' : 'bg-slate-800 text-slate-300'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Drawer Bottom Sync */}
+              <div className="p-4 border-t border-slate-800 bg-slate-950">
+                <button
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    handleRefresh();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Sync Portal Data</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* ========================================================= */}
+      {/* 3. MAIN DASHBOARD CONTENT AREA                            */}
+      {/* ========================================================= */}
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6">
         
         {/* ======================================================== */}
         {/* TAB 1: INSPECTION BOUNTIES (EXPLORE)                     */}
@@ -1199,7 +1443,7 @@ export default function FieldAgentPortal({ currentUser, authToken }) {
           </div>
         )}
 
-      </div>
+      </main>
 
       {/* ======================================================== */}
       {/* MODAL 1: ON-SITE AUDIT EVIDENCE UPLOADER                 */}

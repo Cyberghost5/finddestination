@@ -1,16 +1,16 @@
 {
   "src/index.css": {
-    "file": "assets/css-BVvKXEvZ.css",
+    "file": "assets/css-BNHxqDtf.css",
     "src": "src/index.css",
     "isEntry": true
   },
   "src/main.jsx": {
-    "file": "assets/main-DP-6l5u0.js",
+    "file": "assets/main-DK8TCLf2.js",
     "name": "main",
     "src": "src/main.jsx",
     "isEntry": true,
     "css": [
-      "assets/css-BVvKXEvZ.css"
+      "assets/css-BNHxqDtf.css"
     ]
   }
 }

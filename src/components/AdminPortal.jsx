@@ -35,11 +35,14 @@ import {
   Landmark,
   ArrowDownLeft,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  Menu,
+  ChevronRight
 } from 'lucide-react';
 
 export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish, currentUser }) {
   const [activeTab, setActiveTab] = useState('host_approvals'); // 'host_approvals', 'verification', 'escrow', or 'payment_settings'
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [payoutLogs, setPayoutLogs] = useState([]);
 
   // Host Level 1 Approval Queue State
@@ -213,7 +216,7 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     }
   }, [selectedSupportThreadId]);
 
-  const supportUnreadTotal = supportThreads.reduce((sum, t) => sum + (t.unread_count || 0), 0);
+  const supportUnreadTotal = supportThreads.reduce((sum, t) => sum + (t.unread_count || t.unread || 0), 0);
 
   // Fetch Host Applications
   const fetchHosts = async () => {
@@ -575,205 +578,418 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
     setPayoutLogs(prev => [newLog, ...prev]);
   };
 
+  const adminNavItems = [
+    {
+      id: 'host_approvals',
+      label: 'Host CAC Approvals',
+      icon: UserCheck,
+      badge: pendingHostsCount,
+      badgeColor: 'bg-amber-500 text-slate-950',
+      desc: 'Level 1 Document Audits'
+    },
+    {
+      id: 'agent_inspections',
+      label: 'Agent Inspections',
+      icon: Navigation,
+      badge: pendingApplicationsCount + submittedReportsCount,
+      badgeColor: 'bg-tafiya-blue text-white',
+      desc: 'Bounties & Field Audits'
+    },
+    {
+      id: 'agent_withdrawals',
+      label: 'Agent Withdrawals',
+      icon: DollarSign,
+      badge: pendingWithdrawalsCount,
+      badgeColor: 'bg-emerald-500 text-white',
+      desc: 'Inspector Payout Requests'
+    },
+    {
+      id: 'verification',
+      label: 'Property Publishing',
+      icon: Building2,
+      badge: null,
+      desc: 'Level 2 Listing Approvals'
+    },
+    {
+      id: 'escrow',
+      label: 'Escrow Settlements',
+      icon: Landmark,
+      badge: null,
+      desc: 'Host Payout Dispatches'
+    },
+    {
+      id: 'support_desk',
+      label: 'Support Desk',
+      icon: Bot,
+      badge: supportUnreadTotal,
+      badgeColor: 'bg-tafiya-orange text-white',
+      desc: 'Universal Inquiries'
+    },
+    {
+      id: 'payment_settings',
+      label: 'Gateway Settings',
+      icon: Settings,
+      badge: activeGateway.toUpperCase(),
+      badgeColor: 'bg-slate-700 text-slate-200',
+      desc: 'Paystack, Monnify, QoreID'
+    }
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8 animate-in fade-in duration-300">
+    <div className="min-h-[calc(100vh-80px)] bg-slate-50/70 text-slate-900 flex flex-col lg:flex-row animate-in fade-in duration-300">
       
-      {/* Super Admin & Field Agent Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md shrink-0">
-            <ShieldCheck className="w-8 h-8" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black">Super Admin & Verification Console</h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white">
-                Multi-Level Governance
-              </span>
+      {/* ========================================================= */}
+      {/* 1. DESKTOP LEFT SIDEBAR NAVIGATION                        */}
+      {/* ========================================================= */}
+      <aside className="hidden lg:flex w-72 shrink-0 bg-slate-900 text-white border-r border-slate-800 flex-col sticky top-20 h-[calc(100vh-80px)] z-20">
+        
+        {/* Admin Branding & Role Identity */}
+        <div className="p-6 border-b border-slate-800 bg-slate-950/60">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
+              <ShieldCheck className="w-6 h-6" />
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">Host CAC Audits • Field Agent Bounties • Tier 3 Certified Verification • Escrow Payouts</p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-black text-white truncate">Super Admin Console</h2>
+              <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || 'admin@tafiya.ng'}</p>
+              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Tier 3 Governance
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-tafiya-blue/20 text-tafiya-blue border border-tafiya-blue/30">
+                  Escrow Officer
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Quick Escrow & Platform Health Pill */}
+        <div className="p-4 border-b border-slate-800/80 bg-slate-950/30">
+          <div 
+            onClick={() => setActiveTab('escrow')}
+            className="p-3.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-2xl transition-all cursor-pointer group"
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider">Total Escrow Vault</span>
+              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                <Lock className="w-3.5 h-3.5" />
+              </div>
+            </div>
+            <div className="text-xl font-black text-white group-hover:scale-102 transition-transform">
+              ₦{escrowTotal.toLocaleString()}
+            </div>
+            <div className="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[10px] text-slate-400">
+              <span>Platform Take: 12.5%</span>
+              <span className="text-emerald-400 font-bold">{properties.length} Properties</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Items List */}
+        <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
+          <div className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+            Platform Queues & Management
+          </div>
+
+          {adminNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer text-left group ${
+                  isActive
+                    ? 'bg-tafiya-blue text-white shadow-md shadow-tafiya-blue/20 ring-1 ring-tafiya-blue'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="truncate">
+                    <span className="block truncate">{item.label}</span>
+                    <span className={`text-[10px] block font-normal truncate ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
+                      {item.desc}
+                    </span>
+                  </div>
+                </div>
+
+                {item.badge !== null && (item.badge > 0 || typeof item.badge === 'string') && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                    isActive 
+                      ? 'bg-white text-tafiya-blue' 
+                      : (item.badgeColor || 'bg-slate-800 text-slate-300')
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sidebar Bottom Sync Action */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950/40">
           <button
             onClick={fetchAllAgentAdminData}
             title="Refresh All Admin Queues"
-            className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-2xl transition-all cursor-pointer flex items-center gap-2 text-xs font-bold"
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
-            <span>Sync Queues</span>
+            <span>Sync All Admin Queues</span>
           </button>
+        </div>
+      </aside>
 
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
-            <Sparkles className="w-4 h-4 text-tafiya-gold" />
-            <span>Super Admin Authority</span>
+      {/* ========================================================= */}
+      {/* 2. MOBILE TOP BAR & SLIDING SIDEBAR DRAWER                */}
+      {/* ========================================================= */}
+      <div className="lg:hidden sticky top-16 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-sm">
+        
+        {/* Mobile Header Bar */}
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsMobileNavOpen(true)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
+              title="Open Navigation Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-white">
+                  {adminNavItems.find(i => i.id === activeTab)?.label || 'Console'}
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium">Super Admin Authority</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchAllAgentAdminData}
+              title="Sync Queues"
+              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
+            </button>
           </div>
         </div>
+
+        {/* Mobile Horizontal Quick-Tab Bar */}
+        <div className="flex items-center gap-2 px-4 pb-2.5 overflow-x-auto scrollbar-none">
+          {adminNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                  isActive
+                    ? 'bg-tafiya-blue text-white shadow-sm'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{item.label}</span>
+                {item.badge !== null && (item.badge > 0 || typeof item.badge === 'string') && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                    isActive ? 'bg-white text-tafiya-blue' : (item.badgeColor || 'bg-slate-700 text-slate-200')
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Mobile Drawer Backdrop & Menu */}
+        {isMobileNavOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsMobileNavOpen(false)}
+            ></div>
+
+            {/* Drawer Content */}
+            <div className="relative w-72 max-w-[85vw] bg-slate-900 text-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+              
+              {/* Drawer Top */}
+              <div className="p-5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 text-white flex items-center justify-center font-black">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-white">Super Admin Console</h3>
+                    <p className="text-[10px] text-slate-400">Multi-Level Governance</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Drawer Nav Links */}
+              <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
+                <div className="px-2 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Admin Queues
+                </div>
+
+                {adminNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsMobileNavOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                        isActive
+                          ? 'bg-tafiya-blue text-white shadow-sm'
+                          : 'text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.badge !== null && (item.badge > 0 || typeof item.badge === 'string') && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                          isActive ? 'bg-white text-tafiya-blue' : (item.badgeColor || 'bg-slate-800 text-slate-300')
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Drawer Bottom Sync */}
+              <div className="p-4 border-t border-slate-800 bg-slate-950">
+                <button
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    fetchAllAgentAdminData();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 cursor-pointer"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Sync All Queues</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+      {/* ========================================================= */}
+      {/* 3. MAIN DASHBOARD CONTENT AREA                            */}
+      {/* ========================================================= */}
+      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-8">
         
-        {/* Pending Level 1 Host Approvals */}
-        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Host CAC Queue</span>
-          <div className="text-2xl font-black text-amber-600">{pendingHostsCount} Hosts</div>
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-            <Clock className="w-3 h-3 text-amber-600" /> CAC Check Needed
-          </span>
+        {/* Super Admin & Field Agent Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md shrink-0">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black">Super Admin & Verification Console</h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white">
+                  Multi-Level Governance
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">Host CAC Audits • Field Agent Bounties • Tier 3 Certified Verification • Escrow Payouts</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchAllAgentAdminData}
+              title="Refresh All Admin Queues"
+              className="p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-2xl transition-all cursor-pointer flex items-center gap-2 text-xs font-bold"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
+              <span>Sync Queues</span>
+            </button>
+
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-slate-800/80 px-4 py-2 rounded-2xl border border-slate-700">
+              <Sparkles className="w-4 h-4 text-tafiya-gold" />
+              <span>Super Admin Authority</span>
+            </div>
+          </div>
         </div>
 
-        {/* Inspector Applications & Audits */}
-        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Inspection Queue</span>
-          <div className="text-2xl font-black text-tafiya-blue">{pendingApplicationsCount + submittedReportsCount} Active</div>
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
-            <Navigation className="w-3 h-3 text-tafiya-blue" /> {submittedReportsCount} Audits for Review
-          </span>
-        </div>
-
-        {/* Pending Agent Withdrawals */}
-        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Payout Requests</span>
-          <div className="text-2xl font-black text-emerald-600">{pendingWithdrawalsCount} Payouts</div>
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-            <DollarSign className="w-3 h-3 text-emerald-600" /> Bank Transfer Ready
-          </span>
-        </div>
-
-        {/* Total Escrow */}
-        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Escrow Funds</span>
-          <div className="text-2xl font-black text-slate-900">₦{escrowTotal.toLocaleString()}</div>
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-            <Lock className="w-3 h-3" /> Monnify/Paystack Escrow
-          </span>
-        </div>
-
-        {/* Total Listings */}
-        <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Active Listings</span>
-          <div className="text-2xl font-black text-slate-900">{properties.length} Properties</div>
-          <span className="text-[11px] font-medium text-slate-500">Tier 1-3 Verified</span>
-        </div>
-
-      </div>
-
-      {/* Main Tab Controls */}
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center gap-4 border-b border-slate-200">
+        {/* Metrics Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
           
-          {/* TAB 1: Host CAC Approvals */}
-          <button
-            onClick={() => setActiveTab('host_approvals')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
-              activeTab === 'host_approvals'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Host CAC Approvals (Level 1)</span>
-            {pendingHostsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
-                {pendingHostsCount}
-              </span>
-            )}
-          </button>
+          {/* Pending Level 1 Host Approvals */}
+          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Host CAC Queue</span>
+            <div className="text-2xl font-black text-amber-600">{pendingHostsCount} Hosts</div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+              <Clock className="w-3 h-3 text-amber-600" /> CAC Check Needed
+            </span>
+          </div>
 
-          {/* TAB 2: Field Agent Inspections & Bounties (NEW) */}
-          <button
-            onClick={() => setActiveTab('agent_inspections')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
-              activeTab === 'agent_inspections'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Navigation className="w-4 h-4 text-tafiya-blue" />
-            <span>Agent Inspections & Bounties</span>
-            {(pendingApplicationsCount + submittedReportsCount) > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white font-black text-[10px]">
-                {pendingApplicationsCount + submittedReportsCount}
-              </span>
-            )}
-          </button>
+          {/* Inspector Applications & Audits */}
+          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Inspection Queue</span>
+            <div className="text-2xl font-black text-tafiya-blue">{pendingApplicationsCount + submittedReportsCount} Active</div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+              <Navigation className="w-3 h-3 text-tafiya-blue" /> {submittedReportsCount} Audits for Review
+            </span>
+          </div>
 
-          {/* TAB 3: Agent Payouts & Withdrawals (NEW) */}
-          <button
-            onClick={() => setActiveTab('agent_withdrawals')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
-              activeTab === 'agent_withdrawals'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <DollarSign className="w-4 h-4 text-emerald-600" />
-            <span>Agent Withdrawals</span>
-            {pendingWithdrawalsCount > 0 && (
-              <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center">
-                {pendingWithdrawalsCount}
-              </span>
-            )}
-          </button>
+          {/* Pending Agent Withdrawals */}
+          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Agent Payout Requests</span>
+            <div className="text-2xl font-black text-emerald-600">{pendingWithdrawalsCount} Payouts</div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <DollarSign className="w-3 h-3 text-emerald-600" /> Bank Transfer Ready
+            </span>
+          </div>
 
-          {/* TAB 4: Property Verification & Publishing */}
-          <button
-            onClick={() => setActiveTab('verification')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
-              activeTab === 'verification'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>Level 2 Property Publishing</span>
-          </button>
+          {/* Total Escrow */}
+          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Escrow Funds</span>
+            <div className="text-2xl font-black text-slate-900">₦{escrowTotal.toLocaleString()}</div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <Lock className="w-3 h-3" /> Monnify/Paystack Escrow
+            </span>
+          </div>
 
-          {/* TAB 5: Escrow Settlement */}
-          <button
-            onClick={() => setActiveTab('escrow')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer ${
-              activeTab === 'escrow'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Escrow Settlement & Host Payouts
-          </button>
+          {/* Total Listings */}
+          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Active Listings</span>
+            <div className="text-2xl font-black text-slate-900">{properties.length} Properties</div>
+            <span className="text-[11px] font-medium text-slate-500">Tier 1-3 Verified</span>
+          </div>
 
-          {/* TAB 6: Super Admin Support Desk */}
-          <button
-            onClick={() => setActiveTab('support_desk')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'support_desk'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Bot className="w-3.5 h-3.5 text-tafiya-blue" />
-            <span>Escrow Support Desk</span>
-            {supportUnreadTotal > 0 && (
-              <span className="bg-tafiya-orange text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
-                {supportUnreadTotal}
-              </span>
-            )}
-          </button>
-
-          {/* TAB 7: Payment Gateway Settings */}
-          <button
-            onClick={() => setActiveTab('payment_settings')}
-            className={`pb-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'payment_settings'
-                ? 'border-tafiya-blue text-tafiya-blue'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Gateway Settings ({activeGateway.toUpperCase()})</span>
-          </button>
         </div>
+
+        {/* Tab Views Content Area */}
+        <div className="space-y-6">
 
         {/* VIEW 1: HOST CAC LEVEL 1 APPROVAL QUEUE */}
         {activeTab === 'host_approvals' && (
@@ -2183,6 +2399,9 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
           </div>
         )}
 
+        </div>
+      </main>
+
         {/* MODAL 1: CONFIGURE INSPECTION BOUNTY */}
         {bountyConfigModal && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -2790,7 +3009,5 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
           </div>
         )}
       </div>
-
-    </div>
   );
 }
