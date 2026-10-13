@@ -306,4 +306,81 @@ class PropertyController extends Controller
             'data' => $this->formatPropertyForFrontend($property->fresh(['roomTypes', 'reviews', 'host']))
         ]);
     }
+
+    /**
+     * PUT/PATCH /api/v1/properties/{id}
+     * Admin or Host updates property details, pricing, location, amenities, and status
+     */
+    public function update(Request $request, $id)
+    {
+        $property = Property::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'property_type' => 'sometimes|string',
+            'category' => 'nullable|string',
+            'description' => 'nullable|string',
+            'address' => 'sometimes|string',
+            'city' => 'sometimes|string',
+            'state' => 'sometimes|string',
+            'neighborhood' => 'nullable|string',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'contact_phone' => 'nullable|string',
+            'verification_tier' => 'nullable|string',
+            'verification_status' => 'nullable|string',
+            'is_published' => 'nullable|boolean',
+            'amenities' => 'nullable|array',
+            'images' => 'nullable|array',
+            'starting_price_kobo' => 'nullable|numeric',
+            'base_price_ngn' => 'nullable|numeric',
+            'host_id' => 'nullable|integer',
+        ]);
+
+        if (isset($validated['name']) && $validated['name'] !== $property->name) {
+            $validated['slug'] = Str::slug($validated['name']) . '-' . strtolower($validated['city'] ?? $property->city);
+        }
+
+        if (isset($validated['verification_tier'])) {
+            $statusMap = [
+                'tier_1_docs' => 'documents_verified',
+                'tier_2_location' => 'location_verified',
+                'tier_3_certified' => 'verified'
+            ];
+            $validated['verification_status'] = $statusMap[$validated['verification_tier']] ?? 'verified';
+        }
+
+        $property->update($validated);
+
+        // If price or room details provided, update or create the primary RoomType
+        $priceKobo = $request->input('starting_price_kobo') 
+            ?? ($request->input('base_price_ngn') ? (int)($request->input('base_price_ngn') * 100) : null);
+
+        if ($priceKobo !== null) {
+            $primaryRoom = $property->roomTypes()->first();
+            if ($primaryRoom) {
+                $primaryRoom->update([
+                    'base_price_kobo' => $priceKobo,
+                    'name' => $request->input('room_name') ?? $primaryRoom->name,
+                    'bed_type' => $request->input('bed_type') ?? $primaryRoom->bed_type,
+                    'max_occupancy' => $request->input('max_occupancy') ?? $primaryRoom->max_occupancy,
+                ]);
+            } else {
+                RoomType::create([
+                    'property_id' => $property->id,
+                    'name' => $request->input('room_name') ?? 'Executive Suite',
+                    'base_price_kobo' => $priceKobo,
+                    'total_units' => (int)($request->input('total_units') ?? 4),
+                    'max_occupancy' => (int)($request->input('max_occupancy') ?? 2),
+                    'bed_type' => $request->input('bed_type') ?? 'King Bed'
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Property details updated in database successfully',
+            'data' => $this->formatPropertyForFrontend($property->fresh(['roomTypes', 'reviews', 'host']))
+        ]);
+    }
 }

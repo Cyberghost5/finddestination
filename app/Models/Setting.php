@@ -19,8 +19,14 @@ class Setting extends Model
         $setting = static::where('key', $key)->first();
         if (!$setting) return $default;
 
-        $decoded = json_decode($setting->value, true);
-        return json_last_error() === JSON_ERROR_NONE ? $decoded : $setting->value;
+        $val = (string) $setting->value;
+        if (str_starts_with($val, '[') || str_starts_with($val, '{')) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                return $decoded;
+            }
+        }
+        return $val;
     }
 
     public static function setByKey(string $key, mixed $value): static

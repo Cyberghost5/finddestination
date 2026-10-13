@@ -38,13 +38,18 @@ class SettingController extends Controller
     /**
      * POST /api/v1/settings/payment-gateway
      */
-    public function updatePaymentGatewaySetting(Request $request)
-    {
+        // Normalize any numeric or scalar input into strings
+        foreach (['paystack_public_key', 'monnify_api_key', 'monnify_contract_code', 'google_client_id', 'qoreid_client_id', 'qoreid_secret_key'] as $field) {
+            if ($request->has($field) && !is_null($request->input($field))) {
+                $request->merge([$field => (string) $request->input($field)]);
+            }
+        }
+
         $validated = $request->validate([
             'active_gateway' => 'required|in:paystack,monnify',
             'paystack_public_key' => 'nullable|string',
             'monnify_api_key' => 'nullable|string',
-            'monnify_contract_code' => 'nullable|string',
+            'monnify_contract_code' => 'nullable',
             'google_client_id' => 'nullable|string',
             'qoreid_client_id' => 'nullable|string',
             'qoreid_secret_key' => 'nullable|string',

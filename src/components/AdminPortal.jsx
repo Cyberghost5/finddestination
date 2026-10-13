@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Eye,
+  EyeOff,
   MessageSquare,
   Bot,
   Send,
@@ -37,10 +38,21 @@ import {
   CheckCircle,
   ExternalLink,
   Menu,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  Edit,
+  SlidersHorizontal,
+  Globe,
+  Tag,
+  BedDouble,
+  Home,
+  Layers,
+  Filter,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
-export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish, currentUser }) {
+export default function AdminPortal({ properties, onUpdateVerificationStatus, onTogglePublish, onUpdateProperty, currentUser, onSwitchToGuest, onLogout, onSelectRole }) {
   const [activeTab, setActiveTab] = useState('host_approvals'); // 'host_approvals', 'verification', 'escrow', or 'payment_settings'
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [payoutLogs, setPayoutLogs] = useState([]);
@@ -66,9 +78,13 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
   // Modals for Agent Inspections & Payouts
   const [bountyConfigModal, setBountyConfigModal] = useState(null); // { property, fee, is_open }
+  const [isSavingBounty, setIsSavingBounty] = useState(false);
   const [appReviewModal, setAppReviewModal] = useState(null); // { application, action, notes }
+  const [isSavingAppReview, setIsSavingAppReview] = useState(false);
   const [reportVerifyModal, setReportVerifyModal] = useState(null); // { report, action, notes }
+  const [isSavingReportVerify, setIsSavingReportVerify] = useState(false);
   const [withdrawalActionModal, setWithdrawalActionModal] = useState(null); // { withdrawal, action, note }
+  const [isSavingWithdrawalAction, setIsSavingWithdrawalAction] = useState(false);
 
   // Payment Gateway & Auth Settings State
   const [activeGateway, setActiveGateway] = useState('paystack');
@@ -96,6 +112,132 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
   const [adminReplyInput, setAdminReplyInput] = useState('');
   const [isSendingAdminReply, setIsSendingAdminReply] = useState(false);
   const [supportSearchQuery, setSupportSearchQuery] = useState('');
+
+  // Property Governance & Publishing Management State
+  const [propertySearchQuery, setPropertySearchQuery] = useState('');
+  const [propertyFilterStatus, setPropertyFilterStatus] = useState('all'); // 'all', 'published', 'unpublished', 'tier_3_certified', 'tier_2_location', 'tier_1_docs'
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+  const [selectedPropertyModal, setSelectedPropertyModal] = useState(null);
+  const [isPropertyEditMode, setIsPropertyEditMode] = useState(false);
+  const [propertyEditForm, setPropertyEditForm] = useState(null);
+  const [isSavingPropertyEdit, setIsSavingPropertyEdit] = useState(false);
+  const [propertyActionMsg, setPropertyActionMsg] = useState('');
+  const [propertyActionError, setPropertyActionError] = useState('');
+  const [publishingPropId, setPublishingPropId] = useState(null);
+  const [activePhotoPreviewIndex, setActivePhotoPreviewIndex] = useState(0);
+
+  const handleOpenPropertyDetails = (prop, editMode = false) => {
+    setSelectedPropertyModal(prop);
+    setIsPropertyEditMode(editMode);
+    setActivePhotoPreviewIndex(0);
+    setPropertyEditForm({
+      name: prop.name || '',
+      property_type: prop.property_type || 'hotel',
+      category: prop.category || 'All Stays',
+      city: prop.city || '',
+      state: prop.state || 'Bauchi',
+      neighborhood: prop.neighborhood || '',
+      address: prop.address || '',
+      description: prop.description || '',
+      contact_phone: prop.contact_phone || prop.host?.phone || '',
+      starting_price_ngn: prop.starting_price_kobo ? Math.round(prop.starting_price_kobo / 100) : 45000,
+      verification_tier: prop.verification_tier || 'tier_1_docs',
+      is_published: !!prop.is_published,
+      amenities: Array.isArray(prop.amenities) ? [...prop.amenities] : ['24/7 Power', 'Constant Water', 'WiFi'],
+      latitude: prop.latitude || 10.3158,
+      longitude: prop.longitude || 9.8442,
+      room_name: prop.rooms && prop.rooms[0] ? prop.rooms[0].name : 'Executive Suite',
+      bed_type: prop.rooms && prop.rooms[0] ? prop.rooms[0].bed_type : 'King Bed',
+      max_occupancy: prop.rooms && prop.rooms[0] ? prop.rooms[0].max_occupancy : 2,
+    });
+    setPropertyActionMsg('');
+    setPropertyActionError('');
+  };
+
+  const handleToggleAmenity = (amenity) => {
+    if (!propertyEditForm) return;
+    const current = propertyEditForm.amenities || [];
+    const updated = current.includes(amenity)
+      ? current.filter(a => a !== amenity)
+      : [...current, amenity];
+    setPropertyEditForm(prev => ({ ...prev, amenities: updated }));
+  };
+
+  const handleSavePropertyEdit = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedPropertyModal || !propertyEditForm) return;
+
+    setIsSavingPropertyEdit(true);
+    setPropertyActionError('');
+
+    try {
+      const payload = {
+        name: propertyEditForm.name,
+        property_type: propertyEditForm.property_type,
+        category: propertyEditForm.category,
+        description: propertyEditForm.description,
+        address: propertyEditForm.address,
+        neighborhood: propertyEditForm.neighborhood,
+        city: propertyEditForm.city,
+        state: propertyEditForm.state,
+        latitude: parseFloat(propertyEditForm.latitude) || selectedPropertyModal.latitude,
+        longitude: parseFloat(propertyEditForm.longitude) || selectedPropertyModal.longitude,
+        contact_phone: propertyEditForm.contact_phone,
+        verification_tier: propertyEditForm.verification_tier,
+        is_published: propertyEditForm.is_published,
+        amenities: propertyEditForm.amenities,
+        base_price_ngn: parseFloat(propertyEditForm.starting_price_ngn) || 45000,
+        starting_price_kobo: Math.round((parseFloat(propertyEditForm.starting_price_ngn) || 45000) * 100),
+        room_name: propertyEditForm.room_name,
+        bed_type: propertyEditForm.bed_type,
+        max_occupancy: parseInt(propertyEditForm.max_occupancy, 10) || 2,
+      };
+
+      if (onUpdateProperty) {
+        const updated = await onUpdateProperty(selectedPropertyModal.id, payload);
+        if (updated) {
+          setSelectedPropertyModal(updated);
+        } else {
+          const merged = { ...selectedPropertyModal, ...payload, starting_price_formatted: `₦${Number(payload.base_price_ngn).toLocaleString()}` };
+          setSelectedPropertyModal(merged);
+        }
+      }
+
+      setPropertyActionMsg('Property details and values saved successfully!');
+      setIsPropertyEditMode(false);
+      setTimeout(() => setPropertyActionMsg(''), 4000);
+    } catch (err) {
+      console.error('Error saving property edit:', err);
+      setPropertyActionError('Failed to save changes. Please check fields and try again.');
+    } finally {
+      setIsSavingPropertyEdit(false);
+    }
+  };
+
+  const handleTogglePublishDirect = async (e, propId) => {
+    if (e) e.stopPropagation();
+    setPublishingPropId(propId);
+    try {
+      if (onTogglePublish) {
+        await onTogglePublish(propId);
+      }
+      if (selectedPropertyModal && selectedPropertyModal.id === propId) {
+        setSelectedPropertyModal(prev => prev ? { ...prev, is_published: !prev.is_published } : null);
+        if (propertyEditForm) {
+          setPropertyEditForm(prev => prev ? { ...prev, is_published: !prev.is_published } : null);
+        }
+      }
+      const target = (properties || []).find(p => p.id === propId);
+      const nextStatus = target ? !target.is_published : true;
+      setPropertyActionMsg(nextStatus ? 'Property is now Published Live on public site.' : 'Property is now Unpublished (removed from public site).');
+      setTimeout(() => setPropertyActionMsg(''), 4000);
+    } catch (err) {
+      console.error('Failed to toggle publish:', err);
+      setPropertyActionError('Could not update publish state.');
+    } finally {
+      setPublishingPropId(null);
+    }
+  };
 
   const getAdminAuthHeaders = () => {
     const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
@@ -218,6 +360,60 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
   const supportUnreadTotal = supportThreads.reduce((sum, t) => sum + (t.unread_count || t.unread || 0), 0);
 
+  // Auto-dismiss notification alerts after 4 seconds
+  useEffect(() => {
+    if (inspectActionMsg) {
+      const timer = setTimeout(() => setInspectActionMsg(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [inspectActionMsg]);
+
+  useEffect(() => {
+    if (inspectActionError) {
+      const timer = setTimeout(() => setInspectActionError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [inspectActionError]);
+
+  useEffect(() => {
+    if (hostActionMsg) {
+      const timer = setTimeout(() => setHostActionMsg(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [hostActionMsg]);
+
+  useEffect(() => {
+    if (hostActionError) {
+      const timer = setTimeout(() => setHostActionError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [hostActionError]);
+
+  useEffect(() => {
+    if (gatewaySaveMsg) {
+      const timer = setTimeout(() => setGatewaySaveMsg(''), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [gatewaySaveMsg]);
+
+  useEffect(() => {
+    if (gatewaySaveError) {
+      const timer = setTimeout(() => setGatewaySaveError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [gatewaySaveError]);
+
+  // Clear all pending messages when switching between admin tabs or subtabs
+  useEffect(() => {
+    setInspectActionMsg('');
+    setInspectActionError('');
+    setHostActionMsg('');
+    setHostActionError('');
+    setGatewaySaveMsg('');
+    setGatewaySaveError('');
+    setCacCheckError('');
+  }, [activeTab, adminInspectionsSubTab]);
+
   // Fetch Host Applications
   const fetchHosts = async () => {
     setIsLoadingHosts(true);
@@ -301,7 +497,8 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
   const handleSaveBountyConfig = async (e) => {
     e.preventDefault();
-    if (!bountyConfigModal) return;
+    if (!bountyConfigModal || isSavingBounty) return;
+    setIsSavingBounty(true);
     setInspectActionMsg('');
     setInspectActionError('');
 
@@ -318,18 +515,21 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
       if (res.ok && data.status === 'success') {
         setInspectActionMsg(data.message || 'Property bounty configuration updated!');
         setBountyConfigModal(null);
-        fetchInspectionProperties();
+        await fetchInspectionProperties();
       } else {
         setInspectActionError(data.message || 'Failed to update bounty configuration.');
       }
     } catch (err) {
       setInspectActionError('Network error updating bounty configuration: ' + err.message);
+    } finally {
+      setIsSavingBounty(false);
     }
   };
 
   const handleRespondApplication = async (e) => {
     e.preventDefault();
-    if (!appReviewModal) return;
+    if (!appReviewModal || isSavingAppReview) return;
+    setIsSavingAppReview(true);
     setInspectActionMsg('');
     setInspectActionError('');
 
@@ -346,18 +546,21 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
       if (res.ok && data.status === 'success') {
         setInspectActionMsg(data.message || 'Application response recorded!');
         setAppReviewModal(null);
-        fetchAllAgentAdminData();
+        await fetchAllAgentAdminData();
       } else {
         setInspectActionError(data.message || 'Failed to process application response.');
       }
     } catch (err) {
       setInspectActionError('Network error: ' + err.message);
+    } finally {
+      setIsSavingAppReview(false);
     }
   };
 
   const handleVerifyReport = async (e) => {
     e.preventDefault();
-    if (!reportVerifyModal) return;
+    if (!reportVerifyModal || isSavingReportVerify) return;
+    setIsSavingReportVerify(true);
     setInspectActionMsg('');
     setInspectActionError('');
 
@@ -374,18 +577,21 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
       if (res.ok && data.status === 'success') {
         setInspectActionMsg(data.message || 'Inspection report processed successfully!');
         setReportVerifyModal(null);
-        fetchAllAgentAdminData();
+        await fetchAllAgentAdminData();
       } else {
         setInspectActionError(data.message || 'Failed to verify inspection report.');
       }
     } catch (err) {
       setInspectActionError('Network error: ' + err.message);
+    } finally {
+      setIsSavingReportVerify(false);
     }
   };
 
   const handleProcessWithdrawal = async (e) => {
     e.preventDefault();
-    if (!withdrawalActionModal) return;
+    if (!withdrawalActionModal || isSavingWithdrawalAction) return;
+    setIsSavingWithdrawalAction(true);
     setInspectActionMsg('');
     setInspectActionError('');
 
@@ -402,12 +608,14 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
       if (res.ok && data.status === 'success') {
         setInspectActionMsg(data.message || 'Withdrawal request updated!');
         setWithdrawalActionModal(null);
-        fetchAgentWithdrawals();
+        await fetchAgentWithdrawals();
       } else {
         setInspectActionError(data.message || 'Failed to process withdrawal.');
       }
     } catch (err) {
       setInspectActionError('Network error: ' + err.message);
+    } finally {
+      setIsSavingWithdrawalAction(false);
     }
   };
 
@@ -524,13 +732,13 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          active_gateway: activeGateway,
-          paystack_public_key: paystackPublicKey,
-          monnify_api_key: monnifyApiKey,
-          monnify_contract_code: monnifyContractCode,
-          google_client_id: googleClientId,
-          qoreid_client_id: qoreidClientId,
-          qoreid_secret_key: qoreidSecretKey
+          active_gateway: String(activeGateway || 'paystack'),
+          paystack_public_key: String(paystackPublicKey || ''),
+          monnify_api_key: String(monnifyApiKey || ''),
+          monnify_contract_code: String(monnifyContractCode || ''),
+          google_client_id: String(googleClientId || ''),
+          qoreid_client_id: String(qoreidClientId || ''),
+          qoreid_secret_key: String(qoreidSecretKey || '')
         })
       });
 
@@ -636,62 +844,44 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
   ];
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-slate-50/70 text-slate-900 flex flex-col lg:flex-row animate-in fade-in duration-300">
+    <div className="min-h-screen bg-slate-50/60 text-slate-900 flex flex-col lg:flex-row animate-in fade-in duration-300">
       
       {/* ========================================================= */}
-      {/* 1. DESKTOP LEFT SIDEBAR NAVIGATION                        */}
+      {/* 1. DESKTOP LEFT SIDEBAR NAVIGATION (STANDARD WHITE)       */}
       {/* ========================================================= */}
-      <aside className="hidden lg:flex w-72 shrink-0 bg-slate-900 text-white border-r border-slate-800 flex-col sticky top-20 h-[calc(100vh-80px)] z-20">
+      <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 bg-white border-r border-slate-200/80 flex-col h-screen sticky top-0 z-30 justify-between select-none">
         
-        {/* Admin Branding & Role Identity */}
-        <div className="p-6 border-b border-slate-800 bg-slate-950/60">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-black text-white truncate">Super Admin Console</h2>
-              <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || 'admin@tafiya.ng'}</p>
-              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Tier 3 Governance
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-tafiya-blue/20 text-tafiya-blue border border-tafiya-blue/30">
-                  Escrow Officer
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Escrow & Platform Health Pill */}
-        <div className="p-4 border-b border-slate-800/80 bg-slate-950/30">
+        {/* Top Brand Logo & Console Title */}
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
           <div 
-            onClick={() => setActiveTab('escrow')}
-            className="p-3.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 rounded-2xl transition-all cursor-pointer group"
+            onClick={() => onSwitchToGuest && onSwitchToGuest()}
+            className="flex items-center gap-2.5 cursor-pointer group"
+            title="Return to FindDestination explore view"
           >
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider">Total Escrow Vault</span>
-              <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                <Lock className="w-3.5 h-3.5" />
+            <div className="relative overflow-hidden rounded-xl border border-slate-200/80 p-1 bg-white shadow-xs group-hover:scale-105 transition-transform shrink-0">
+              <img
+                src="/logo.jpeg"
+                alt="FindDestination Logo"
+                className="w-8 h-8 object-contain rounded-lg"
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-black tracking-tight text-slate-900 group-hover:text-tafiya-blue transition-colors leading-tight">
+                FindDestination<span className="text-tafiya-orange">.com.ng</span>
               </div>
-            </div>
-            <div className="text-xl font-black text-white group-hover:scale-102 transition-transform">
-              ₦{escrowTotal.toLocaleString()}
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[10px] text-slate-400">
-              <span>Platform Take: 12.5%</span>
-              <span className="text-emerald-400 font-bold">{properties.length} Properties</span>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                <ShieldCheck className="w-3 h-3 text-tafiya-blue" />
+                <span>Super Admin</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Navigation Items List */}
-        <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-          <div className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-            Platform Queues & Management
+        {/* Clean Standard Navigation Links (Fits viewport without scroll) */}
+        <nav className="p-3 space-y-1 flex-1 overflow-y-auto no-scrollbar">
+          <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">
+            Admin Navigation
           </div>
-
           {adminNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -699,31 +889,21 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer text-left group ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
                   isActive
-                    ? 'bg-tafiya-blue text-white shadow-md shadow-tafiya-blue/20 ring-1 ring-tafiya-blue'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                    ? 'bg-tafiya-blue text-white shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white'
-                  }`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="truncate">
-                    <span className="block truncate">{item.label}</span>
-                    <span className={`text-[10px] block font-normal truncate ${isActive ? 'text-white/80' : 'text-slate-500'}`}>
-                      {item.desc}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                  <span className="truncate">{item.label}</span>
                 </div>
-
                 {item.badge !== null && (item.badge > 0 || typeof item.badge === 'string') && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
                     isActive 
                       ? 'bg-white text-tafiya-blue' 
-                      : (item.badgeColor || 'bg-slate-800 text-slate-300')
+                      : (item.badgeColor || 'bg-slate-100 text-slate-700')
                   }`}>
                     {item.badge}
                   </span>
@@ -731,175 +911,205 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
               </button>
             );
           })}
-        </div>
+        </nav>
 
-        {/* Sidebar Bottom Sync Action */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/40">
+        {/* Bottom User Profile, Quick Sync & Logout Actions */}
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
+          {/* Quick Queue Sync Button */}
           <button
             onClick={fetchAllAgentAdminData}
-            title="Refresh All Admin Queues"
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all cursor-pointer"
+            title="Sync All Admin Queues"
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition-all cursor-pointer shadow-2xs"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
-            <span>Sync All Admin Queues</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : 'text-slate-500'}`} />
+            <span>Sync Admin Queues</span>
           </button>
+
+          {/* Current Admin Identity */}
+          <div className="flex items-center gap-2.5 px-2 py-1">
+            <div className="w-8 h-8 rounded-xl bg-tafiya-blue/10 text-tafiya-blue font-black text-xs flex items-center justify-center shrink-0">
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-slate-900 truncate">
+                {currentUser?.name || 'Super Admin'}
+              </div>
+              <div className="text-[10px] text-slate-400 truncate">
+                {currentUser?.email || 'admin@finddestination.com.ng'}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Switch to Traveler & Log Out Buttons */}
+          <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-200/60">
+            <button
+              onClick={() => onSwitchToGuest && onSwitchToGuest()}
+              className="px-2 py-1.5 text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              title="Switch to Traveler Explorer View"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Traveler View</span>
+            </button>
+            <button
+              onClick={() => onLogout && onLogout()}
+              className="px-2 py-1.5 text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              title="Log Out of Super Admin"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out</span>
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* ========================================================= */}
-      {/* 2. MOBILE TOP BAR & SLIDING SIDEBAR DRAWER                */}
+      {/* 2. MOBILE TOP BAR & STANDARD OFF-CANVAS SLIDING DRAWER    */}
       {/* ========================================================= */}
-      <div className="lg:hidden sticky top-16 z-30 bg-slate-900 text-white border-b border-slate-800 shadow-sm">
-        
-        {/* Mobile Header Bar */}
-        <div className="px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setIsMobileNavOpen(true)}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer"
-              title="Open Navigation Menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black text-white">
-                  {adminNavItems.find(i => i.id === activeTab)?.label || 'Console'}
-                </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              </div>
-              <p className="text-[10px] text-slate-400 font-medium">Super Admin Authority</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchAllAgentAdminData}
-              title="Sync Queues"
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors cursor-pointer"
-            >
-              <RefreshCw className={`w-4 h-4 ${isLoadingInspections || isLoadingWithdrawals ? 'animate-spin text-tafiya-blue' : ''}`} />
-            </button>
+      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsMobileNavOpen(true)}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+            title="Open Navigation"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div 
+            onClick={() => onSwitchToGuest && onSwitchToGuest()}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <img
+              src="/logo.jpeg"
+              alt="FindDestination"
+              className="w-7 h-7 object-contain rounded-lg border border-slate-200 p-0.5"
+            />
+            <span className="text-sm font-black text-slate-900">
+              FindDestination<span className="text-tafiya-orange">.com.ng</span>
+            </span>
           </div>
         </div>
 
-        {/* Mobile Horizontal Quick-Tab Bar */}
-        <div className="flex items-center gap-2 px-4 pb-2.5 overflow-x-auto scrollbar-none">
-          {adminNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-tafiya-blue/10 text-tafiya-blue">
+            Admin
+          </span>
+          <button
+            onClick={() => onLogout && onLogout()}
+            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Sliding Drawer */}
+      {isMobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setIsMobileNavOpen(false)}
+          ></div>
+
+          {/* Drawer Content */}
+          <div className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-200 select-none">
+            {/* Drawer Top */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/logo.jpeg"
+                  alt="FindDestination"
+                  className="w-8 h-8 object-contain rounded-xl border border-slate-200 p-0.5"
+                />
+                <div>
+                  <div className="text-sm font-black text-slate-900">FindDestination</div>
+                  <div className="text-[10px] font-bold text-tafiya-blue">Super Admin Console</div>
+                </div>
+              </div>
               <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
-                  isActive
-                    ? 'bg-tafiya-blue text-white shadow-sm'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                }`}
+                onClick={() => setIsMobileNavOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
-                {item.badge !== null && (item.badge > 0 || typeof item.badge === 'string') && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
-                    isActive ? 'bg-white text-tafiya-blue' : (item.badgeColor || 'bg-slate-700 text-slate-200')
-                  }`}>
-                    {item.badge}
-                  </span>
-                )}
+                <X className="w-5 h-5" />
               </button>
-            );
-          })}
-        </div>
+            </div>
 
-        {/* Mobile Drawer Backdrop & Menu */}
-        {isMobileNavOpen && (
-          <div className="fixed inset-0 z-50 flex">
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
-              onClick={() => setIsMobileNavOpen(false)}
-            ></div>
+            {/* Drawer Navigation Links */}
+            <nav className="p-3 space-y-1 flex-1 overflow-y-auto no-scrollbar">
+              {adminNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsMobileNavOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                      isActive
+                        ? 'bg-tafiya-blue text-white shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.badge !== null && (item.badge > 0 || typeof item.badge === 'string') && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                        isActive ? 'bg-white text-tafiya-blue' : (item.badgeColor || 'bg-slate-100 text-slate-700')
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
 
-            {/* Drawer Content */}
-            <div className="relative w-72 max-w-[85vw] bg-slate-900 text-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
-              
-              {/* Drawer Top */}
-              <div className="p-5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-tafiya-blue to-emerald-500 text-white flex items-center justify-center font-black">
-                    <ShieldCheck className="w-5 h-5" />
+            {/* Drawer Footer Actions */}
+            <div className="p-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
+              <div className="flex items-center gap-2.5 px-2 py-1">
+                <div className="w-8 h-8 rounded-xl bg-tafiya-blue/10 text-tafiya-blue font-black text-xs flex items-center justify-center shrink-0">
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-slate-900 truncate">
+                    {currentUser?.name || 'Super Admin'}
                   </div>
-                  <div>
-                    <h3 className="text-xs font-black text-white">Super Admin Console</h3>
-                    <p className="text-[10px] text-slate-400">Multi-Level Governance</p>
+                  <div className="text-[10px] text-slate-400 truncate">
+                    {currentUser?.email || 'admin@finddestination.com.ng'}
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
-
-              {/* Drawer Nav Links */}
-              <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-                <div className="px-2 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Admin Queues
-                </div>
-
-                {adminNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        setActiveTab(item.id);
-                        setIsMobileNavOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
-                        isActive
-                          ? 'bg-tafiya-blue text-white shadow-sm'
-                          : 'text-slate-300 hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.badge !== null && (item.badge > 0 || typeof item.badge === 'string') && (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                          isActive ? 'bg-white text-tafiya-blue' : (item.badgeColor || 'bg-slate-800 text-slate-300')
-                        }`}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Drawer Bottom Sync */}
-              <div className="p-4 border-t border-slate-800 bg-slate-950">
+              <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-200/60">
                 <button
                   onClick={() => {
                     setIsMobileNavOpen(false);
-                    fetchAllAgentAdminData();
+                    onSwitchToGuest && onSwitchToGuest();
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 cursor-pointer"
+                  className="px-2 py-1.5 text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Sync All Queues</span>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Traveler View</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onLogout && onLogout();
+                  }}
+                  className="px-2 py-1.5 text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Log Out</span>
                 </button>
               </div>
-
             </div>
           </div>
-        )}
-
-      </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* 3. MAIN DASHBOARD CONTENT AREA                            */}
@@ -1014,16 +1224,36 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
             {/* Status Notifications */}
             {hostActionMsg && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{hostActionMsg}</span>
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{hostActionMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHostActionMsg('')}
+                  className="p-1 hover:bg-emerald-100 rounded-lg text-emerald-700 transition-colors cursor-pointer"
+                  title="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 
             {hostActionError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                <span>{hostActionError}</span>
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{hostActionError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHostActionError('')}
+                  className="p-1 hover:bg-red-100 rounded-lg text-red-700 transition-colors cursor-pointer"
+                  title="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 
@@ -1270,15 +1500,35 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
             {/* Notifications */}
             {inspectActionMsg && (
-              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{inspectActionMsg}</span>
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{inspectActionMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectActionMsg('')}
+                  className="p-1 hover:bg-emerald-100 rounded-lg text-emerald-700 transition-colors cursor-pointer"
+                  title="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
             {inspectActionError && (
-              <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                <span>{inspectActionError}</span>
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{inspectActionError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectActionError('')}
+                  className="p-1 hover:bg-red-100 rounded-lg text-red-700 transition-colors cursor-pointer"
+                  title="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 
@@ -1681,15 +1931,35 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
             {/* Notifications */}
             {inspectActionMsg && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{inspectActionMsg}</span>
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{inspectActionMsg}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectActionMsg('')}
+                  className="p-1 hover:bg-emerald-100 rounded-lg text-emerald-700 transition-colors cursor-pointer"
+                  title="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
             {inspectActionError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                <span>{inspectActionError}</span>
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{inspectActionError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectActionError('')}
+                  className="p-1 hover:bg-red-100 rounded-lg text-red-700 transition-colors cursor-pointer"
+                  title="Dismiss notification"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 
@@ -1788,99 +2058,416 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
           </div>
         )}
 
-        {/* VIEW 2: LEVEL 2 PROPERTY AUDIT & PUBLISHING */}
-        {activeTab === 'verification' && (
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-extrabold text-slate-900">Level 2 Governance: Property Verification & Publishing Control</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Review property details, award Tier 2/3 verification badges, and approve live publishing.</p>
-              </div>
-            </div>
+        {/* VIEW 2: LEVEL 2 PROPERTY AUDIT & PUBLISHING (REDESIGNED) */}
+        {activeTab === 'verification' && (() => {
+          const publishedCount = (properties || []).filter(p => p.is_published).length;
+          const unpublishedCount = (properties || []).filter(p => !p.is_published).length;
+          const tier3Count = (properties || []).filter(p => p.verification_tier === 'tier_3_certified').length;
+          const tier2Count = (properties || []).filter(p => p.verification_tier === 'tier_2_location').length;
+          const tier1Count = (properties || []).filter(p => p.verification_tier === 'tier_1_docs').length;
 
-            <div className="space-y-3">
-              {properties.map((prop) => (
-                <div key={prop.id} className="p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white hover:border-slate-300 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <img 
-                      src={prop.images[0]} 
-                      alt={prop.name} 
-                      className="w-14 h-14 rounded-xl object-cover shrink-0"
-                    />
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-slate-900 text-xs">{prop.name}</h4>
-                        <span className="text-[10px] text-slate-400 capitalize">• {prop.property_type}</span>
-                      </div>
-                      <p className="text-xs text-slate-500 flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-tafiya-blue" />
-                        <span>{prop.address}, {prop.city} ({prop.state})</span>
-                      </p>
-                      <p className="text-[11px] text-slate-400">Host: {prop.host?.name || 'Approved Host Provider'}</p>
+          const filteredGovProperties = (properties || []).filter(prop => {
+            if (propertySearchQuery.trim()) {
+              const q = propertySearchQuery.toLowerCase();
+              const matchName = (prop.name || '').toLowerCase().includes(q);
+              const matchCity = (prop.city || '').toLowerCase().includes(q);
+              const matchState = (prop.state || '').toLowerCase().includes(q);
+              const matchAddress = (prop.address || '').toLowerCase().includes(q);
+              const matchHost = (prop.host?.name || '').toLowerCase().includes(q);
+              if (!matchName && !matchCity && !matchState && !matchAddress && !matchHost) return false;
+            }
+            if (propertyFilterStatus === 'published' && !prop.is_published) return false;
+            if (propertyFilterStatus === 'unpublished' && prop.is_published) return false;
+            if (propertyFilterStatus === 'tier_3_certified' && prop.verification_tier !== 'tier_3_certified') return false;
+            if (propertyFilterStatus === 'tier_2_location' && prop.verification_tier !== 'tier_2_location') return false;
+            if (propertyFilterStatus === 'tier_1_docs' && prop.verification_tier !== 'tier_1_docs') return false;
+            if (propertyTypeFilter !== 'all' && prop.property_type !== propertyTypeFilter) return false;
+            return true;
+          });
+
+          return (
+            <div className="space-y-6">
+
+              {/* Top Banner & KPI Strip */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-5">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-tafiya-blue" />
+                      <h3 className="text-base font-extrabold text-slate-900">
+                        Property Governance & Public Publishing Desk
+                      </h3>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-tafiya-blue/10 text-tafiya-blue">
+                        Level 2 Control
+                      </span>
                     </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Inspect property attributes, update pricing & values, award Tier 2/3 verification badges, and publish/unpublish live listings.
+                    </p>
                   </div>
 
-                  {/* Tier & Publishing Action Controls */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {prop.verification_tier === 'tier_1_docs' && (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                        Tier 1 Docs Cleared
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPropertySearchQuery('');
+                        setPropertyFilterStatus('all');
+                        setPropertyTypeFilter('all');
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                </div>
 
-                    {prop.verification_tier === 'tier_2_location' && (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-tafiya-blue-50 text-tafiya-blue">
-                        Tier 2 Location Verified
-                      </span>
-                    )}
+                {/* Notifications */}
+                {propertyActionMsg && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{propertyActionMsg}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPropertyActionMsg('')}
+                      className="p-1 hover:bg-emerald-100 rounded-lg text-emerald-700 transition-colors cursor-pointer"
+                      title="Dismiss notification"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                {propertyActionError && (
+                  <div className="p-3.5 bg-red-50 border border-red-200 text-red-800 text-xs font-bold rounded-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                      <span>{propertyActionError}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPropertyActionError('')}
+                      className="p-1 hover:bg-red-100 rounded-lg text-red-700 transition-colors cursor-pointer"
+                      title="Dismiss notification"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
 
-                    {prop.verification_tier === 'tier_3_certified' && (
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span>Tier 3 Certified</span>
-                      </span>
-                    )}
+                {/* KPI Metrics Chips */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div 
+                    onClick={() => setPropertyFilterStatus('all')}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      propertyFilterStatus === 'all' 
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
+                        : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${propertyFilterStatus === 'all' ? 'text-slate-300' : 'text-slate-400'}`}>
+                      Total Properties
+                    </span>
+                    <span className="text-xl font-black mt-0.5 block">
+                      {(properties || []).length}
+                    </span>
+                  </div>
 
-                    {/* Level 2 Publishing Toggle */}
-                    {onTogglePublish && (
+                  <div 
+                    onClick={() => setPropertyFilterStatus('published')}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      propertyFilterStatus === 'published' 
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
+                        : 'bg-emerald-50/50 border-emerald-200/80 hover:border-emerald-300 text-emerald-950'
+                    }`}
+                  >
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${propertyFilterStatus === 'published' ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                      Published Live
+                    </span>
+                    <span className="text-xl font-black mt-0.5 block">
+                      {publishedCount}
+                    </span>
+                  </div>
+
+                  <div 
+                    onClick={() => setPropertyFilterStatus('unpublished')}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      propertyFilterStatus === 'unpublished' 
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-sm' 
+                        : 'bg-amber-50/50 border-amber-200/80 hover:border-amber-300 text-amber-950'
+                    }`}
+                  >
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${propertyFilterStatus === 'unpublished' ? 'text-amber-100' : 'text-amber-700'}`}>
+                      Draft / Hidden
+                    </span>
+                    <span className="text-xl font-black mt-0.5 block">
+                      {unpublishedCount}
+                    </span>
+                  </div>
+
+                  <div 
+                    onClick={() => setPropertyFilterStatus('tier_3_certified')}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      propertyFilterStatus === 'tier_3_certified' 
+                        ? 'bg-tafiya-blue text-white border-tafiya-blue shadow-sm' 
+                        : 'bg-blue-50/50 border-blue-200/80 hover:border-blue-300 text-blue-950'
+                    }`}
+                  >
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${propertyFilterStatus === 'tier_3_certified' ? 'text-blue-100' : 'text-blue-700'}`}>
+                      Tier 3 Certified
+                    </span>
+                    <span className="text-xl font-black mt-0.5 block">
+                      {tier3Count}
+                    </span>
+                  </div>
+
+                  <div 
+                    onClick={() => setPropertyFilterStatus('tier_2_location')}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      propertyFilterStatus === 'tier_2_location' 
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                        : 'bg-indigo-50/50 border-indigo-200/80 hover:border-indigo-300 text-indigo-950'
+                    }`}
+                  >
+                    <span className={`text-[10px] font-black uppercase tracking-wider block ${propertyFilterStatus === 'tier_2_location' ? 'text-indigo-100' : 'text-indigo-700'}`}>
+                      Tier 2 Verified
+                    </span>
+                    <span className="text-xl font-black mt-0.5 block">
+                      {tier2Count}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Search Bar & Status Filters */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2">
+                  {/* Search input */}
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search property name, city, state, address, or host..."
+                      value={propertySearchQuery}
+                      onChange={(e) => setPropertySearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-9 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-tafiya-blue font-medium text-slate-800"
+                    />
+                    {propertySearchQuery && (
                       <button
-                        onClick={() => onTogglePublish(prop.id)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer ${
-                          prop.is_published 
-                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        onClick={() => setPropertySearchQuery('')}
+                        className="p-1 text-slate-400 hover:text-slate-600 absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {[
+                      { id: 'all', label: 'All' },
+                      { id: 'published', label: 'Published' },
+                      { id: 'unpublished', label: 'Draft' },
+                      { id: 'tier_3_certified', label: 'Tier 3' },
+                      { id: 'tier_2_location', label: 'Tier 2' },
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setPropertyFilterStatus(tab.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                          propertyFilterStatus === tab.id
+                            ? 'bg-slate-900 text-white shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                         }`}
                       >
-                        {prop.is_published ? 'Published Live' : 'Publish to Public Site'}
+                        {tab.label}
                       </button>
-                    )}
+                    ))}
 
-                    {/* Action buttons to upgrade tiers */}
-                    {prop.verification_tier !== 'tier_2_location' && prop.verification_tier !== 'tier_3_certified' && (
-                      <button
-                        onClick={() => onUpdateVerificationStatus(prop.id, 'tier_2_location')}
-                        className="px-3 py-1.5 bg-tafiya-blue text-white rounded-full text-[11px] font-bold hover:bg-tafiya-blue-600 transition-colors shadow-sm"
-                      >
-                        Log GPS & Award Tier 2
-                      </button>
-                    )}
-
-                    {prop.verification_tier !== 'tier_3_certified' && (
-                      <button
-                        onClick={() => onUpdateVerificationStatus(prop.id, 'tier_3_certified')}
-                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-[11px] font-bold hover:bg-emerald-700 transition-colors shadow-sm flex items-center gap-1"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Award Tier 3</span>
-                      </button>
-                    )}
+                    <select
+                      value={propertyTypeFilter}
+                      onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border-none focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer shrink-0"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="hotel">Hotels</option>
+                      <option value="resort">Resorts</option>
+                      <option value="serviced_apartment">Serviced Apartments</option>
+                      <option value="lodge">Lodges</option>
+                      <option value="boutique">Boutique Stays</option>
+                    </select>
                   </div>
-
                 </div>
-              ))}
+              </div>
+
+              {/* Properties Governance List */}
+              <div className="space-y-3">
+                {filteredGovProperties.length === 0 ? (
+                  <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center space-y-3">
+                    <Building2 className="w-10 h-10 text-slate-300 mx-auto" />
+                    <h4 className="text-sm font-extrabold text-slate-800">No properties matching current criteria</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      Try resetting your search query or switching the status filter tab to view listings.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPropertySearchQuery('');
+                        setPropertyFilterStatus('all');
+                        setPropertyTypeFilter('all');
+                      }}
+                      className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+                    >
+                      Show All Properties
+                    </button>
+                  </div>
+                ) : (
+                  filteredGovProperties.map((prop) => {
+                    const isLive = !!prop.is_published;
+                    const isCertified = prop.verification_tier === 'tier_3_certified';
+                    const isLocation = prop.verification_tier === 'tier_2_location';
+                    const isToggling = publishingPropId === prop.id;
+
+                    return (
+                      <div
+                        key={prop.id}
+                        onClick={() => handleOpenPropertyDetails(prop, false)}
+                        className="group bg-white rounded-3xl border border-slate-200/80 hover:border-slate-300 p-4 sm:p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                        title="Click to view full property details or edit values"
+                      >
+                        {/* Left Side: Thumbnail & Property Core Info */}
+                        <div className="flex items-start gap-4 min-w-0 flex-1">
+                          <div className="relative shrink-0 overflow-hidden rounded-2xl w-20 h-20 sm:w-24 sm:h-24 border border-slate-200/80 bg-slate-100">
+                            <img
+                              src={prop.images && prop.images[0] ? prop.images[0] : (prop.cover_image || '/placeholder-stay.jpg')}
+                              alt={prop.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            {prop.images && prop.images.length > 1 && (
+                              <span className="absolute bottom-1.5 right-1.5 bg-slate-950/70 backdrop-blur-xs text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">
+                                {prop.images.length} photos
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-tafiya-blue transition-colors line-clamp-1">
+                                {prop.name}
+                              </h4>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wider shrink-0">
+                                {prop.property_type ? prop.property_type.replace('_', ' ') : 'Stay'}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-500 flex items-center gap-1.5 truncate">
+                              <MapPin className="w-3.5 h-3.5 text-tafiya-blue shrink-0" />
+                              <span className="truncate">{prop.address || `${prop.city}, ${prop.state}`}</span>
+                              <span className="text-slate-300">•</span>
+                              <strong className="text-slate-700 shrink-0">{prop.city}, {prop.state}</strong>
+                            </p>
+
+                            <div className="flex items-center gap-3 flex-wrap text-xs pt-0.5">
+                              <span className="font-mono font-black text-slate-900 text-xs">
+                                {prop.starting_price_formatted || (prop.starting_price_kobo ? `₦${(prop.starting_price_kobo / 100).toLocaleString()}` : '₦45,000')}
+                                <span className="text-[10px] text-slate-400 font-normal"> / night</span>
+                              </span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-slate-500 text-[11px] truncate">
+                                Host: <strong className="text-slate-800">{prop.host?.name || 'Verified Host'}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Side: Verification Badges & Control Actions */}
+                        <div 
+                          className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* Verification Tier Badge */}
+                          {isCertified ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                              <span>Tier 3 Certified</span>
+                            </span>
+                          ) : isLocation ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-800 border border-blue-200 flex items-center gap-1 shrink-0">
+                              <ShieldCheck className="w-3 h-3 text-blue-600 shrink-0" />
+                              <span>Tier 2 Location</span>
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 shrink-0">
+                              Tier 1 Docs
+                            </span>
+                          )}
+
+                          {/* Level 2 Public Publishing Toggle */}
+                          <button
+                            type="button"
+                            disabled={isToggling}
+                            onClick={(e) => handleTogglePublishDirect(e, prop.id)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0 ${
+                              isLive
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                            }`}
+                            title={isLive ? 'Click to remove from public site' : 'Click to publish to public site'}
+                          >
+                            {isToggling ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : isLive ? (
+                              <Globe className="w-3.5 h-3.5 text-emerald-200" />
+                            ) : (
+                              <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                            )}
+                            <span>{isLive ? 'Published Live' : 'Publish to Public Site'}</span>
+                          </button>
+
+                          {/* Quick Upgrade Tier Actions if not already Certified */}
+                          {!isLocation && !isCertified && (
+                            <button
+                              type="button"
+                              onClick={() => onUpdateVerificationStatus(prop.id, 'tier_2_location')}
+                              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-[11px] font-bold transition-colors cursor-pointer border border-blue-200 shrink-0"
+                              title="Award Tier 2 Location Verified Badge"
+                            >
+                              Award Tier 2
+                            </button>
+                          )}
+
+                          {!isCertified && (
+                            <button
+                              type="button"
+                              onClick={() => onUpdateVerificationStatus(prop.id, 'tier_3_certified')}
+                              className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-[11px] font-bold transition-colors cursor-pointer border border-emerald-200 flex items-center gap-1 shrink-0"
+                              title="Award Tier 3 Full Certified Badge"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Award Tier 3</span>
+                            </button>
+                          )}
+
+                          {/* View & Edit Inspector Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenPropertyDetails(prop, false);
+                            }}
+                            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View & Edit</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* VIEW 3: ESCROW PAYOUT MONITORING */}
         {activeTab === 'escrow' && (
@@ -2426,23 +3013,63 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
 
               <form onSubmit={handleSaveBountyConfig} className="space-y-4">
                 {/* Toggle open for inspection */}
-                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 block">Open for Field Agent Bounties</span>
-                    <span className="text-[10px] text-slate-400">Listed on certified regional agents explore view</span>
+                <div 
+                  onClick={() => !isSavingBounty && setBountyConfigModal(prev => ({ ...prev, is_open: !prev.is_open }))}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-3 ${
+                    bountyConfigModal.is_open 
+                      ? 'bg-blue-50/70 border-tafiya-blue/40 shadow-xs' 
+                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100/80'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      bountyConfigModal.is_open 
+                        ? 'bg-tafiya-blue text-white shadow-sm' 
+                        : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      <Navigation className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-slate-900 block">Open for Field Agent Bounties</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                          bountyConfigModal.is_open 
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                            : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {bountyConfigModal.is_open ? 'Active' : 'Disabled'}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 block truncate mt-0.5">
+                        {bountyConfigModal.is_open 
+                          ? 'Listed on certified regional agents explore view' 
+                          : 'Hidden from regional agents explore view'}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Explicit Switch Button */}
                   <button
                     type="button"
-                    onClick={() => setBountyConfigModal(prev => ({ ...prev, is_open: !prev.is_open }))}
-                    className={`w-12 h-6.5 rounded-full transition-colors relative p-0.5 cursor-pointer ${
-                      bountyConfigModal.is_open ? 'bg-tafiya-blue' : 'bg-slate-300'
+                    role="switch"
+                    aria-checked={bountyConfigModal.is_open}
+                    disabled={isSavingBounty}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setBountyConfigModal(prev => ({ ...prev, is_open: !prev.is_open }));
+                    }}
+                    className={`w-14 h-8 rounded-full transition-colors duration-200 p-1 flex items-center shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-tafiya-blue/40 shadow-inner ${
+                      bountyConfigModal.is_open ? 'bg-tafiya-blue justify-end' : 'bg-slate-300 justify-start'
                     }`}
+                    title={bountyConfigModal.is_open ? 'Click to disable bounty' : 'Click to enable bounty'}
                   >
-                    <div
-                      className={`w-5.5 h-5.5 rounded-full bg-white shadow-md transform transition-transform ${
-                        bountyConfigModal.is_open ? 'translate-x-5.5' : 'translate-x-0'
-                      }`}
-                    />
+                    <div className="w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center transition-all duration-200">
+                      {bountyConfigModal.is_open ? (
+                        <Check className="w-3.5 h-3.5 text-tafiya-blue stroke-[3]" />
+                      ) : (
+                        <X className="w-3.5 h-3.5 text-slate-400 stroke-[3]" />
+                      )}
+                    </div>
                   </button>
                 </div>
 
@@ -2457,10 +3084,11 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                       type="number"
                       min="0"
                       step="1000"
+                      disabled={isSavingBounty}
                       value={bountyConfigModal.fee}
                       onChange={(e) => setBountyConfigModal(prev => ({ ...prev, fee: e.target.value }))}
                       placeholder="e.g. 25000"
-                      className="w-full pl-8 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl font-mono font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                      className="w-full pl-8 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl font-mono font-bold text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-tafiya-blue disabled:bg-slate-100 disabled:opacity-60"
                       required
                     />
                   </div>
@@ -2472,8 +3100,9 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                       <button
                         type="button"
                         key={val}
+                        disabled={isSavingBounty}
                         onClick={() => setBountyConfigModal(prev => ({ ...prev, fee: val }))}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-colors cursor-pointer disabled:opacity-50 ${
                           Number(bountyConfigModal.fee) === val
                             ? 'bg-tafiya-blue text-white shadow-xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -2492,16 +3121,28 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                 <div className="flex items-center justify-end gap-2.5 pt-2">
                   <button
                     type="button"
+                    disabled={isSavingBounty}
                     onClick={() => setBountyConfigModal(null)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-tafiya-blue hover:bg-tafiya-blue-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-tafiya-blue/20 cursor-pointer"
+                    disabled={isSavingBounty}
+                    className="px-5 py-2.5 bg-tafiya-blue hover:bg-tafiya-blue-600 disabled:opacity-60 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-tafiya-blue/20 cursor-pointer flex items-center gap-2"
                   >
-                    Save Configuration
+                    {isSavingBounty ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                        <span>Saving Configuration...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-3.5 h-3.5 text-white" />
+                        <span>Save Configuration</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -2578,20 +3219,29 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                 <div className="flex items-center justify-end gap-2.5 pt-2">
                   <button
                     type="button"
+                    disabled={isSavingAppReview}
                     onClick={() => setAppReviewModal(null)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+                    disabled={isSavingAppReview}
+                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2 disabled:opacity-60 ${
                       appReviewModal.action === 'approved'
                         ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
                         : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
                     }`}
                   >
-                    {appReviewModal.action === 'approved' ? 'Confirm Approval & Release Info' : 'Confirm Decline'}
+                    {isSavingAppReview ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      appReviewModal.action === 'approved' ? 'Confirm Approval & Release Info' : 'Confirm Decline'
+                    )}
                   </button>
                 </div>
               </form>
@@ -2662,20 +3312,29 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                 <div className="flex items-center justify-end gap-2.5 pt-2">
                   <button
                     type="button"
+                    disabled={isSavingReportVerify}
                     onClick={() => setReportVerifyModal(null)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+                    disabled={isSavingReportVerify}
+                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2 disabled:opacity-60 ${
                       reportVerifyModal.action === 'verified'
                         ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
                         : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
                     }`}
                   >
-                    {reportVerifyModal.action === 'verified' ? 'Certify & Credit Bounty' : 'Send Revision Notice'}
+                    {isSavingReportVerify ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      reportVerifyModal.action === 'verified' ? 'Certify & Credit Bounty' : 'Send Revision Notice'
+                    )}
                   </button>
                 </div>
               </form>
@@ -2755,20 +3414,29 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                 <div className="flex items-center justify-end gap-2.5 pt-2">
                   <button
                     type="button"
+                    disabled={isSavingWithdrawalAction}
                     onClick={() => setWithdrawalActionModal(null)}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
+                    disabled={isSavingWithdrawalAction}
+                    className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-2 disabled:opacity-60 ${
                       withdrawalActionModal.action === 'approved'
                         ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
                         : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
                     }`}
                   >
-                    {withdrawalActionModal.action === 'approved' ? 'Confirm Disbursal' : 'Decline & Refund Wallet'}
+                    {isSavingWithdrawalAction ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      withdrawalActionModal.action === 'approved' ? 'Confirm Disbursal' : 'Decline & Refund Wallet'
+                    )}
                   </button>
                 </div>
               </form>
@@ -3003,6 +3671,631 @@ export default function AdminPortal({ properties, onUpdateVerificationStatus, on
                     </button>
                   )}
                 </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: PROPERTY DETAILS INSPECTOR & ADMIN EDIT FORM */}
+        {selectedPropertyModal && propertyEditForm && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200">
+              
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between gap-3 bg-white shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-tafiya-blue/10 text-tafiya-blue flex items-center justify-center shrink-0">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-sm sm:text-base text-slate-900 truncate">
+                      {selectedPropertyModal.name}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 truncate flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-tafiya-blue shrink-0" />
+                      <span>{selectedPropertyModal.city}, {selectedPropertyModal.state}</span>
+                      <span>•</span>
+                      <span className="capitalize">{selectedPropertyModal.property_type ? selectedPropertyModal.property_type.replace('_', ' ') : 'Stay'}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Mode Switcher Tabs */}
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setIsPropertyEditMode(false)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        !isPropertyEditMode 
+                          ? 'bg-white text-slate-900 shadow-xs' 
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Inspect Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPropertyEditMode(true)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isPropertyEditMode 
+                          ? 'bg-white text-slate-900 shadow-xs' 
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <Edit className="w-3.5 h-3.5 text-tafiya-blue" />
+                      <span className="hidden sm:inline">Edit Values</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPropertyModal(null);
+                      setIsPropertyEditMode(false);
+                    }}
+                    className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Body (Scrollable) */}
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
+                
+                {/* VIEW MODE */}
+                {!isPropertyEditMode ? (
+                  <div className="space-y-6">
+                    {/* Status & Governance Banner */}
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Live Publish Status */}
+                        {selectedPropertyModal.is_published ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 flex items-center gap-1.5">
+                            <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Published Live on Public Site</span>
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-900 flex items-center gap-1.5">
+                            <EyeOff className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Unpublished (Hidden / Draft)</span>
+                          </span>
+                        )}
+
+                        {/* Verification Tier */}
+                        {selectedPropertyModal.verification_tier === 'tier_3_certified' ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Tier 3 Certified</span>
+                          </span>
+                        ) : selectedPropertyModal.verification_tier === 'tier_2_location' ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-800 border border-blue-200 flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Tier 2 Location Verified</span>
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
+                            Tier 1 Documents
+                          </span>
+                        )}
+
+                        {/* Starting Price */}
+                        <span className="px-3 py-1 rounded-full text-xs font-black bg-white border border-slate-200 text-slate-900 font-mono">
+                          {selectedPropertyModal.starting_price_formatted || (selectedPropertyModal.starting_price_kobo ? `₦${(selectedPropertyModal.starting_price_kobo / 100).toLocaleString()}` : '₦45,000')}
+                          <span className="font-sans font-normal text-slate-400 text-[10px]"> / night</span>
+                        </span>
+                      </div>
+
+                      {/* Direct Publish / Unpublish Toggle */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleTogglePublishDirect(e, selectedPropertyModal.id)}
+                        disabled={publishingPropId === selectedPropertyModal.id}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 ${
+                          selectedPropertyModal.is_published
+                            ? 'bg-amber-100 hover:bg-amber-200 text-amber-900'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        }`}
+                      >
+                        {publishingPropId === selectedPropertyModal.id ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : selectedPropertyModal.is_published ? (
+                          <EyeOff className="w-3.5 h-3.5" />
+                        ) : (
+                          <Globe className="w-3.5 h-3.5" />
+                        )}
+                        <span>{selectedPropertyModal.is_published ? 'Remove from Public Site' : 'Publish to Public Site'}</span>
+                      </button>
+                    </div>
+
+                    {/* Image Gallery */}
+                    {selectedPropertyModal.images && selectedPropertyModal.images.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="relative rounded-2xl overflow-hidden h-64 sm:h-80 bg-slate-100 border border-slate-200">
+                          <img
+                            src={selectedPropertyModal.images[activePhotoPreviewIndex] || selectedPropertyModal.images[0]}
+                            alt={selectedPropertyModal.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-3 left-3 bg-slate-950/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
+                            Photo {activePhotoPreviewIndex + 1} of {selectedPropertyModal.images.length}
+                          </div>
+                        </div>
+
+                        {selectedPropertyModal.images.length > 1 && (
+                          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                            {selectedPropertyModal.images.map((img, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setActivePhotoPreviewIndex(idx)}
+                                className={`w-20 h-16 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                                  activePhotoPreviewIndex === idx ? 'border-tafiya-blue ring-2 ring-tafiya-blue/20' : 'border-transparent opacity-70 hover:opacity-100'
+                                }`}
+                              >
+                                <img src={img} alt="" className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 2-Column Property Metadata Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      
+                      {/* Left Column: General & Rooms */}
+                      <div className="space-y-5">
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                            Property Overview
+                          </h4>
+                          <div>
+                            <span className="text-[11px] text-slate-400 block font-semibold">About Property</span>
+                            <p className="text-xs text-slate-700 leading-relaxed mt-0.5 whitespace-pre-line">
+                              {selectedPropertyModal.description || 'No description provided by host.'}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 text-xs">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">Property Type</span>
+                              <span className="font-bold text-slate-800 capitalize">
+                                {selectedPropertyModal.property_type ? selectedPropertyModal.property_type.replace('_', ' ') : 'Stay'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-slate-400 block">Category</span>
+                              <span className="font-bold text-slate-800">
+                                {selectedPropertyModal.category || 'All Stays'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Room Types Breakdown */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                            Rooms & Accommodation Configurations
+                          </h4>
+                          {selectedPropertyModal.rooms && selectedPropertyModal.rooms.length > 0 ? (
+                            <div className="space-y-2">
+                              {selectedPropertyModal.rooms.map((room, rIdx) => (
+                                <div key={rIdx} className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center justify-between text-xs">
+                                  <div>
+                                    <span className="font-bold text-slate-900 block">{room.name}</span>
+                                    <span className="text-[11px] text-slate-500">
+                                      {room.bed_type || 'King Bed'} • Max {room.max_occupancy || 2} Guests
+                                    </span>
+                                  </div>
+                                  <span className="font-mono font-black text-slate-900 text-xs">
+                                    {room.price_formatted || (room.price_kobo ? `₦${(room.price_kobo / 100).toLocaleString()}` : selectedPropertyModal.starting_price_formatted)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic">Standard Executive Suite available at {selectedPropertyModal.starting_price_formatted}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right Column: Location, Host, Amenities */}
+                      <div className="space-y-5">
+                        
+                        {/* Location Details */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                            Location & Geolocation
+                          </h4>
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex items-start gap-2">
+                              <MapPin className="w-4 h-4 text-tafiya-blue shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-bold text-slate-900 block">{selectedPropertyModal.address}</span>
+                                <span className="text-slate-500">{selectedPropertyModal.neighborhood ? `${selectedPropertyModal.neighborhood}, ` : ''}{selectedPropertyModal.city}, {selectedPropertyModal.state}</span>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[11px] font-mono">
+                              <span className="text-slate-500">Lat: <strong className="text-slate-800">{selectedPropertyModal.latitude || '10.3158'}</strong></span>
+                              <span className="text-slate-500">Lng: <strong className="text-slate-800">{selectedPropertyModal.longitude || '9.8442'}</strong></span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Host Information */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                            Host Partner Liaison
+                          </h4>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-tafiya-blue/10 text-tafiya-blue font-black text-sm flex items-center justify-center shrink-0">
+                              {selectedPropertyModal.host?.name ? selectedPropertyModal.host.name.charAt(0).toUpperCase() : 'H'}
+                            </div>
+                            <div className="min-w-0 text-xs flex-1">
+                              <span className="font-extrabold text-slate-900 block truncate">
+                                {selectedPropertyModal.host?.name || 'Verified Host Partner'}
+                              </span>
+                              <span className="text-slate-400 text-[11px] block truncate">
+                                {selectedPropertyModal.host?.business_name || 'Independent Partner'} • {selectedPropertyModal.host?.phone || selectedPropertyModal.contact_phone || 'No phone'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Amenities Checklist */}
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                            Verified Amenities & Facilities
+                          </h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedPropertyModal.amenities && selectedPropertyModal.amenities.length > 0 ? (
+                              selectedPropertyModal.amenities.map((a, aIdx) => (
+                                <span key={aIdx} className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                                  <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span>{a}</span>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-slate-400 italic">No amenities recorded</span>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  </div>
+                ) : (
+                  /* EDIT MODE (ADMIN VALUE EDITING FORM) */
+                  <form onSubmit={handleSavePropertyEdit} className="space-y-6">
+                    
+                    {/* Section 1: Basic Information */}
+                    <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-4 shadow-2xs">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Edit className="w-3.5 h-3.5 text-tafiya-blue" />
+                        <span>1. Core Property Information & Pricing</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-bold text-slate-700 block">Property Title / Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={propertyEditForm.name}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, name: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="e.g. Yankari Safari & Luxury Suites"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">Property Type</label>
+                          <select
+                            value={propertyEditForm.property_type}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, property_type: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer"
+                          >
+                            <option value="hotel">Hotel</option>
+                            <option value="resort">Resort</option>
+                            <option value="serviced_apartment">Serviced Apartment</option>
+                            <option value="lodge">Lodge</option>
+                            <option value="boutique">Boutique</option>
+                            <option value="villa">Villa</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">Base Price per Night (₦ NGN)</label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">₦</span>
+                            <input
+                              type="number"
+                              min="1000"
+                              step="500"
+                              required
+                              value={propertyEditForm.starting_price_ngn}
+                              onChange={(e) => setPropertyEditForm(prev => ({ ...prev, starting_price_ngn: e.target.value }))}
+                              className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                              placeholder="45000"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-bold text-slate-700 block">Marketing Category</label>
+                          <input
+                            type="text"
+                            value={propertyEditForm.category}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, category: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="e.g. Safari & Nature, City Center, Executive"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Location & Address */}
+                    <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-4 shadow-2xs">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-tafiya-blue" />
+                        <span>2. Location & Geolocation Coordinates</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-bold text-slate-700 block">Street Address</label>
+                          <input
+                            type="text"
+                            required
+                            value={propertyEditForm.address}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, address: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="Plot 14 Safari Way, Off Central Expressway"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">Neighborhood / District</label>
+                          <input
+                            type="text"
+                            value={propertyEditForm.neighborhood}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, neighborhood: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="e.g. GRA, Nassarawa, Rayfield"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">City</label>
+                          <input
+                            type="text"
+                            required
+                            value={propertyEditForm.city}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, city: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="e.g. Bauchi, Kano, Kaduna"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">State</label>
+                          <select
+                            value={propertyEditForm.state}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, state: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer"
+                          >
+                            {['Bauchi', 'Kaduna', 'Kano', 'Plateau', 'Abuja', 'Adamawa', 'Gombe', 'Katsina', 'Sokoto', 'Borno', 'Niger', 'Kebbi', 'Taraba', 'Yobe', 'Jigawa', 'Nasarawa', 'Benue'].map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">Contact Phone</label>
+                          <input
+                            type="text"
+                            value={propertyEditForm.contact_phone}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, contact_phone: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="+234 802 362 7512"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">GPS Latitude</label>
+                          <input
+                            type="number"
+                            step="0.000001"
+                            value={propertyEditForm.latitude}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, latitude: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="10.315800"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">GPS Longitude</label>
+                          <input
+                            type="number"
+                            step="0.000001"
+                            value={propertyEditForm.longitude}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, longitude: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                            placeholder="9.844200"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Description */}
+                    <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-2 shadow-2xs">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
+                        3. Description & Guest Narrative
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={propertyEditForm.description}
+                        onChange={(e) => setPropertyEditForm(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full p-3.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs leading-relaxed text-slate-800 focus:outline-none focus:ring-2 focus:ring-tafiya-blue"
+                        placeholder="Provide full description of amenities, accommodations, backup electricity, and hospitality highlights..."
+                      />
+                    </div>
+
+                    {/* Section 4: Amenities Multi-Select Tags */}
+                    <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-3 shadow-2xs">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-400 block">
+                        4. Amenities & Verified Features (Click to Toggle)
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          '24/7 Power',
+                          'Constant Water',
+                          'Air Conditioning',
+                          'WiFi',
+                          'Armed Security',
+                          'Swimming Pool',
+                          'Free Breakfast',
+                          'CCTV Security',
+                          'Kitchenette',
+                          'Free Parking',
+                          'Solar Inverter',
+                          'Gym',
+                          'Smart TV',
+                          'Airport Shuttle'
+                        ].map((amenity) => {
+                          const isSelected = (propertyEditForm.amenities || []).includes(amenity);
+                          return (
+                            <button
+                              type="button"
+                              key={amenity}
+                              onClick={() => handleToggleAmenity(amenity)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {isSelected ? (
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              ) : (
+                                <span className="w-3.5 h-3.5 rounded-full border border-slate-400 shrink-0"></span>
+                              )}
+                              <span>{amenity}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Section 5: Governance, Tier & Public Publishing */}
+                    <div className="p-5 bg-white rounded-2xl border border-slate-200/80 space-y-4 shadow-2xs">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-tafiya-blue" />
+                        <span>5. Verification Tier & Public Publishing Switch</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Verification Tier */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">Verification Governance Tier</label>
+                          <select
+                            value={propertyEditForm.verification_tier}
+                            onChange={(e) => setPropertyEditForm(prev => ({ ...prev, verification_tier: e.target.value }))}
+                            className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-tafiya-blue cursor-pointer"
+                          >
+                            <option value="tier_1_docs">Tier 1: Document Audits Cleared</option>
+                            <option value="tier_2_location">Tier 2: Location & GPS Verified</option>
+                            <option value="tier_3_certified">Tier 3: Certified (Field Inspected)</option>
+                          </select>
+                        </div>
+
+                        {/* Public Publishing Toggle Switch */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">Public Site Status</label>
+                          <div 
+                            onClick={() => setPropertyEditForm(prev => ({ ...prev, is_published: !prev.is_published }))}
+                            className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all select-none ${
+                              propertyEditForm.is_published 
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-900' 
+                                : 'bg-slate-100 border-slate-200 text-slate-600'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {propertyEditForm.is_published ? (
+                                <Globe className="w-4 h-4 text-emerald-600" />
+                              ) : (
+                                <EyeOff className="w-4 h-4 text-slate-400" />
+                              )}
+                              <span className="text-xs font-bold">
+                                {propertyEditForm.is_published ? 'Published Live on Public Site' : 'Unpublished (Draft / Hidden)'}
+                              </span>
+                            </div>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white ${
+                              propertyEditForm.is_published ? 'bg-emerald-600' : 'bg-slate-400'
+                            }`}>
+                              {propertyEditForm.is_published ? '✓' : '✕'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setIsPropertyEditMode(false)}
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={isSavingPropertyEdit}
+                        className="px-6 py-2.5 bg-tafiya-blue hover:bg-tafiya-blue/90 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingPropertyEdit ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Saving Changes...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            <span>Save Property Values</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                  </form>
+                )}
+
+              </div>
+
+              {/* Modal Bottom Close Bar */}
+              <div className="p-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between shrink-0">
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Property ID: #{selectedPropertyModal.id} • Slug: {selectedPropertyModal.slug || 'N/A'}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPropertyModal(null);
+                    setIsPropertyEditMode(false);
+                  }}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Close Modal
+                </button>
               </div>
 
             </div>

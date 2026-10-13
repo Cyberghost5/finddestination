@@ -70,6 +70,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/properties/search', [PropertyController::class, 'search']);
     Route::get('/properties/{id}', [PropertyController::class, 'show']);
     Route::post('/properties', [PropertyController::class, 'store']);
+    Route::put('/properties/{id}', [PropertyController::class, 'update']);
+    Route::patch('/properties/{id}', [PropertyController::class, 'update']);
     Route::patch('/properties/{id}/publish', [PropertyController::class, 'togglePublish']);
     Route::patch('/properties/{id}/verification', [PropertyController::class, 'updateVerification']);
 

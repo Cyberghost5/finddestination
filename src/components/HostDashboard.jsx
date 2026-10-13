@@ -27,10 +27,11 @@ import {
   CreditCard,
   Sparkles,
   ArrowRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  LogOut
 } from 'lucide-react';
 
-export default function HostDashboard({ currentUser, properties, onOpenWizard, onTogglePublish, onOpenChat, onNavigateInbox }) {
+export default function HostDashboard({ currentUser, properties, onOpenWizard, onTogglePublish, onOpenChat, onNavigateInbox, onSwitchToGuest, onSelectRole, onLogout }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'listings', 'reservations', 'payouts'
   const [payoutRequested, setPayoutRequested] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -155,49 +156,44 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] bg-slate-50/60 flex flex-col lg:flex-row animate-in fade-in duration-300">
+    <div className="min-h-screen bg-slate-50/60 flex flex-col lg:flex-row animate-in fade-in duration-300">
       
       {/* ========================================================= */}
-      {/* 1. DESKTOP LEFT SIDEBAR NAVIGATION                        */}
+      {/* 1. DESKTOP LEFT SIDEBAR NAVIGATION (STANDARD WHITE)       */}
       {/* ========================================================= */}
-      <aside className="hidden lg:flex w-72 shrink-0 bg-white border-r border-slate-200/80 flex-col sticky top-20 h-[calc(100vh-80px)] z-20">
+      <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 bg-white border-r border-slate-200/80 flex-col h-screen sticky top-0 z-30 justify-between select-none">
         
-        {/* Sidebar Host Identity Header */}
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-tafiya-blue via-indigo-600 to-tafiya-orange text-white flex items-center justify-center font-black text-lg shadow-md shrink-0">
-              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'H'}
+        {/* Top Brand Logo & Workspace Title */}
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div 
+            onClick={() => onSwitchToGuest && onSwitchToGuest()}
+            className="flex items-center gap-2.5 cursor-pointer group"
+            title="Return to FindDestination explore view"
+          >
+            <div className="relative overflow-hidden rounded-xl border border-slate-200/80 p-1 bg-white shadow-xs group-hover:scale-105 transition-transform shrink-0">
+              <img
+                src="/logo.jpeg"
+                alt="FindDestination Logo"
+                className="w-8 h-8 object-contain rounded-lg"
+              />
             </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-black text-slate-900 truncate">{currentUser?.name || 'Property Host'}</h2>
-              <p className="text-[11px] text-slate-500 truncate">{currentUser?.business_name || 'Enterprise Host'}</p>
-              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                {isApproved && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800 flex items-center gap-1">
-                    <CheckCircle2 className="w-2.5 h-2.5" /> Approved Host
-                  </span>
-                )}
-                {isPendingApproval && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-amber-100 text-amber-900 flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5 text-amber-600" /> CAC In Review
-                  </span>
-                )}
-                {isRejected && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-red-100 text-red-800 flex items-center gap-1">
-                    <AlertTriangle className="w-2.5 h-2.5" /> CAC Rejected
-                  </span>
-                )}
+            <div className="min-w-0">
+              <div className="text-sm font-black tracking-tight text-slate-900 group-hover:text-tafiya-blue transition-colors leading-tight">
+                FindDestination<span className="text-tafiya-orange">.com.ng</span>
+              </div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                <Building2 className="w-3 h-3 text-tafiya-blue" />
+                <span>Host Workspace</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Navigation Items List */}
-        <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-          <div className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-            Host Workspace
+        {/* Clean Standard Navigation Links (Fits viewport without scroll) */}
+        <nav className="p-3 space-y-1 flex-1 overflow-y-auto no-scrollbar">
+          <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">
+            Workspace Navigation
           </div>
-
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -205,31 +201,21 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
               <button
                 key={item.id}
                 onClick={() => handleTabSelect(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer text-left group ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
                   isActive
-                    ? 'bg-tafiya-blue text-white shadow-md shadow-tafiya-blue/20 ring-1 ring-tafiya-blue'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                    ? 'bg-tafiya-blue text-white shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                 }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
-                  }`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="truncate">
-                    <span className="block truncate">{item.label}</span>
-                    <span className={`text-[10px] block font-normal truncate ${isActive ? 'text-white/80' : 'text-slate-400'}`}>
-                      {item.desc}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                  <span className="truncate">{item.label}</span>
                 </div>
-
-                {item.badge !== null && (
+                {item.badge !== null && item.badge > 0 && (
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
                     isActive 
                       ? 'bg-white text-tafiya-blue' 
-                      : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                      : 'bg-slate-100 text-slate-700'
                   }`}>
                     {item.badge}
                   </span>
@@ -238,36 +224,30 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
             );
           })}
 
-          {/* Quick Communication Item */}
-          <div className="pt-4 px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-            Communication
+          <div className="pt-2 px-3 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+            Direct Messages
           </div>
-
           <button
             onClick={() => onNavigateInbox && onNavigateInbox()}
-            className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 transition-all cursor-pointer text-left group"
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 transition-all cursor-pointer text-left"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-100">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="block">Guest Messages</span>
-                <span className="text-[10px] text-slate-400 font-normal">Direct Traveler Chat</span>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Guest Messages</span>
             </div>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
           </button>
-        </div>
+        </nav>
 
-        {/* Sidebar Bottom CTA Action */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2.5">
+        {/* Bottom Host Profile, CTA & Logout Actions */}
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
+          {/* List Property CTA Button */}
           <button
             onClick={() => isApproved && onOpenWizard && onOpenWizard()}
             disabled={!isApproved}
-            className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black shadow-md transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer ${
               isApproved
-                ? 'bg-gradient-to-r from-tafiya-blue to-tafiya-blue-600 text-white hover:shadow-lg hover:shadow-tafiya-blue/30 active:scale-98'
+                ? 'bg-tafiya-blue hover:bg-tafiya-blue-600 text-white active:scale-98'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75'
             }`}
             title={!isApproved ? 'Host approval required prior to listing properties' : ''}
@@ -276,202 +256,234 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
             <span>{isApproved ? 'List New Property' : 'List Property (Locked)'}</span>
           </button>
 
-          {currentUser?.cac_number && (
-            <div className="text-center">
-              <span className="text-[10px] font-mono text-slate-400">
-                CAC Reg: {currentUser.cac_number}
-              </span>
+          {/* Current Host Identity */}
+          <div className="flex items-center gap-2.5 px-2 py-1">
+            <div className="w-8 h-8 rounded-xl bg-tafiya-blue/10 text-tafiya-blue font-black text-xs flex items-center justify-center shrink-0">
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'H'}
             </div>
-          )}
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-slate-900 truncate">
+                {currentUser?.name || 'Property Host'}
+              </div>
+              <div className="text-[10px] text-slate-400 truncate">
+                {currentUser?.business_name || currentUser?.email || 'Host Account'}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-200/60">
+            <button
+              onClick={() => onSwitchToGuest && onSwitchToGuest()}
+              className="px-2 py-1.5 text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              title="Switch to Traveler Explorer View"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Traveler View</span>
+            </button>
+            <button
+              onClick={() => onLogout && onLogout()}
+              className="px-2 py-1.5 text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+              title="Log Out of Host Workspace"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out</span>
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* ========================================================= */}
-      {/* 2. MOBILE TOP BAR & SLIDING SIDEBAR DRAWER                */}
+      {/* 2. MOBILE TOP BAR & STANDARD OFF-CANVAS SLIDING DRAWER    */}
       {/* ========================================================= */}
-      <div className="lg:hidden sticky top-16 z-30 bg-white border-b border-slate-200/90 shadow-sm">
-        
-        {/* Mobile Header Bar */}
-        <div className="px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setIsMobileNavOpen(true)}
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-              title="Open Navigation Menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black text-slate-900">
-                  {navItems.find(i => i.id === activeTab)?.label || 'Dashboard'}
-                </span>
-                {isApproved && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" title="Host Approved" />
-                )}
-              </div>
-              <p className="text-[10px] text-slate-500 font-medium">Host: {currentUser?.business_name || currentUser?.name || 'Workspace'}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onNavigateInbox && onNavigateInbox()}
-              className="p-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
-              title="Guest Messages"
-            >
-              <MessageSquare className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => isApproved && onOpenWizard && onOpenWizard()}
-              disabled={!isApproved}
-              className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                isApproved
-                  ? 'bg-tafiya-blue text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
-              }`}
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              <span className="hidden sm:inline">List Property</span>
-            </button>
+      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsMobileNavOpen(true)}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+            title="Open Navigation"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div 
+            onClick={() => onSwitchToGuest && onSwitchToGuest()}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <img
+              src="/logo.jpeg"
+              alt="FindDestination"
+              className="w-7 h-7 object-contain rounded-lg border border-slate-200 p-0.5"
+            />
+            <span className="text-sm font-black text-slate-900">
+              FindDestination<span className="text-tafiya-orange">.com.ng</span>
+            </span>
           </div>
         </div>
 
-        {/* Mobile Horizontal Quick-Tab Bar */}
-        <div className="flex items-center gap-2 px-4 pb-2.5 overflow-x-auto scrollbar-none">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => isApproved && onOpenWizard && onOpenWizard()}
+            disabled={!isApproved}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              isApproved
+                ? 'bg-tafiya-blue text-white shadow-xs'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
+            }`}
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span>List</span>
+          </button>
+          <button
+            onClick={() => onLogout && onLogout()}
+            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Log Out"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Sliding Drawer */}
+      {isMobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setIsMobileNavOpen(false)}
+          ></div>
+
+          {/* Drawer Content */}
+          <div className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-200 select-none">
+            {/* Drawer Top */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/logo.jpeg"
+                  alt="FindDestination"
+                  className="w-8 h-8 object-contain rounded-xl border border-slate-200 p-0.5"
+                />
+                <div>
+                  <div className="text-sm font-black text-slate-900">FindDestination</div>
+                  <div className="text-[10px] font-bold text-tafiya-blue">Host Workspace</div>
+                </div>
+              </div>
               <button
-                key={item.id}
-                onClick={() => handleTabSelect(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
-                  isActive
-                    ? 'bg-tafiya-blue text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                onClick={() => setIsMobileNavOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Drawer Navigation Links */}
+            <nav className="p-3 space-y-1 flex-1 overflow-y-auto no-scrollbar">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      handleTabSelect(item.id);
+                      setIsMobileNavOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
+                      isActive
+                        ? 'bg-tafiya-blue text-white shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.badge !== null && item.badge > 0 && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
+                        isActive ? 'bg-white text-tafiya-blue' : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+              <div className="pt-2 px-3 pb-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                Direct Messages
+              </div>
+              <button
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  onNavigateInbox && onNavigateInbox();
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 transition-all cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Guest Messages</span>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+            </nav>
+
+            {/* Drawer Footer Actions */}
+            <div className="p-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
+              <button
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  isApproved && onOpenWizard && onOpenWizard();
+                }}
+                disabled={!isApproved}
+                className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer ${
+                  isApproved
+                    ? 'bg-tafiya-blue hover:bg-tafiya-blue-600 text-white'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
-                {item.badge !== null && item.badge > 0 && (
-                  <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
-                    isActive ? 'bg-white text-tafiya-blue' : 'bg-slate-200 text-slate-800'
-                  }`}>
-                    {item.badge}
-                  </span>
-                )}
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>{isApproved ? 'List New Property' : 'List Property (Locked)'}</span>
               </button>
-            );
-          })}
-        </div>
 
-        {/* Mobile Drawer Backdrop & Menu */}
-        {isMobileNavOpen && (
-          <div className="fixed inset-0 z-50 flex">
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-              onClick={() => setIsMobileNavOpen(false)}
-            ></div>
-
-            {/* Drawer Content */}
-            <div className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
-              
-              {/* Drawer Top */}
-              <div className="p-5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-tafiya-blue text-white flex items-center justify-center font-black">
-                    {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'H'}
+              <div className="flex items-center gap-2.5 px-2 py-1">
+                <div className="w-8 h-8 rounded-xl bg-tafiya-blue/10 text-tafiya-blue font-black text-xs flex items-center justify-center shrink-0">
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'H'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-slate-900 truncate">
+                    {currentUser?.name || 'Property Host'}
                   </div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900">{currentUser?.name || 'Property Host'}</h3>
-                    <p className="text-[10px] text-slate-500">{currentUser?.business_name || 'Enterprise'}</p>
+                  <div className="text-[10px] text-slate-400 truncate">
+                    {currentUser?.business_name || currentUser?.email || 'Host Account'}
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
 
-              {/* Drawer Nav Links */}
-              <div className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-                <div className="px-2 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Navigation
-                </div>
-
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleTabSelect(item.id)}
-                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all text-left ${
-                        isActive
-                          ? 'bg-tafiya-blue text-white shadow-sm'
-                          : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-4 h-4" />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.badge !== null && (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                          isActive ? 'bg-white text-tafiya-blue' : 'bg-slate-100 text-slate-700'
-                        }`}>
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-
-                <div className="pt-4 px-2 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-                  Direct Messages
-                </div>
-
+              <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-200/60">
                 <button
                   onClick={() => {
                     setIsMobileNavOpen(false);
-                    onNavigateInbox && onNavigateInbox();
+                    onSwitchToGuest && onSwitchToGuest();
                   }}
-                  className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 text-left"
+                  className="px-2 py-1.5 text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <MessageSquare className="w-4 h-4 text-emerald-600" />
-                  <span>Guest Messages</span>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Traveler View</span>
                 </button>
-              </div>
-
-              {/* Drawer Bottom CTA */}
-              <div className="p-4 border-t border-slate-100 bg-slate-50 space-y-2">
                 <button
                   onClick={() => {
                     setIsMobileNavOpen(false);
-                    isApproved && onOpenWizard && onOpenWizard();
+                    onLogout && onLogout();
                   }}
-                  disabled={!isApproved}
-                  className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black shadow-sm ${
-                    isApproved
-                      ? 'bg-tafiya-blue text-white'
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  }`}
+                  className="px-2 py-1.5 text-[11px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
-                  <Plus className="w-4 h-4 stroke-[3]" />
-                  <span>{isApproved ? 'List New Property' : 'List Property (Locked)'}</span>
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Log Out</span>
                 </button>
               </div>
-
             </div>
           </div>
-        )}
-
-      </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* 3. MAIN DASHBOARD CONTENT AREA                            */}

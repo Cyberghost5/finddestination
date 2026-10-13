@@ -352,6 +352,11 @@ export default function App() {
 
   const filteredProperties = useMemo(() => {
     return properties.filter(property => {
+      // 0. Only show published properties on the public traveler feed
+      if (property.is_published === false) {
+        return false;
+      }
+
       // 1. Search State Filter
       if (searchParams.state) {
         const searchedState = searchParams.state.toLowerCase();
@@ -547,6 +552,50 @@ export default function App() {
     setProperties(prev => prev.map(p =>
       p.id === propId ? { ...p, is_published: !p.is_published } : p
     ));
+    if (selectedProperty && selectedProperty.id === propId) {
+      setSelectedProperty(prev => prev ? { ...prev, is_published: !prev.is_published } : null);
+    }
+  };
+
+  const handleUpdateProperty = async (propId, updatedFields) => {
+    try {
+      const response = await fetch(`/api/v1/properties/${propId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+        },
+        body: JSON.stringify(updatedFields)
+      });
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.status === 'success' && resData.data) {
+          setProperties(prev => prev.map(p => p.id === propId ? resData.data : p));
+          if (selectedProperty && selectedProperty.id === propId) {
+            setSelectedProperty(resData.data);
+          }
+          return resData.data;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update property in DB', e);
+    }
+
+    // Fallback optimistic update
+    setProperties(prev => prev.map(p => {
+      if (p.id === propId) {
+        const updated = { ...p, ...updatedFields };
+        if (updatedFields.starting_price_kobo) {
+          updated.starting_price_formatted = `₦${(updatedFields.starting_price_kobo / 100).toLocaleString()}`;
+        } else if (updatedFields.base_price_ngn) {
+          updated.starting_price_kobo = updatedFields.base_price_ngn * 100;
+          updated.starting_price_formatted = `₦${Number(updatedFields.base_price_ngn).toLocaleString()}`;
+        }
+        return updated;
+      }
+      return p;
+    }));
   };
 
   const handleUpdateVerificationStatus = async (propId, newTier) => {
@@ -591,37 +640,52 @@ export default function App() {
     }));
   };
 
+  const handleSwitchToGuest = () => {
+    setCurrentRole('guest');
+    setActiveMobileTab('explore');
+    setGuestSubView('feed');
+  };
+
+  const isDashboardView = !activeLegalPolicy &&
+    !!currentUser &&
+    (currentRole === 'host' || currentRole === 'agent' || currentRole === 'admin') &&
+    !['wishlist', 'trips', 'inbox', 'profile'].includes(activeMobileTab);
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/30">
 
       <div className="flex-1">
-        {/* 1. Global Role Switcher Navigation Header */}
-        <RoleSwitcher
-          currentRole={currentRole}
-          currentUser={currentUser}
-          onOpenAuthModal={handleOpenAuthModal}
-          onSelectRole={handleRoleSelect}
-        />
+        {/* 1. Global Role Switcher Navigation Header (Hidden on Dashboards) */}
+        {!isDashboardView && (
+          <RoleSwitcher
+            currentRole={currentRole}
+            currentUser={currentUser}
+            onOpenAuthModal={handleOpenAuthModal}
+            onSelectRole={handleRoleSelect}
+          />
+        )}
 
-        {/* 2. Main Header */}
-        <Header
-          onOpenSearchModal={() => setIsSearchModalOpen(true)}
-          activeTab={activeMobileTab}
-          setActiveTab={setActiveMobileTab}
-          currentUser={currentUser}
-          onOpenAuthModal={handleOpenAuthModal}
-          onLogout={handleLogout}
-          searchParams={searchParams}
-          onOpenTracker={handleOpenTrackerModal}
-          onLogoClick={() => {
-            setActiveLegalPolicy(null);
-            if (window.location.hash) {
-              history.pushState("", document.title, window.location.pathname + window.location.search);
-            }
-            setActiveMobileTab('explore');
-            setGuestSubView('feed');
-          }}
-        />
+        {/* 2. Main Header (Hidden on Dashboards) */}
+        {!isDashboardView && (
+          <Header
+            onOpenSearchModal={() => setIsSearchModalOpen(true)}
+            activeTab={activeMobileTab}
+            setActiveTab={setActiveMobileTab}
+            currentUser={currentUser}
+            onOpenAuthModal={handleOpenAuthModal}
+            onLogout={handleLogout}
+            searchParams={searchParams}
+            onOpenTracker={handleOpenTrackerModal}
+            onLogoClick={() => {
+              setActiveLegalPolicy(null);
+              if (window.location.hash) {
+                history.pushState("", document.title, window.location.pathname + window.location.search);
+              }
+              setActiveMobileTab('explore');
+              setGuestSubView('feed');
+            }}
+          />
+        )}
 
         {/* 3. Render Role-Specific Portal or Mobile Sub-Page */}
         {activeLegalPolicy ? (
@@ -747,6 +811,9 @@ export default function App() {
               onTogglePublish={handleTogglePublish}
               onOpenChat={handleOpenChat}
               onNavigateInbox={() => setActiveMobileTab('inbox')}
+              onSwitchToGuest={handleSwitchToGuest}
+              onSelectRole={handleRoleSelect}
+              onLogout={handleLogout}
             />
           </AuthGuard>
         ) : currentRole === 'agent' ? (
@@ -764,6 +831,9 @@ export default function App() {
               currentUser={currentUser}
               authToken={authToken}
               onCompleteLocationAudit={() => {}}
+              onSwitchToGuest={handleSwitchToGuest}
+              onSelectRole={handleRoleSelect}
+              onLogout={handleLogout}
             />
           </AuthGuard>
         ) : (
@@ -780,7 +850,11 @@ export default function App() {
               properties={properties}
               onUpdateVerificationStatus={handleUpdateVerificationStatus}
               onTogglePublish={handleTogglePublish}
+              onUpdateProperty={handleUpdateProperty}
               currentUser={currentUser}
+              onSwitchToGuest={handleSwitchToGuest}
+              onSelectRole={handleRoleSelect}
+              onLogout={handleLogout}
             />
           </AuthGuard>
         )}
@@ -874,25 +948,29 @@ export default function App() {
         onSelectStateFilter={handleSelectDestinationState}
       />
 
-      {/* Airbnb Style Full Footer Component */}
-      <Footer
-        currentUser={currentUser}
-        currentRole={currentRole}
-        onOpenAuthModal={handleOpenAuthModal}
-        onOpenInfoTopic={handleOpenInfoTopic}
-        onSelectDestinationState={handleSelectDestinationState}
-        onOpenTracker={handleOpenTrackerModal}
-        onOpenWizard={() => setIsWizardOpen(true)}
-        onSelectTab={(tab) => setActiveMobileTab(tab)}
-      />
+      {/* Airbnb Style Full Footer Component (Hidden on Dashboards) */}
+      {!isDashboardView && (
+        <Footer
+          currentUser={currentUser}
+          currentRole={currentRole}
+          onOpenAuthModal={handleOpenAuthModal}
+          onOpenInfoTopic={handleOpenInfoTopic}
+          onSelectDestinationState={handleSelectDestinationState}
+          onOpenTracker={handleOpenTrackerModal}
+          onOpenWizard={() => setIsWizardOpen(true)}
+          onSelectTab={(tab) => setActiveMobileTab(tab)}
+        />
+      )}
 
-      {/* Mobile Bottom Navigation */}
-      <MobileFooterNav
-        currentRole={currentRole}
-        activeTab={activeMobileTab}
-        setActiveTab={setActiveMobileTab}
-        onOpenWizard={() => setIsWizardOpen(true)}
-      />
+      {/* Mobile Bottom Navigation (Hidden on Dashboards) */}
+      {!isDashboardView && (
+        <MobileFooterNav
+          currentRole={currentRole}
+          activeTab={activeMobileTab}
+          setActiveTab={setActiveMobileTab}
+          onOpenWizard={() => setIsWizardOpen(true)}
+        />
+      )}
 
     </div>
   );
