@@ -25,7 +25,7 @@ export default function MapLocationPickerModal({
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodingNote, setGeocodingNote] = useState('');
 
-  // Fallback state centers in Northern Nigeria
+  // Fallback state centers in Nigeria
   const stateCoordinates = {
     Bauchi: [10.3158, 9.8442],
     Kaduna: [10.5105, 7.4165],
@@ -255,7 +255,7 @@ export default function MapLocationPickerModal({
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-900 text-white">
           <div className="flex items-center gap-2.5">

@@ -22,6 +22,9 @@
 /storage/*.key
 /storage/pail
 /vendor
+/bootstrap/cache/*.php
+!/bootstrap/cache/packages.php
+!/bootstrap/cache/services.php
 _ide_helper.php
 Homestead.json
 Homestead.yaml

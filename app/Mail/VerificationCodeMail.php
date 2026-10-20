@@ -52,7 +52,7 @@ class VerificationCodeMail extends Mailable
                         FindDestination<span style="color: #f97316;">.com.ng</span>
                       </h1>
                       <p style="margin: 6px 0 0 0; font-size: 12px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
-                        Verified Northern Nigeria Stays
+                        Verified Nigeria Stays
                       </p>
                     </td>
                   </tr>

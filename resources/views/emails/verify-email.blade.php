@@ -144,7 +144,7 @@
             </div>
             <h1 class="brand-name">FindDestination<span class="brand-orange">.com.ng</span></h1>
             <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.8; font-weight: 500;">
-                Verified Accommodations Across Northern Nigeria
+                Verified Accommodations Across Nigeria
             </p>
         </div>
 

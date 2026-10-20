@@ -67,7 +67,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
-        // 2. Seed 26 Rich Properties across Northern Nigeria
+        // 2. Seed 26 Rich Properties across Nigeria
         $propertiesData = [
             [
                 'id' => 101,
@@ -228,7 +228,7 @@ class DatabaseSeeder extends Seeder
                     ['id' => 1061, 'name' => 'Boutique Deluxe Room', 'price_kobo' => 3200000, 'max_occupancy' => 2, 'bed_type' => 'Queen Bed']
                 ]
             ],
-            // --- 20 NEW NORTHERN NIGERIA PROPERTIES ---
+            // --- 20 NEW Nigeria PROPERTIES ---
             [
                 'id' => 107,
                 'name' => 'Sokoto Caliphate Heritage Hotel',

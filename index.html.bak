@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/jpeg" href="/logo.jpeg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FindDestination | Trusted Digital Accommodation Marketplace for Northern Nigeria</title>
-    <meta name="description" content="Book verified hotels, guest houses, serviced apartments, and lodges across Bauchi, Kaduna, Kano, Plateau, and Northern Nigeria." />
+    <title>FindDestination | Trusted Digital Accommodation Marketplace for Nigeria</title>
+    <meta name="description" content="Book verified hotels, guest houses, serviced apartments, and lodges across Bauchi, Kaduna, Kano, Plateau, and Nigeria." />
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

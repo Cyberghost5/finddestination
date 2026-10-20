@@ -31,7 +31,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
   }, []);
 
   // Format search pill labels
-  const locationLabel = searchParams?.state ? searchParams.state : 'Anywhere in Northern Nigeria';
+  const locationLabel = searchParams?.state ? searchParams.state : 'Anywhere in Nigeria';
   const datesLabel = (searchParams?.checkIn && searchParams?.checkOut)
     ? `${searchParams.checkIn} → ${searchParams.checkOut}`
     : 'Any dates';
@@ -57,7 +57,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                 FindDestination<span className="text-tafiya-orange">.com.ng</span>
               </span>
               <span className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase -mt-1 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-tafiya-blue fill-tafiya-blue/10" /> Verified Northern Stays
+                <ShieldCheck className="w-3 h-3 text-tafiya-blue fill-tafiya-blue/10" /> Verified Nigerian Stays
               </span>
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function Header({ onOpenSearchModal, activeTab, setActiveTab, cur
                       ) : (
                         <div>
                           <p className="text-xs font-semibold text-slate-900">Welcome to FindDestination</p>
-                          <p className="text-[11px] text-slate-500">Northern Nigeria's Accommodation Portal</p>
+                          <p className="text-[11px] text-slate-500">Nigeria's Accommodation Portal</p>
                         </div>
                       )}
                     </div>

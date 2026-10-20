@@ -92,7 +92,7 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900">Search Accommodations in Northern Nigeria</span>
+            <span className="text-sm font-bold text-slate-900">Search Accommodations in Nigeria</span>
           </div>
           <button
             onClick={onClose}
@@ -108,7 +108,7 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
           {/* 1. Where to? Section */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">1. Where to in Northern Nigeria?</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">1. Where to in Nigeria?</h3>
               {selectedState && (
                 <button
                   type="button"
@@ -128,8 +128,8 @@ export default function SearchModal({ isOpen, onClose, searchParams, onApplySear
                     key={state.name}
                     onClick={() => setSelectedState(isSelected ? '' : state.name)}
                     className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer ${isSelected
-                        ? 'border-tafiya-blue bg-tafiya-blue-50/60 ring-2 ring-tafiya-blue/30 shadow-sm'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-tafiya-blue bg-tafiya-blue-50/60 ring-2 ring-tafiya-blue/30 shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                   >
                     <div className="flex items-center justify-between">

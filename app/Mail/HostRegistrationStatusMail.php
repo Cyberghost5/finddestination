@@ -73,7 +73,7 @@ class HostRegistrationStatusMail extends Mailable
                         FindDestination<span style="color: #f97316;">.com.ng</span>
                       </h1>
                       <p style="margin: 6px 0 0 0; font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">
-                        Trusted Digital Accommodation Marketplace • Northern Nigeria
+                        Trusted Digital Accommodation Marketplace • Nigeria
                       </p>
                     </td>
                   </tr>
@@ -138,7 +138,7 @@ class HostRegistrationStatusMail extends Mailable
                           What You Can Do Now:
                         </h3>
                         <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #475569; line-height: 1.8;">
-                          <li><strong>Upload Properties:</strong> Add your serviced apartments, suites, and guest lodges across Northern Nigeria.</li>
+                          <li><strong>Upload Properties:</strong> Add your serviced apartments, suites, and guest lodges across Nigeria.</li>
                           <li><strong>Request Tier 3 Field Inspections:</strong> Certified regional agents can physically audit your locations for the Tier 3 Trust Badge.</li>
                           <li><strong>Guest Liaison Messaging:</strong> Directly communicate with confirmed guests who book your properties.</li>
                           <li><strong>Automated Escrow Disbursals:</strong> Receive verified guest payouts directly to your designated bank account upon check-in.</li>
@@ -184,7 +184,7 @@ class HostRegistrationStatusMail extends Mailable
                   <tr>
                     <td style="background-color: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; line-height: 1.6;">
                       <p style="margin: 0 0 4px 0; font-weight: 700; color: #64748b;">
-                        FindDestination Nigeria Ltd • Trusted Northern Nigeria Escrow Platform
+                        FindDestination Nigeria Ltd • Trusted Nigeria Escrow Platform
                       </p>
                       <p style="margin: 0; color: #94a3b8;">
                         Bauchi • Kaduna • Kano • Jos • Yola • Gombe • Abuja

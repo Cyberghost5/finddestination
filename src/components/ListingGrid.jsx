@@ -9,7 +9,7 @@ export default function ListingGrid({ properties, onSelectProperty, onOpenFilter
 
   return (
     <div className="space-y-6">
-      
+
       {/* Search Header Bar & Tax Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -17,7 +17,7 @@ export default function ListingGrid({ properties, onSelectProperty, onOpenFilter
             {properties.length} {properties.length === 1 ? 'Stay' : 'Verified Stays'} Available
           </span>
           <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-            Northern Nigeria Regional Inventory
+            Nigeria Regional Inventory
           </span>
         </div>
 
@@ -26,13 +26,11 @@ export default function ListingGrid({ properties, onSelectProperty, onOpenFilter
           <span>Display total before taxes</span>
           <button
             onClick={() => setIncludeTaxes(!includeTaxes)}
-            className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer ${
-              includeTaxes ? 'bg-tafiya-blue' : 'bg-slate-300'
-            }`}
+            className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer ${includeTaxes ? 'bg-tafiya-blue' : 'bg-slate-300'
+              }`}
           >
-            <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform shadow-md ${
-              includeTaxes ? 'right-1' : 'left-1'
-            }`} />
+            <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform shadow-md ${includeTaxes ? 'right-1' : 'left-1'
+              }`} />
           </button>
         </div>
       </div>
@@ -55,9 +53,9 @@ export default function ListingGrid({ properties, onSelectProperty, onOpenFilter
       ) : showMap ? (
         /* Real Leaflet OpenStreetMap Container */
         <div className="relative w-full h-[650px] rounded-3xl overflow-hidden border border-slate-200 shadow-xl bg-slate-900 animate-in fade-in duration-300">
-          <MapView 
-            properties={properties} 
-            onSelectProperty={onSelectProperty} 
+          <MapView
+            properties={properties}
+            onSelectProperty={onSelectProperty}
           />
         </div>
       ) : (

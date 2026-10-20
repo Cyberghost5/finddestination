@@ -103,7 +103,7 @@ export default function Footer({
                     <span className="text-xl font-extrabold text-white">FindDestination<span className="text-tafiya-orange">.com.ng</span></span>
                   </div>
                   <p className="text-slate-400 text-xs mt-1 max-w-xl">
-                    The trusted digital accommodation portal for Northern Nigeria. Verified property documents, on-site GPS agent audits, and 100% escrow backed payment security.
+                    The trusted digital accommodation portal for Nigeria. Verified property documents, on-site GPS agent audits, and 100% escrow backed payment security.
                   </p>
                 </div>
               )}
@@ -177,7 +177,7 @@ export default function Footer({
 
         {/* Section 1: Inspiration for Future Trips (Airbnb Style Tabs) */}
         <div className="border-b border-slate-800 pb-10">
-          <h3 className="text-sm font-extrabold text-white mb-4">Inspiration for stays across Northern Nigeria</h3>
+          <h3 className="text-sm font-extrabold text-white mb-4">Inspiration for stays across Nigeria</h3>
 
           {/* Navigation Category Tabs */}
           <div className="flex items-center gap-6 border-b border-slate-800 pb-3 mb-6 overflow-x-auto no-scrollbar">

@@ -26,7 +26,7 @@ export default function MapView({ properties, onSelectProperty, singleProperty =
 
       const L = window.L;
 
-      // Default center: Northern Nigeria [lat, lng]
+      // Default center: Nigeria [lat, lng]
       const centerLat = singleProperty ? (singleProperty.latitude || 10.3158) : 10.3158;
       const centerLng = singleProperty ? (singleProperty.longitude || 9.8442) : 9.2000;
       const zoomLevel = singleProperty ? 14 : 7;

@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary & Product Architecture
 
-**Tafiya** is a localized digital accommodation marketplace engineered for Northern Nigeria, connecting travelers (corporate travelers, development/NGO personnel, tourists, students, and families) with vetted lodging providers (hotels, guest houses, lodges, and serviced apartments).
+**Tafiya** is a localized digital accommodation marketplace engineered for Nigeria, connecting travelers (corporate travelers, development/NGO personnel, tourists, students, and families) with vetted lodging providers (hotels, guest houses, lodges, and serviced apartments).
 
 The platform operates as a modern web application designed API-first using **PHP 8.3+ with Laravel 11.x/12.x** and **MySQL 8.0+**, enabling complete feature parity when native **Flutter** iOS/Android client apps consume the `/api/v1/*` endpoints at a later phase. Online payment processing is powered by **Paystack** (Cards, USSD, Apple Pay) and **Monnify** (Dynamic Virtual Bank Accounts, Direct Bank Transfers) within an escrow settlement lifecycle.
 
@@ -42,7 +42,7 @@ The platform operates as a modern web application designed API-first using **PHP
 
 ## 3. High-Priority Payment Gateway Architecture (Paystack & Monnify)
 
-To maximize conversion across Northern Nigerian payment preferences, FindDestination implements a multi-rail gateway using the **Strategy Pattern**.
+To maximize conversion across Nigerian payment preferences, FindDestination implements a multi-rail gateway using the **Strategy Pattern**.
 
 ### 3.1 Gateway Responsibilities
 

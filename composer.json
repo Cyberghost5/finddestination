@@ -1,7 +1,7 @@
 {
     "name": "finddestination/backend",
     "type": "project",
-    "description": "FindDestination Digital Accommodation Marketplace API for Northern Nigeria",
+    "description": "FindDestination Digital Accommodation Marketplace API for Nigeria",
     "keywords": [
         "laravel",
         "framework",

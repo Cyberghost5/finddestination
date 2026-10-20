@@ -128,7 +128,7 @@ Effective Date: January 1, 2026
 Website: https://finddestination.com.ng
 
 1. HOST PARTNERSHIP OVERVIEW
-FindDestination connects verified property owners, hotel managers, and shortlet hosts across Northern Nigeria (Bauchi, Kaduna, Kano, Plateau, Adamawa, Gombe, Zaria, and Sokoto) with high-intent travelers, corporate teams, and NGO personnel.
+FindDestination connects verified property owners, hotel managers, and shortlet hosts across Nigeria (Bauchi, Kaduna, Kano, Plateau, Adamawa, Gombe, Zaria, and Sokoto) with high-intent travelers, corporate teams, and NGO personnel.
 
 2. MANDATORY 4-TIER VERIFICATION PROTOCOL
 To maintain marketplace security and eliminate accommodation fraud, every host must pass FindDestination's verification protocol:
@@ -278,8 +278,8 @@ FindDestination requests location permissions strictly to log property coordinat
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
               className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${isActive
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
             >
               <TabIcon className={`w-4 h-4 ${isActive ? 'text-tafiya-gold' : 'text-slate-400'}`} />
@@ -307,7 +307,7 @@ FindDestination requests location permissions strictly to log property coordinat
           {currentTab === 'sitemap' ? (
             <div className="space-y-6">
               <p className="text-slate-600 leading-relaxed font-medium">
-                Explore the complete directory of Stay Portals, Northern Nigeria State Hubs, and Legal Verification Documents for FindDestination.com.ng:
+                Explore the complete directory of Stay Portals, Nigeria State Hubs, and Legal Verification Documents for FindDestination.com.ng:
               </p>
 
               {/* State Hubs Grid */}

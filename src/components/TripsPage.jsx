@@ -238,7 +238,7 @@ export default function TripsPage({ currentUser, onOpenAuthModal, onOpenVoucher,
             <h3 className="text-base font-extrabold text-slate-900">No Trips Found</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               {activeFilter === 'all'
-                ? "You don't have any bookings yet. Browse verified shortlet properties across Northern Nigeria and book with full escrow protection."
+                ? "You don't have any bookings yet. Browse verified shortlet properties across Nigeria and book with full escrow protection."
                 : `No ${activeFilter} stays found in your account.`}
             </p>
           </div>

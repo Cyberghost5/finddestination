@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Building2, 
-  ShieldCheck, 
-  DollarSign, 
-  Users, 
-  Calendar, 
-  Plus, 
-  CheckCircle2, 
-  Clock, 
-  ArrowUpRight, 
-  Eye, 
-  Edit, 
-  Check, 
+import {
+  Building2,
+  ShieldCheck,
+  DollarSign,
+  Users,
+  Calendar,
+  Plus,
+  CheckCircle2,
+  Clock,
+  ArrowUpRight,
+  Eye,
+  Edit,
+  Check,
   Lock,
   MapPin,
   AlertTriangle,
@@ -290,8 +290,8 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
       setLoadingReservations(true);
       try {
         const token = localStorage.getItem('finddestination_token') || localStorage.getItem('tafiya_token');
-        const url = currentUser.id 
-          ? `/api/v1/host/bookings?host_id=${currentUser.id}` 
+        const url = currentUser.id
+          ? `/api/v1/host/bookings?host_id=${currentUser.id}`
           : `/api/v1/host/bookings`;
         const res = await fetch(url, {
           headers: {
@@ -359,15 +359,14 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
 
   return (
     <div className="min-h-screen bg-slate-50/60 flex flex-col lg:flex-row animate-in fade-in duration-300">
-      
+
       {/* Toast Alert */}
       {toast && (
         <div className="fixed top-4 right-4 z-[99999] max-w-md animate-in slide-in-from-top-4 fade-in duration-300">
-          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-xs font-bold border ${
-            toast.type === 'success' 
-              ? 'bg-emerald-950 text-emerald-100 border-emerald-800' 
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-xs font-bold border ${toast.type === 'success'
+              ? 'bg-emerald-950 text-emerald-100 border-emerald-800'
               : 'bg-red-950 text-red-100 border-red-800'
-          }`}>
+            }`}>
             {toast.type === 'success' ? (
               <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
             ) : (
@@ -380,15 +379,15 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
           </div>
         </div>
       )}
-      
+
       {/* ========================================================= */}
       {/* 1. DESKTOP LEFT SIDEBAR NAVIGATION (STANDARD WHITE)       */}
       {/* ========================================================= */}
       <aside className="hidden lg:flex w-64 xl:w-72 shrink-0 bg-white border-r border-slate-200/80 flex-col h-screen sticky top-0 z-30 justify-between select-none">
-        
+
         {/* Top Brand Logo & Workspace Title */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div 
+          <div
             onClick={() => onSwitchToGuest && onSwitchToGuest()}
             className="flex items-center gap-2.5 cursor-pointer group"
             title="Return to FindDestination explore view"
@@ -424,22 +423,20 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
               <button
                 key={item.id}
                 onClick={() => handleTabSelect(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
-                  isActive
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${isActive
                     ? 'bg-tafiya-blue text-white shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                   <span className="truncate">{item.label}</span>
                 </div>
                 {item.badge !== null && item.badge > 0 && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
-                    isActive 
-                      ? 'bg-white text-tafiya-blue' 
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${isActive
+                      ? 'bg-white text-tafiya-blue'
                       : 'bg-slate-100 text-slate-700'
-                  }`}>
+                    }`}>
                     {item.badge}
                   </span>
                 )}
@@ -468,11 +465,10 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
           <button
             onClick={() => isApproved && onOpenWizard && onOpenWizard()}
             disabled={!isApproved}
-            className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer ${
-              isApproved
+            className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer ${isApproved
                 ? 'bg-tafiya-blue hover:bg-tafiya-blue-600 text-white active:scale-98'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75'
-            }`}
+              }`}
             title={!isApproved ? 'Host approval required prior to listing properties' : ''}
           >
             <Plus className="w-4 h-4 stroke-[3]" />
@@ -528,7 +524,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div 
+          <div
             onClick={() => onSwitchToGuest && onSwitchToGuest()}
             className="flex items-center gap-2 cursor-pointer"
           >
@@ -547,11 +543,10 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
           <button
             onClick={() => isApproved && onOpenWizard && onOpenWizard()}
             disabled={!isApproved}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              isApproved
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${isApproved
                 ? 'bg-tafiya-blue text-white shadow-xs'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
-            }`}
+              }`}
           >
             <Plus className="w-3.5 h-3.5 stroke-[3]" />
             <span>List</span>
@@ -570,7 +565,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
       {isMobileNavOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in"
             onClick={() => setIsMobileNavOpen(false)}
           ></div>
@@ -610,20 +605,18 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                       handleTabSelect(item.id);
                       setIsMobileNavOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
-                      isActive
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${isActive
                         ? 'bg-tafiya-blue text-white shadow-xs font-bold'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                       <span className="truncate">{item.label}</span>
                     </div>
                     {item.badge !== null && item.badge > 0 && (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
-                        isActive ? 'bg-white text-tafiya-blue' : 'bg-slate-100 text-slate-700'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${isActive ? 'bg-white text-tafiya-blue' : 'bg-slate-100 text-slate-700'
+                        }`}>
                         {item.badge}
                       </span>
                     )}
@@ -657,11 +650,10 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                   isApproved && onOpenWizard && onOpenWizard();
                 }}
                 disabled={!isApproved}
-                className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer ${
-                  isApproved
+                className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer ${isApproved
                     ? 'bg-tafiya-blue hover:bg-tafiya-blue-600 text-white'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75'
-                }`}
+                  }`}
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
                 <span>{isApproved ? 'List New Property' : 'List Property (Locked)'}</span>
@@ -712,7 +704,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
       {/* 3. MAIN DASHBOARD CONTENT AREA                            */}
       {/* ========================================================= */}
       <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-8">
-        
+
         {/* Host Banner Card */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl">
           <div className="flex items-center gap-4">
@@ -845,12 +837,12 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
         {/* ========================================================= */}
         {activeTab === 'overview' && (
           <div className="space-y-8 animate-in fade-in duration-200">
-            
+
             {/* Metric Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              
+
               {/* Available Escrow Earnings */}
-              <div 
+              <div
                 onClick={() => handleTabSelect('payouts')}
                 className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2 cursor-pointer hover:border-tafiya-blue/40 hover:shadow-md transition-all group"
                 title="Click to view and manage Escrow Payouts"
@@ -878,7 +870,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
               <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Monthly Bookings</span>
                 <div className="text-2xl font-black text-tafiya-orange">{isApproved && managedProperties.length > 0 ? `${managedProperties.length * 3} Stays` : '0 Stays'}</div>
-                <span className="text-[11px] font-medium text-slate-500">Northern Nigeria Region</span>
+                <span className="text-[11px] font-medium text-slate-500">Nigeria Region</span>
               </div>
 
               {/* Verification Status */}
@@ -906,7 +898,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
 
             {/* Quick Actions & Highlights Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
+
               {/* Managed Properties Snapshot */}
               <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
@@ -940,9 +932,8 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                             <span className="text-[10px] text-slate-500">{prop.city}, {prop.state} • {prop.starting_price_formatted}/night</span>
                           </div>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${
-                          prop.is_published ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${prop.is_published ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                          }`}>
                           {prop.is_published ? 'Published' : 'Draft'}
                         </span>
                       </div>
@@ -1057,9 +1048,9 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                       {managedProperties.map((prop) => (
                         <tr key={prop.id} className="hover:bg-slate-50/60 transition-colors">
                           <td className="p-4 flex items-center gap-3">
-                            <img 
-                              src={prop.images[0]} 
-                              alt={prop.name} 
+                            <img
+                              src={prop.images[0]}
+                              alt={prop.name}
                               className="w-10 h-10 rounded-xl object-cover"
                             />
                             <div>
@@ -1095,11 +1086,10 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                           <td className="p-4">
                             <button
                               onClick={() => onTogglePublish(prop.id)}
-                              className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors cursor-pointer ${
-                                prop.is_published 
-                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold transition-colors cursor-pointer ${prop.is_published
+                                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
                                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                              }`}
+                                }`}
                             >
                               {prop.is_published ? 'Published' : 'Draft'}
                             </button>
@@ -1211,7 +1201,7 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
 
             {/* Top 3 Metric Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              
+
               {/* Card 1: Available Escrow Balance */}
               <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-sm border border-slate-800 flex flex-col justify-between space-y-4">
                 <div className="flex items-center justify-between">
@@ -1359,13 +1349,12 @@ export default function HostDashboard({ currentUser, properties, onOpenWizard, o
                               {p.amount_formatted}
                             </td>
                             <td className="py-4 px-6 text-center">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-                                isPaid
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${isPaid
                                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                   : isPending
-                                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                                  : 'bg-rose-50 text-rose-800 border-rose-200'
-                              }`}>
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                                }`}>
                                 <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-500' : isPending ? 'bg-amber-500' : 'bg-rose-500'}`} />
                                 <span>{isPaid ? 'Disbursed' : isPending ? 'Pending Disbursal' : 'Declined'}</span>
                               </span>

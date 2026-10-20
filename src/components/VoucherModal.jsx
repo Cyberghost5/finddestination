@@ -24,7 +24,7 @@ export default function VoucherModal({ isOpen, onClose, booking }) {
   const propertyName = booking.property?.name || booking.propertyTitle || 'FindDestination Verified Stay';
   const propertyAddress = booking.property?.address
     ? `${booking.property.address}${booking.property.city ? `, ${booking.property.city}` : ''}`
-    : (booking.location || 'Northern Nigeria');
+    : (booking.location || 'Nigeria');
   const propertyImage = booking.property?.images?.[0] || booking.propertyImage || '/logo.jpeg';
   const roomName = booking.room?.name || booking.roomType || 'Executive Verified Stay';
   const checkInDate = booking.checkInDate || booking.checkIn || 'Scheduled Date';

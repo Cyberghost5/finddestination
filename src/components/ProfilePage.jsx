@@ -454,8 +454,8 @@ export default function ProfilePage({
               type="button"
               onClick={() => setActiveReservationFilter('all')}
               className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeReservationFilter === 'all'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               All ({bookings.length})
@@ -464,8 +464,8 @@ export default function ProfilePage({
               type="button"
               onClick={() => setActiveReservationFilter('upcoming')}
               className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeReservationFilter === 'upcoming'
-                  ? 'bg-white text-emerald-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-emerald-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               Confirmed ({upcomingCount})
@@ -475,8 +475,8 @@ export default function ProfilePage({
                 type="button"
                 onClick={() => setActiveReservationFilter('completed')}
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeReservationFilter === 'completed'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
                   }`}
               >
                 Past ({completedCount})
@@ -498,7 +498,7 @@ export default function ProfilePage({
               const propName = item.property?.name || item.propertyTitle || item.propertyName || 'FindDestination Verified Stay';
               const propLocation = item.property?.city
                 ? `${item.property.city}${item.property.state ? `, ${item.property.state}` : ''}`
-                : (item.location || 'Northern Nigeria');
+                : (item.location || 'Nigeria');
               const propImg = item.property?.images?.[0] || item.property?.cover_image || item.cover_image || '/logo.jpeg';
               const room = item.room?.name || item.roomType || item.room_name || 'Executive Verified Stay';
               const checkIn = item.checkInDate || item.check_in_date || 'Scheduled';
@@ -513,8 +513,8 @@ export default function ProfilePage({
                 <div
                   key={ref + idx}
                   className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 hover:shadow-md ${isJustBooked
-                      ? 'border-emerald-500 bg-emerald-50/20 shadow-md ring-2 ring-emerald-500/20'
-                      : 'border-slate-200/90 bg-white hover:border-slate-300'
+                    ? 'border-emerald-500 bg-emerald-50/20 shadow-md ring-2 ring-emerald-500/20'
+                    : 'border-slate-200/90 bg-white hover:border-slate-300'
                     }`}
                 >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -837,7 +837,7 @@ export default function ProfilePage({
       {/* App Version Info */}
       <div className="text-center pt-2 space-y-1">
         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">FindDestination v2.4</p>
-        <p className="text-[10px] text-slate-400">Escrow Shortlet Platform • Northern Nigeria</p>
+        <p className="text-[10px] text-slate-400">Escrow Shortlet Platform • Nigeria</p>
       </div>
 
     </div>

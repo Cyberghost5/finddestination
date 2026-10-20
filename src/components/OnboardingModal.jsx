@@ -1,30 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  CheckCircle2, 
-  Heart, 
-  Lock, 
-  Calendar, 
-  User, 
-  Mail, 
+import {
+  ShieldCheck,
+  CheckCircle2,
+  Heart,
+  Lock,
+  Calendar,
+  User,
+  Mail,
   ArrowLeft,
   Sparkles,
   AlertCircle
 } from 'lucide-react';
 
-export default function OnboardingModal({ 
-  isOpen, 
-  currentUser, 
-  onCompleteOnboarding 
+export default function OnboardingModal({
+  isOpen,
+  currentUser,
+  onCompleteOnboarding
 }) {
   const [step, setStep] = useState(1); // 1: Account Info (Legal name, DOB, Email), 2: Terms & Community Commitment
-  
+
   // Form State
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dob, setDob] = useState('');
   const [marketingOptOut, setMarketingOptOut] = useState(false);
-  
+
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -117,7 +117,7 @@ export default function OnboardingModal({
       });
 
       const resData = await response.json();
-      
+
       const updatedUser = {
         ...(currentUser || {}),
         ...payload,
@@ -148,7 +148,7 @@ export default function OnboardingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
-        
+
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
           {step === 2 ? (
@@ -173,11 +173,11 @@ export default function OnboardingModal({
 
         {/* Form Body */}
         <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6">
-          
+
           {step === 1 ? (
             /* STEP 1: Account Creation & Legal Details */
             <form onSubmit={handleStep1Submit} className="space-y-6">
-              
+
               <div className="space-y-1">
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">
                   Let’s create your account
@@ -199,7 +199,7 @@ export default function OnboardingModal({
                 <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider">
                   Legal name
                 </label>
-                
+
                 <div className="rounded-2xl border border-slate-300 overflow-hidden focus-within:ring-2 focus-within:ring-slate-900 focus-within:border-slate-900 transition-all bg-white shadow-sm">
                   <div className="p-3 border-b border-slate-200">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase">
@@ -214,7 +214,7 @@ export default function OnboardingModal({
                       className="w-full text-sm font-semibold text-slate-900 bg-transparent focus:outline-none pt-0.5"
                     />
                   </div>
-                  
+
                   <div className="p-3 bg-white">
                     <label className="block text-[10px] font-bold text-slate-500 uppercase">
                       Last name
@@ -240,7 +240,7 @@ export default function OnboardingModal({
                 <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider">
                   Date of birth
                 </label>
-                
+
                 <div className="relative">
                   <input
                     type="date"
@@ -262,7 +262,7 @@ export default function OnboardingModal({
                 <label className="block text-xs font-extrabold text-slate-900 uppercase tracking-wider">
                   Email
                 </label>
-                
+
                 <div className="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 text-sm font-semibold text-slate-600 flex items-center gap-2 cursor-not-allowed">
                   <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                   <span className="truncate">{currentUser?.email || 'user@example.com'}</span>
@@ -311,7 +311,7 @@ export default function OnboardingModal({
           ) : (
             /* STEP 2: Terms of Service & Community Commitment */
             <form onSubmit={handleStep2Submit} className="space-y-6 animate-in fade-in duration-200">
-              
+
               <div className="space-y-2 text-center max-w-sm mx-auto">
                 <div className="w-14 h-14 rounded-3xl bg-tafiya-blue-50 text-tafiya-blue flex items-center justify-center mx-auto shadow-sm">
                   <ShieldCheck className="w-8 h-8 stroke-[2]" />
@@ -339,7 +339,7 @@ export default function OnboardingModal({
                     <span>FindDestination Community Commitment</span>
                   </h4>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    FindDestination is a community built on trust, respect, and safety across Northern Nigeria.
+                    FindDestination is a community built on trust, respect, and safety across Nigeria.
                   </p>
                 </div>
 
@@ -348,7 +348,7 @@ export default function OnboardingModal({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span><strong>Treat everyone with respect:</strong> I agree to treat all members of the FindDestination community — regardless of ethnicity, state of origin, gender, or religion — with respect and without judgment or bias.</span>
                   </li>
-                  
+
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span><strong>Escrow Protection Rules:</strong> I agree to communicate and pay exclusively through the FindDestination platform to ensure escrow holding safety and property verification guarantee.</span>

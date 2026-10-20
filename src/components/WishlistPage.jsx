@@ -2,14 +2,14 @@ import React from 'react';
 import ListingCard from './ListingCard';
 import { Heart, Search, ShieldCheck, MapPin, Building2, Sparkles, Lock, ChevronRight } from 'lucide-react';
 
-export default function WishlistPage({ 
-  properties, 
-  wishlistIds = [], 
-  onToggleWishlist, 
-  onSelectProperty, 
+export default function WishlistPage({
+  properties,
+  wishlistIds = [],
+  onToggleWishlist,
+  onSelectProperty,
   onNavigateExplore,
   currentUser,
-  onOpenAuthModal 
+  onOpenAuthModal
 }) {
   // Enforce Authentication Check
   if (!currentUser) {
@@ -19,11 +19,11 @@ export default function WishlistPage({
           <div className="w-16 h-16 rounded-3xl bg-tafiya-orange-50 text-tafiya-orange flex items-center justify-center mx-auto border border-tafiya-orange-100 shadow-sm">
             <Lock className="w-8 h-8 stroke-[2]" />
           </div>
-          
+
           <div className="space-y-2">
             <h2 className="text-lg font-black text-slate-900">Sign In to Access Your Wishlist</h2>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Save your favorite verified shortlet stays across Northern Nigeria, sync them across all your devices, and receive price drop alerts.
+              Save your favorite verified shortlet stays across Nigeria, sync them across all your devices, and receive price drop alerts.
             </p>
           </div>
 
@@ -52,7 +52,7 @@ export default function WishlistPage({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 animate-in fade-in duration-300">
-      
+
       {/* Header Banner */}
       <div className="flex items-center justify-between p-6 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-xl">
         <div className="flex items-center gap-4">
@@ -80,7 +80,7 @@ export default function WishlistPage({
           <div className="space-y-1">
             <h3 className="text-base font-extrabold text-slate-900">Your Wishlist is Empty</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              As you browse verified shortlet properties across Northern Nigeria, tap the heart icon on any stay to save it here for quick access.
+              As you browse verified shortlet properties across Nigeria, tap the heart icon on any stay to save it here for quick access.
             </p>
           </div>
           <button

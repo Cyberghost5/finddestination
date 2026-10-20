@@ -12,7 +12,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       content: (
         <div className="space-y-4">
           <p className="text-xs text-slate-600 leading-relaxed">
-            Need help with your stay booking or property listing? Our dedicated Northern Nigeria support team is available 24/7.
+            Need help with your stay booking or property listing? Our dedicated Nigeria support team is available 24/7.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
@@ -78,7 +78,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            Your safety in Northern Nigeria is our top priority. We implement strict safety standards across Bauchi, Kaduna, Kano, Plateau, Adamawa, and Gombe:
+            Your safety in Nigeria is our top priority. We implement strict safety standards across Bauchi, Kaduna, Kano, Plateau, Adamawa, and Gombe:
           </p>
           <ul className="space-y-2 list-disc pl-4 text-[11px] text-slate-700">
             <li><strong>Verified Host Contacts:</strong> Only communicate and pay through the FindDestination platform. Never send funds directly to personal bank accounts.</li>
@@ -132,7 +132,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            FindDestination Cover provides up to ₦5,000,000 in property damage protection and host liability insurance for verified property owners in Northern Nigeria.
+            FindDestination Cover provides up to ₦5,000,000 in property damage protection and host liability insurance for verified property owners in Nigeria.
           </p>
           <button
             onClick={() => { onClose(); onOpenAuthModal && onOpenAuthModal('signup'); }}
@@ -146,11 +146,11 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
     about: {
       title: "About FindDestination.com.ng Marketplace",
       icon: Building2,
-      badge: "Northern Nigeria Accommodation Portal",
+      badge: "Nigeria Accommodation Portal",
       content: (
         <div className="space-y-3 text-xs text-slate-600">
           <p className="leading-relaxed">
-            FindDestination.com.ng is Northern Nigeria's premier digital accommodation marketplace connecting travelers, NGO teams, and corporate personnel with verified hotels, serviced apartments, resorts, and guest houses.
+            FindDestination.com.ng is Nigeria's premier digital accommodation marketplace connecting travelers, NGO teams, and corporate personnel with verified hotels, serviced apartments, resorts, and guest houses.
           </p>
           <p className="leading-relaxed text-[11px] text-slate-500">
             Registered with the Corporate Affairs Commission (CAC RC: 7890123), FindDestination operates across Bauchi, Kaduna, Kano, Plateau (Jos), Adamawa (Yola), Gombe, Zaria, and Sokoto.
@@ -189,7 +189,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
       badge: "Navigation Directory",
       content: (
         <div className="space-y-3 text-xs">
-          <p className="text-slate-500 text-[11px]">Explore popular stay categories and regional hubs across Northern Nigeria:</p>
+          <p className="text-slate-500 text-[11px]">Explore popular stay categories and regional hubs across Nigeria:</p>
           <div className="grid grid-cols-2 gap-2">
             {['Bauchi', 'Kaduna', 'Kano', 'Plateau', 'Adamawa', 'Gombe'].map((stateName) => (
               <button
@@ -217,7 +217,7 @@ export default function InfoModal({ isOpen, onClose, topicKey, onOpenAuthModal, 
     content: (
       <div className="space-y-3 text-xs text-slate-600">
         <p className="leading-relaxed">
-          Welcome to FindDestination.com.ng — Northern Nigeria's trusted digital accommodation marketplace.
+          Welcome to FindDestination.com.ng — Nigeria's trusted digital accommodation marketplace.
         </p>
       </div>
     )
