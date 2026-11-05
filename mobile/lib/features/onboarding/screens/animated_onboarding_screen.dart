@@ -131,12 +131,27 @@ class _AnimatedOnboardingScreenState extends State<AnimatedOnboardingScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
+                        width: 32,
+                        height: 32,
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        child: const Icon(LucideIcons.hotel, color: Colors.white, size: 18),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(7),
+                          child: Image.asset(
+                            'assets/images/logo.jpeg',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       const Text(

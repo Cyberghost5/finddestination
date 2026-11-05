@@ -165,7 +165,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               controller: controller,
               decoration: const InputDecoration(
                 labelText: 'API Base URL',
-                hintText: 'http://10.0.2.2:8000/api/v1',
+                hintText: 'https://finddestination.com.ng/api/v1/',
               ),
             ),
           ],
@@ -220,12 +220,27 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
-              child: const Icon(LucideIcons.hotel, color: Colors.white, size: 18),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(7),
+                child: Image.asset(
+                  'assets/images/logo.jpeg',
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
             const SizedBox(width: 10),
             const Column(

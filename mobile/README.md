@@ -133,16 +133,14 @@ flutter build ipa --release
 
 ## 🌐 Connecting to Backend API
 
-By default, the app connects to:
-- **Android Emulator:** `http://10.0.2.2:8000/api/v1`
-- **iOS Simulator / Desktop:** `http://127.0.0.1:8000/api/v1`
-- **Web:** `http://localhost:8000/api/v1`
+By default, the app is pre-configured to connect to the live production server:
+- **Default Base URL:** `https://finddestination.com.ng/api/v1/`
 
-To connect to your live production or staging server:
-- Change the URL in chat or open **Account > API Base URL** dialog in the app, or
-- Pass it in `lib/core/constants/api_constants.dart`:
+To test locally or connect to a custom staging environment:
+- Open **Account > API Base URL** dialog inside the app and enter your local development host (e.g. `http://10.0.2.2:8000/api/v1` for Android Emulator or `http://localhost:8000/api/v1`), or
+- Override it programmatically in `lib/core/constants/api_constants.dart`:
 ```dart
-ApiConstants.setCustomBaseUrl('https://api.yourdomain.com/api/v1');
+ApiConstants.setCustomBaseUrl('http://10.0.2.2:8000/api/v1');
 ```
 
 ---

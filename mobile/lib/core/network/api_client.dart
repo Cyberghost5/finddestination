@@ -27,8 +27,15 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Update base URL dynamically in case host was changed
-          options.baseUrl = ApiConstants.baseUrl;
+          // Normalize base URL dynamically in case host was changed
+          var base = ApiConstants.baseUrl.trim();
+          if (!base.endsWith('/')) {
+            base = '$base/';
+          }
+          options.baseUrl = base;
+          if (options.path.startsWith('/')) {
+            options.path = options.path.substring(1);
+          }
 
           // Attach token if present
           if (_authToken != null && _authToken!.isNotEmpty) {

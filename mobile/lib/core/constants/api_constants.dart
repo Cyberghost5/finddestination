@@ -1,7 +1,8 @@
-import 'package:flutter/foundation.dart';
-
 class ApiConstants {
-  // Allow overriding base URL for local network testing / production
+  // Default live production backend API URL
+  static const String defaultLiveUrl = 'https://finddestination.com.ng/api/v1/';
+
+  // Allow overriding base URL for local testing or custom staging
   static String? _customBaseUrl;
 
   static void setCustomBaseUrl(String url) {
@@ -12,16 +13,7 @@ class ApiConstants {
     if (_customBaseUrl != null && _customBaseUrl!.isNotEmpty) {
       return _customBaseUrl!;
     }
-    // Default smart host resolution
-    if (kIsWeb) {
-      return 'https://finddestination.com.ng/api/v1';
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      // Android Emulator maps host machine to 10.0.2.2
-      return 'https://finddestination.com.ng/api/v1';
-    } else {
-      // iOS simulator and desktop
-      return 'https://finddestination.com.ng/api/v1';
-    }
+    return defaultLiveUrl;
   }
 
   // Endpoints
@@ -77,10 +69,8 @@ class ApiConstants {
   static const String adminHosts = '/admin/hosts';
   static const String adminUsers = '/admin/users';
   static const String adminTransactions = '/admin/transactions';
-  static const String adminInspectionProperties =
-      '/admin/inspections/properties';
-  static const String adminInspectionApplications =
-      '/admin/inspections/applications';
+  static const String adminInspectionProperties = '/admin/inspections/properties';
+  static const String adminInspectionApplications = '/admin/inspections/applications';
   static const String adminInspectionReports = '/admin/inspections/reports';
   static const String adminWithdrawals = '/admin/withdrawals';
 }
