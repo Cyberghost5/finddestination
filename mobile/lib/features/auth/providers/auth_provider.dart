@@ -83,6 +83,7 @@ class AuthProvider extends ChangeNotifier {
       final response = await _apiClient.post(
         ApiConstants.login,
         data: {
+          'login': email.trim().toLowerCase(),
           'email': email.trim().toLowerCase(),
           'password': password,
         },

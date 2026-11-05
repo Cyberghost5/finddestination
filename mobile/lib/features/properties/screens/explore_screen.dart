@@ -201,6 +201,44 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     ),
                   ),
                 )
+              else if (provider.errorMessage != null && properties.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.errorBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(LucideIcons.wifiOff, size: 40, color: AppColors.error),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Unable to Load Stays',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.dark),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            provider.errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () => provider.fetchProperties(refresh: true),
+                            icon: const Icon(LucideIcons.refreshCw, size: 16),
+                            label: const Text('Retry Connection'),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
               else if (properties.isEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
