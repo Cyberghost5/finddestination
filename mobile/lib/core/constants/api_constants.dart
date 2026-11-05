@@ -1,6 +1,6 @@
 class ApiConstants {
   // Default live production backend API URL
-  static const String defaultLiveUrl = 'https://finddestination.com.ng/api/v1/';
+  static const String defaultLiveUrl = 'https://finddestination.com.ng/api/v1';
 
   // Allow overriding base URL for local testing or custom staging
   static String? _customBaseUrl;
