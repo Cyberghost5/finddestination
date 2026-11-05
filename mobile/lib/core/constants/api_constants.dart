@@ -14,13 +14,13 @@ class ApiConstants {
     }
     // Default smart host resolution
     if (kIsWeb) {
-      return 'http://localhost:8000/api/v1';
+      return 'https://finddestination.com.ng/api/v1';
     } else if (defaultTargetPlatform == TargetPlatform.android) {
       // Android Emulator maps host machine to 10.0.2.2
-      return 'http://10.0.2.2:8000/api/v1';
+      return 'https://finddestination.com.ng/api/v1';
     } else {
       // iOS simulator and desktop
-      return 'http://127.0.0.1:8000/api/v1';
+      return 'https://finddestination.com.ng/api/v1';
     }
   }
 
@@ -77,8 +77,10 @@ class ApiConstants {
   static const String adminHosts = '/admin/hosts';
   static const String adminUsers = '/admin/users';
   static const String adminTransactions = '/admin/transactions';
-  static const String adminInspectionProperties = '/admin/inspections/properties';
-  static const String adminInspectionApplications = '/admin/inspections/applications';
+  static const String adminInspectionProperties =
+      '/admin/inspections/properties';
+  static const String adminInspectionApplications =
+      '/admin/inspections/applications';
   static const String adminInspectionReports = '/admin/inspections/reports';
   static const String adminWithdrawals = '/admin/withdrawals';
 }
