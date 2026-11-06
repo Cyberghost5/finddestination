@@ -12,9 +12,7 @@ import '../widgets/agent_withdraw_modal.dart';
 import 'field_audit_screen.dart';
 
 class AgentPortalScreen extends StatefulWidget {
-  final VoidCallback? onSwitchToGuest;
-
-  const AgentPortalScreen({super.key, this.onSwitchToGuest});
+  const AgentPortalScreen({super.key});
 
   @override
   State<AgentPortalScreen> createState() => _AgentPortalScreenState();
@@ -55,6 +53,31 @@ class _AgentPortalScreenState extends State<AgentPortalScreen>
     final auth = context.read<AuthProvider>();
     final agentProvider = context.read<AgentProvider>();
     await agentProvider.fetchAgentPortalData(agentId: auth.user?.id);
+  }
+
+  void _confirmLogout(BuildContext context, AuthProvider auth) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        content: const Text('Are you sure you want to sign out of your Field Agent account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await auth.logout();
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -100,9 +123,15 @@ class _AgentPortalScreenState extends State<AgentPortalScreen>
           ),
           IconButton(
             icon: const Icon(LucideIcons.refreshCw, size: 18),
+            tooltip: 'Refresh',
             onPressed: agentProvider.isLoading ? null : _loadData,
           ),
-          const SizedBox(width: 6),
+          IconButton(
+            icon: const Icon(LucideIcons.logOut, size: 18, color: AppColors.error),
+            tooltip: 'Sign Out',
+            onPressed: () => _confirmLogout(context, auth),
+          ),
+          const SizedBox(width: 4),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -723,44 +752,20 @@ class _AgentPortalScreenState extends State<AgentPortalScreen>
                     style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            AgentWithdrawModal.show(context, agentId: auth.user?.id);
-                          },
-                          icon: const Icon(LucideIcons.arrowUpRight, size: 16, color: Color(0xFF1E3A8A)),
-                          label: const Text('Withdraw Bounty', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF1E3A8A))),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        AgentWithdrawModal.show(context, agentId: auth.user?.id);
+                      },
+                      icon: const Icon(LucideIcons.arrowUpRight, size: 16, color: Color(0xFF1E3A8A)),
+                      label: const Text('Withdraw Bounty', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF1E3A8A))),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      const SizedBox(width: 10),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final success = await agent.seedDemoBounty(agentId: auth.user?.id);
-                          if (mounted && success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Demo Bounty of ₦50,000 credited to wallet!'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(LucideIcons.sparkles, size: 14, color: Color(0xFF93C5FD)),
-                        label: const Text('+₦50k Demo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF60A5FA)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),

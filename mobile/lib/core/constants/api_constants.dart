@@ -49,7 +49,6 @@ class ApiConstants {
   static const String hostPayouts = '/host/payouts';
   static const String hostWithdraw = '/host/payouts/withdraw';
   static const String hostBankDetails = '/host/payouts/bank-details';
-  static const String hostSeedDemoEscrow = '/host/payouts/seed-demo-escrow';
 
   // Chats
   static const String chats = '/chats';
@@ -63,7 +62,6 @@ class ApiConstants {
   static const String agentWallet = '/agent/wallet';
   static const String agentBankDetails = '/agent/wallet/bank-details';
   static const String agentWithdraw = '/agent/wallet/withdraw';
-  static const String agentSeedDemoBounty = '/agent/wallet/seed-demo-bounty';
 
   // Admin
   static const String adminHosts = '/admin/hosts';

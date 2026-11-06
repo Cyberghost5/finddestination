@@ -46,7 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (widget.onLoginSuccess != null) {
         widget.onLoginSuccess!();
       } else {
-        Navigator.of(context).pop();
+        // Pop back to root navigation shell to display the role-specific view
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,13 +57,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     }
-  }
-
-  void _fillDemoCredentials(String email, String password) {
-    setState(() {
-      _emailController.text = email;
-      _passwordController.text = password;
-    });
   }
 
   @override
@@ -283,73 +277,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 24),
-
-                // Quick Demo Accounts Section (mirrors web role switcher testing convenience)
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(LucideIcons.sparkles, size: 14, color: AppColors.gold),
-                          SizedBox(width: 6),
-                          Text(
-                            'Quick Demo Accounts',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _buildDemoChip('Guest (Musa)', 'musa@example.com', 'password123'),
-                          _buildDemoChip('Host (Ibrahim)', 'ibrahim@tafiya.ng', 'password123'),
-                          _buildDemoChip('Agent', 'agent@tafiya.ng', 'password123'),
-                          _buildDemoChip('Admin', 'admin@tafiya.ng', 'password123'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDemoChip(String label, String email, String password) {
-    return InkWell(
-      onTap: () => _fillDemoCredentials(email, password),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: AppColors.dark,
           ),
         ),
       ),

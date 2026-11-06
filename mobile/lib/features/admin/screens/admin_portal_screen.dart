@@ -10,9 +10,7 @@ import '../widgets/admin_transaction_detail_modal.dart';
 import '../widgets/admin_verify_report_modal.dart';
 
 class AdminPortalScreen extends StatefulWidget {
-  final VoidCallback? onSwitchToGuest;
-
-  const AdminPortalScreen({super.key, this.onSwitchToGuest});
+  const AdminPortalScreen({super.key});
 
   @override
   State<AdminPortalScreen> createState() => _AdminPortalScreenState();
@@ -40,6 +38,31 @@ class _AdminPortalScreenState extends State<AdminPortalScreen> with SingleTicker
     _tabController.dispose();
     _txSearchController.dispose();
     super.dispose();
+  }
+
+  void _confirmLogout(BuildContext context, AuthProvider auth) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        content: const Text('Are you sure you want to sign out of Super Admin Governance?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await auth.logout();
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _triggerQoreIdCheck(AdminHostModel host) async {
@@ -130,16 +153,11 @@ class _AdminPortalScreenState extends State<AdminPortalScreen> with SingleTicker
             onPressed: () => admin.fetchAllAdminData(),
           ),
           IconButton(
-            icon: const Icon(LucideIcons.arrowLeftRight, size: 18, color: Color(0xFF7E22CE)),
-            tooltip: 'Switch Persona',
-            onPressed: () {
-              if (widget.onSwitchToGuest != null) {
-                widget.onSwitchToGuest!();
-              } else {
-                auth.switchRole('guest');
-              }
-            },
+            icon: const Icon(LucideIcons.logOut, size: 18, color: AppColors.error),
+            tooltip: 'Sign Out',
+            onPressed: () => _confirmLogout(context, auth),
           ),
+          const SizedBox(width: 4),
         ],
         bottom: TabBar(
           controller: _tabController,

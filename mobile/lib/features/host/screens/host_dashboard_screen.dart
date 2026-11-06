@@ -14,9 +14,7 @@ import '../widgets/withdraw_funds_modal.dart';
 import 'listing_wizard_screen.dart';
 
 class HostDashboardScreen extends StatefulWidget {
-  final VoidCallback? onSwitchToGuest;
-
-  const HostDashboardScreen({super.key, this.onSwitchToGuest});
+  const HostDashboardScreen({super.key});
 
   @override
   State<HostDashboardScreen> createState() => _HostDashboardScreenState();
@@ -45,6 +43,31 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
     final auth = context.read<AuthProvider>();
     final hostProvider = context.read<HostProvider>();
     await hostProvider.fetchDashboardData(hostId: auth.user?.id);
+  }
+
+  void _confirmLogout(BuildContext context, AuthProvider auth) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        content: const Text('Are you sure you want to sign out of your Host account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await auth.logout();
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -90,9 +113,15 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
           ),
           IconButton(
             icon: const Icon(LucideIcons.refreshCw, size: 18),
+            tooltip: 'Refresh',
             onPressed: hostProvider.isLoading ? null : _loadData,
           ),
-          const SizedBox(width: 6),
+          IconButton(
+            icon: const Icon(LucideIcons.logOut, size: 18, color: AppColors.error),
+            tooltip: 'Sign Out',
+            onPressed: () => _confirmLogout(context, auth),
+          ),
+          const SizedBox(width: 4),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -222,50 +251,23 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            WithdrawFundsModal.show(context, hostId: auth.user?.id);
-                          },
-                          icon: const Icon(LucideIcons.arrowUpRight, size: 16, color: AppColors.primary),
-                          label: const Text(
-                            'Withdraw Funds',
-                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.primary),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        WithdrawFundsModal.show(context, hostId: auth.user?.id);
+                      },
+                      icon: const Icon(LucideIcons.arrowUpRight, size: 16, color: AppColors.primary),
+                      label: const Text(
+                        'Withdraw Funds',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.primary),
                       ),
-                      const SizedBox(width: 10),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          final success = await host.seedDemoEscrow(hostId: auth.user?.id);
-                          if (mounted && success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Demo Escrow seeded with ₦150,000 for payout testing!'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(LucideIcons.sparkles, size: 14, color: Color(0xFFD8F3DC)),
-                        label: const Text(
-                          '+₦150k Demo',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF52B788)),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -353,16 +355,6 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
               color: AppColors.goldDark,
               onTap: () => BankSetupModal.show(context, hostId: auth.user?.id),
             ),
-            if (widget.onSwitchToGuest != null) ...[
-              const SizedBox(height: 10),
-              _buildActionTile(
-                title: 'Switch to Guest / Traveler View',
-                subtitle: 'Explore stays and search properties across Nigeria',
-                icon: LucideIcons.compass,
-                color: AppColors.info,
-                onTap: widget.onSwitchToGuest!,
-              ),
-            ],
             const SizedBox(height: 28),
 
             // Recent Bookings Header

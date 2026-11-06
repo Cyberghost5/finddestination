@@ -326,37 +326,4 @@ class AgentProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  /// Seed initial demo bounty credit for testing
-  Future<bool> seedDemoBounty({int? agentId, double amount = 50000.0}) async {
-    _isSubmitting = true;
-    _errorMessage = null;
-    _successMessage = null;
-    notifyListeners();
-
-    try {
-      final response = await _apiClient.post(
-        ApiConstants.agentSeedDemoBounty,
-        data: {
-          'amount': amount,
-          if (agentId != null) 'agent_id': agentId,
-        },
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        _successMessage = 'Demo bounty of ₦${amount.toInt()} credited to your wallet!';
-        await fetchWallet(agentId: agentId, notify: false);
-        return true;
-      } else {
-        _errorMessage = response.data?['message'] ?? 'Could not seed bounty';
-        return false;
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-      return false;
-    } finally {
-      _isSubmitting = false;
-      notifyListeners();
-    }
-  }
 }

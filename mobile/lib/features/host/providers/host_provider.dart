@@ -226,39 +226,6 @@ class HostProvider extends ChangeNotifier {
     }
   }
 
-  /// Seed initial demo escrow funds for sandbox / demo evaluation
-  Future<bool> seedDemoEscrow({int? hostId, double amount = 150000.0}) async {
-    _isSubmitting = true;
-    _errorMessage = null;
-    _successMessage = null;
-    notifyListeners();
-
-    try {
-      final response = await _apiClient.post(
-        ApiConstants.hostSeedDemoEscrow,
-        data: {
-          'amount': amount,
-          if (hostId != null) 'host_id': hostId,
-        },
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        _successMessage = 'Demo escrow balance seeded successfully!';
-        await fetchHostPayouts(hostId: hostId, notify: false);
-        return true;
-      } else {
-        _errorMessage = response.data?['message'] ?? 'Could not seed demo escrow';
-        return false;
-      }
-    } catch (e) {
-      _errorMessage = e.toString();
-      return false;
-    } finally {
-      _isSubmitting = false;
-      notifyListeners();
-    }
-  }
-
   /// Toggle published / draft status of a property
   Future<bool> togglePublish(int propertyId) async {
     try {
