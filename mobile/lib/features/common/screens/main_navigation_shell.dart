@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../admin/screens/admin_portal_screen.dart';
 import '../../agent/screens/agent_portal_screen.dart';
@@ -27,52 +26,6 @@ class MainNavigationShell extends StatefulWidget {
 
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _currentIndex = 0;
-
-  void _showApiSettingsDialog(BuildContext context) {
-    final controller = TextEditingController(text: ApiConstants.baseUrl);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Backend API Server', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Set the host URL for your local Laravel development backend.',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'API Base URL',
-                hintText: 'https://finddestination.com.ng/api/v1/',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ApiConstants.setCustomBaseUrl(controller.text.trim());
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('API Base URL updated: ${ApiConstants.baseUrl}')),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showPrivacyPolicyModal(BuildContext context) {
     showModalBottomSheet(
@@ -290,13 +243,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.settings, size: 20),
-            tooltip: 'API Settings',
-            onPressed: () => _showApiSettingsDialog(context),
-          ),
-        ],
       ),
       body: _buildCurrentTab(auth),
       bottomNavigationBar: BottomNavigationBar(
@@ -552,8 +498,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
             if (user.cacNumber != null)
               _buildInfoRow('CAC Registration', user.cacNumber!, LucideIcons.fileText),
             _buildInfoRow('Account Type', 'Verified Traveler (Guest)', LucideIcons.userCheck),
-            _buildInfoRow('API Endpoint', ApiConstants.baseUrl, LucideIcons.server),
-
             const SizedBox(height: 24),
 
             CustomButton(
