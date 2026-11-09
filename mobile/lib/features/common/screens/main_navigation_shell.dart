@@ -74,6 +74,158 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     );
   }
 
+  void _showPrivacyPolicyModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.82,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 24),
+                    SizedBox(width: 8),
+                    Text(
+                      'Privacy Policy & NDPR',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.dark),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.x, size: 20),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Effective Date: January 1, 2026 • Compliant with NDPR & Google Play Developer Policy',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      '1. Data Collection & Privacy Scope',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.dark),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'FindDestination collects information necessary to deliver verified shortlet and accommodation booking services across Nigeria:\n'
+                      '• Account Information: Name, email address, and phone number.\n'
+                      '• Host Verification: Corporate Affairs Commission (CAC) business registration numbers.\n'
+                      '• Location Data (GPS): Collected only during property verification audits to verify coordinates within 50 meters.\n'
+                      '• Camera & Images: Accessed only when uploading property photos or field inspection reports.\n'
+                      '• Financial Transactions: Handled securely via licensed payment gateways (Monnify and Paystack). We never store raw debit/credit card numbers.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '2. Digital Escrow Protection',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.dark),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'All booking payments are held securely in digital escrow and only disbursed to hosts 24 hours after successful guest check-in, ensuring safety for both travelers and hosts.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '3. Your Rights & Account Deletion',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.dark),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Under the Nigeria Data Protection Regulation (NDPR) and Google Play policies, you have the right to access, rectify, or permanently delete your account and personal data at any time via the "Delete Account" button or by contacting support at support@finddestination.com.ng.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '4. Live Online Notice',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.dark),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'The full legal notice is accessible online at: https://finddestination.com.ng/#privacy-policy',
+                      style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+            CustomButton(
+              text: 'Close Notice',
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteAccount(BuildContext context, AuthProvider auth) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(LucideIcons.alertTriangle, color: AppColors.error, size: 22),
+            SizedBox(width: 8),
+            Text('Delete Account', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to permanently delete your FindDestination account?\n\n'
+          'All your profile data, reservations, and saved preferences will be permanently purged in compliance with Google Play Developer Policy and NDPR regulations.\n\n'
+          'This action cannot be undone.',
+          style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.dark, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final success = await auth.deleteAccount();
+              if (context.mounted && success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Your account and personal data have been deleted.'),
+                    backgroundColor: AppColors.dark,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete Permanently', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -247,6 +399,13 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                   );
                 },
               ),
+              const SizedBox(height: 12),
+              CustomButton(
+                text: 'Privacy Policy & NDPR Notice',
+                isOutlined: true,
+                icon: const Icon(LucideIcons.shieldCheck, size: 16, color: AppColors.textSecondary),
+                onPressed: () => _showPrivacyPolicyModal(context),
+              ),
             ],
           ),
         ),
@@ -411,12 +570,39 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
             const SizedBox(height: 12),
 
+            CustomButton(
+              text: 'Privacy Policy & NDPR Notice',
+              isOutlined: true,
+              icon: const Icon(LucideIcons.shieldCheck, size: 16, color: AppColors.primary),
+              onPressed: () => _showPrivacyPolicyModal(context),
+            ),
+
+            const SizedBox(height: 12),
+
             // Logout Button
             CustomButton(
               text: 'Log Out',
               backgroundColor: AppColors.error,
               icon: const Icon(LucideIcons.logOut, size: 18, color: Colors.white),
               onPressed: () => auth.logout(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Delete Account (Google Play & NDPR Compliance)
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _confirmDeleteAccount(context, auth),
+                icon: const Icon(LucideIcons.trash2, size: 15, color: AppColors.error),
+                label: const Text(
+                  'Delete Account & Data',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.error,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

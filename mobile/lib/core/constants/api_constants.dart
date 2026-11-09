@@ -31,6 +31,7 @@ class ApiConstants {
   static const String resetPassword = '/auth/reset-password';
   static const String me = '/auth/me';
   static const String logout = '/auth/logout';
+  static const String deleteAccount = '/auth/delete-account';
   static const String onboarding = '/auth/onboarding';
 
   // Properties

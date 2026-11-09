@@ -498,6 +498,32 @@ class AuthController extends Controller
     }
 
     /**
+     * DELETE /api/v1/auth/delete-account
+     * Google Play & NDPR Compliance: User-initiated account deletion
+     */
+    public function deleteAccount(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        // Revoke active API tokens
+        $user->tokens()->delete();
+
+        // Delete user record & personal data
+        $user->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account and personal data successfully deleted.'
+        ]);
+    }
+
+    /**
      * GET /api/v1/admin/hosts
      */
     public function getAdminHosts()

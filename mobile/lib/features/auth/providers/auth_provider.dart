@@ -374,6 +374,28 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Delete Account (Google Play & NDPR Compliance)
+  Future<bool> deleteAccount() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      if (_token != null) {
+        await _apiClient.delete(ApiConstants.deleteAccount);
+      }
+      await logout();
+      return true;
+    } catch (e) {
+      debugPrint('Delete account API error: $e');
+      await logout();
+      return true;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   /// Logout
   Future<void> logout() async {
     try {
